@@ -1,15 +1,23 @@
 <?php
 
 return [
-    "scope_year"=> "2026",
+    'scope_year' => '2026',
 
     'contractors' => [
-       'Asplundh'
+        'Asplundh',
     ],
 
     'excludedUsers' => [
         'ASPLUNDH\\jcompton',
         'ASPLUNDH\\joseam',
+    ],
+
+    'cycle_types' => [
+        'Reactive',
+        'Storm Follow Up',
+        'Misc. Project Work',
+        'PUC-STORM FOLLOW UP',
+        // 'FFP CPM Maintenance'
     ],
 
     'job_types' => [
@@ -24,36 +32,34 @@ return [
 
     'statuses' => [
 
-        'planner_concern' => [ 'ACTIV', 'QC', 'REWRK', 'CLOSE', ],
+        'planner_concern' => ['ACTIV', 'QC', 'REWRK', 'CLOSE'],
 
         'all' => [
             'new' => [
                 'value' => 'SA',
-                'caption' => 'New'
+                'caption' => 'New',
             ],
 
             'active' => [
                 'value' => 'ACTIV',
-                'caption' => 'In Progress'
+                'caption' => 'In Progress',
             ],
 
             'qc' => [
                 'value' => 'QC',
-                'caption' =>
-                'Pending Quality Control - You Will Be Notified If Any Changes Made. 
+                'caption' => 'Pending Quality Control - You Will Be Notified If Any Changes Made. 
                   -- Any Units Are Failed, Or If It Is Sent To Rework,
-                  You Will Be Notified As Well'
+                  You Will Be Notified As Well',
             ],
 
             'rework' => [
                 'value' => 'REWRK',
-                'caption' =>
-                'Sent To Rework - Check Audit Notes & Pending Permissions'
+                'caption' => 'Sent To Rework - Check Audit Notes & Pending Permissions',
             ],
 
             'deferral' => ['value' => 'DEF', 'caption' => 'Deferral'],
 
             'closed' => ['value' => 'CLOSE', 'caption' => 'Closed'],
-        ]
+        ],
     ],
 ];

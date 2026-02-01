@@ -1,18 +1,19 @@
 <?php
+
 namespace App\Services\WorkStudio\Services;
 
-use Exception;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Http;
+use App\Services\WorkStudio\AssessmentsDx\Queries\AssessmentQueries;
 use App\Services\WorkStudio\Helpers\ExecutionTimer;
 use App\Services\WorkStudio\Managers\ApiCredentialManager;
-use App\Services\WorkStudio\AssessmentsDx\Queries\AssessmentQueries;
+use Exception;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class GetQueryService
 {
-    //  TODO: eventually will need to get signed in users credentials to use for parameters. 
-    // credential manager is already pluged in 
+    //  TODO: eventually will need to get signed in users credentials to use for parameters.
+    // credential manager is already pluged in
 
     public $sqlState;
 
@@ -41,7 +42,7 @@ class GetQueryService
             'SQL' => $sql,
         ];
 
-        $url = rtrim(config('workstudio.base_url'), '/') . '/GETQUERY';
+        $url = rtrim(config('workstudio.base_url'), '/').'/GETQUERY';
         $this->sqlState = $sql;
 
         try {
@@ -61,22 +62,22 @@ class GetQueryService
             if (isset($data['protocol']) && $data['protocol'] == 'ERROR' || isset($data['errorMessage'])) {
                 Log::error('WorkStudio API returned error', [
                     'Status_Code' => 500,
-                    'error' => $data['protocol'] . ' ' . $data['errorMessage'] ?? 'Unknown',
+                    'error' => $data['protocol'].' '.$data['errorMessage'] ?? 'Unknown',
                     'sql' => substr($sql, 0, 500),
 
                 ]);
 
-
                 throw new Exception(json_encode(
                     [
                         'Status_Code' => $response->status(),
-                        'Message' => $data['protocol'] . ' in the ' . class_basename($this) . ' ' . $data['errorMessage'],
+                        'Message' => $data['protocol'].' in the '.class_basename($this).' '.$data['errorMessage'],
                         'SQL' => json_encode($sql, JSON_PRETTY_PRINT),
                     ]
                 ) ?? 'Unknown API error', 500);
             }
 
             $response->throw();
+
             return $data;
         } catch (Exception $e) {
             Log::error('WorkStudio GETQUERY failed', [
@@ -126,7 +127,7 @@ class GetQueryService
 
         // FOR JSON PATH responses come back as chunked strings in Data array
         // Each row contains a single element which is a JSON string fragment
-        $jsonString = implode('', array_map(fn($row) => $row[0], $response['Data']));
+        $jsonString = implode('', array_map(fn ($row) => $row[0], $response['Data']));
 
         // Remove control characters that might break JSON parsing
         $jsonString = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $jsonString);
@@ -145,13 +146,12 @@ class GetQueryService
         return collect([$data]) ?? [];
     }
 
-    // TODO 
-        // Exctact the code below to its own class, it only gets the structure sql statement as a string 
-
+    // TODO
+    // Exctact the code below to its own class, it only gets the structure sql statement as a string
 
     public function getJobGuids(): Collection
     {
-        $sql = 
+        $sql =
         AssessmentQueries::getAllJobGUIDsForEntireScopeYear();
 
         return $this->executeAndHandle($sql, null);
@@ -159,7 +159,7 @@ class GetQueryService
 
     public function getSystemWideMetrics(): Collection
     {
-        $sql = 
+        $sql =
         AssessmentQueries::systemWideDataQuery();
 
         return $this->executeAndHandle($sql, null);
@@ -167,8 +167,16 @@ class GetQueryService
 
     public function getRegionalMetrics(): Collection
     {
-        $sql = 
+        $sql =
         AssessmentQueries::groupedByRegionDataQuery();
+
+        return $this->executeAndHandle($sql, null);
+    }
+
+    public function getDailyActivitiesForAllAssessments(): Collection
+    {
+        $sql =
+        AssessmentQueries::getAllAssessmentsDailyActivities();
 
         return $this->executeAndHandle($sql, null);
     }
@@ -176,7 +184,7 @@ class GetQueryService
     public function getAll(): Collection
     {
         $jobGuid = '{9C2BFF24-4C3D-42D5-9E4E-7FCBEFAE7DF2}';
-        $sql = 
+        $sql =
         AssessmentQueries::getAllByJobGuid($jobGuid);
 
         return $this->executeAndHandle($sql, null);
@@ -184,25 +192,23 @@ class GetQueryService
 
     public function queryAll(): Collection
     {
-        $timer = new ExecutionTimer();
+        $timer = new ExecutionTimer;
         $timer->startTotal();
 
         $timer->start('systemWideDataQuery');
-        $sql = 
+        $sql =
         AssessmentQueries::systemWideDataQuery();
         $systemWideDataQuery = $this->executeAndHandle($sql, null);
         $timer->stop('systemWideDataQuery');
 
         $timer->start('groupedByRegionDataQuery');
-        $sql = 
+        $sql =
         AssessmentQueries::groupedByRegionDataQuery();
         $groupedByRegionDataQuery = $this->executeAndHandle($sql, null);
         $timer->stop('groupedByRegionDataQuery');
 
-
-
         $timer->start('groupedByCircuitDataQuery');
-        $sql = 
+        $sql =
         AssessmentQueries::groupedByCircuitDataQuery();
         $groupedByCircuitDataQuery = $this->executeAndHandle($sql, null);
         $timer->stop('groupedByCircuitDataQuery');
@@ -211,6 +217,7 @@ class GetQueryService
         dump('$groupedByRegionDataQuery', $groupedByRegionDataQuery);
         dump('$groupedByCircuitDataQuery', $groupedByCircuitDataQuery);
         $timer->logTotalTime();
+
         return collect($groupedByCircuitDataQuery);
     }
 
