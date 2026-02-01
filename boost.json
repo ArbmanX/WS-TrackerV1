@@ -1,0 +1,18 @@
+{
+    "agents": [
+        "claude_code"
+    ],
+    "guidelines": true,
+    "herd_mcp": false,
+    "mcp": true,
+    "packages": [
+        "laravel/fortify"
+    ],
+    "sail": false,
+    "skills": [
+        "livewire-development",
+        "pest-testing",
+        "tailwindcss-development",
+        "developing-with-fortify"
+    ]
+}
