@@ -1,0 +1,99 @@
+# Project Rules — WS-TrackerV1
+
+> These rules apply to ALL development on this project. No exceptions without team approval.
+
+---
+
+## UI Framework
+
+- **Use DaisyUI** for all user interface components
+- **Leverage DaisyUI theming** — use theme variables, not hardcoded colors
+- Components should support theme switching without code changes
+
+---
+
+## Git Workflow
+
+1. **Before starting a new phase:**
+   - Confirm previous phase was merged to `main`
+   - Confirm current branch is `main`
+   - Pull latest: `git pull origin main`
+
+2. **Create a new branch for each phase:**
+   - Naming: `phase/{phase-name}` or `feature/{feature-name}`
+   - Example: `phase/testing-infrastructure`, `feature/dusk-setup`
+
+3. **On phase completion:**
+   - Run all tests: `php artisan test`
+   - Run code formatter: `vendor/bin/pint`
+   - Merge branch to `main`
+   - **Get user confirmation before pushing to origin**
+
+4. **Maintain CHANGELOG.md:**
+   - Update changelog with each meaningful change
+   - Follow Keep a Changelog format
+
+---
+
+## Code Style & Quality
+
+- **Run `vendor/bin/pint`** before every commit
+- **No `dd()` in committed code** — use conditional `dump()` or logging
+- **Use `config()` not `env()`** in application code (env() only in config files)
+- **Strict types** encouraged in new PHP files
+
+---
+
+## Architecture
+
+- **Services must implement interfaces** — enables testing and flexibility
+- **Single source of truth for config** — no duplicate configuration across files
+- **Inject dependencies via constructor** — use Laravel's container
+- **Keep folder structure minimal** — prefer simplicity over deep nesting
+- **No business logic in controllers** — delegate to services
+
+---
+
+## Security
+
+- **Never commit credentials or secrets** — use `.env` and credential managers
+- **Validate all user input** — use Form Requests
+- **Sanitize output** — prevent XSS via Blade escaping
+
+---
+
+## Testing
+
+- **New features require tests** — no exceptions
+- **Run tests before merging** — `php artisan test` must pass
+- **Use factories for test data** — keep tests isolated and repeatable
+- **Pest 4** is the testing framework — follow Pest conventions
+
+---
+
+## Database
+
+- **Use migrations for all schema changes** — never modify DB directly
+- **Use Eloquent** — avoid raw queries unless absolutely necessary
+- **Factories required for new models**
+
+---
+
+## Quick Reference
+
+```bash
+# Before starting work
+git checkout main && git pull origin main
+git checkout -b phase/your-phase-name
+
+# Before committing
+vendor/bin/pint
+php artisan test
+
+# Before merging
+php artisan test --compact
+git checkout main && git merge phase/your-phase-name
+
+# Before pushing (get confirmation)
+git push origin main
+```

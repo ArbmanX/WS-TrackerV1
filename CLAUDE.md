@@ -261,3 +261,41 @@ protected function isAccessible(User $user, ?string $path = null): bool
 - IMPORTANT: Always use the `search-docs` tool for detailed Laravel Fortify patterns and documentation.
 - IMPORTANT: Activate `developing-with-fortify` skill when working with Fortify authentication features.
 </laravel-boost-guidelines>
+
+---
+
+# AI Session Management Rules
+
+These rules govern AI agent behavior during development sessions on this project.
+
+## Context Management
+
+- **At 60% context usage:** Ask user if they would like to create a context/handoff file summarizing current work
+- **At 65% context usage:** Create a markdown summary of current activities and offer to clear context with user confirmation
+- **Context file location:** Save to `BMAD_WS/session-handoffs/` with timestamp
+
+## Git Workflow Enforcement
+
+- **Before starting any new phase:**
+  1. Confirm previous phase was merged to `main`
+  2. Confirm current branch is `main`
+  3. Create new branch for the phase
+
+- **Always get user confirmation before:**
+  - Pushing to origin (`git push`)
+  - Force operations
+  - Merging to main
+
+## Documentation
+
+- **Maintain CHANGELOG.md** — Update with each meaningful change
+- **Read PROJECT_RULES.md** — Follow all project development rules
+
+## Session Handoff Template
+
+When creating context/handoff files, include:
+- Current task status
+- Files modified this session
+- Next steps / TODO items
+- Any blockers or decisions needed
+- Relevant code locations
