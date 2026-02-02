@@ -487,6 +487,9 @@ class AssessmentQueries
 
                             VEGJOB.REGION AS Region,
                             SS.TITLE AS Circuit_Name,
+                            CAST(VEGJOB.LENGTH AS DECIMAL(10,2)) AS Total_Miles,
+                            CAST(VEGJOB.LENGTHCOMP AS DECIMAL(10,2)) AS Completed_Miles,
+                            VEGJOB.PRCENT AS Percent_Complete,
                             VEGJOB.SITECOUNT AS Site_Count,
 
                             SS.JOBTYPE AS Job_Type,

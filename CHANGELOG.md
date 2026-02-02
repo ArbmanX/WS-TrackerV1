@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - `PROJECT_RULES.md` — Development standards and guidelines
+- AI Context Management rules in `PROJECT_RULES.md` (context file tracking, warnings at 60%/70%)
 - AI session management rules in `CLAUDE.md`
 - **Testing & Monitoring Infrastructure** (2026-02-01)
   - Laravel Dusk for browser testing (`tests/Browser/`)
@@ -22,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Scheduled cleanup commands in `routes/console.php`
 
 ### Changed
+- `AssessmentQueries::getAllJobGUIDsForEntireScopeYear()` — Added Total_Miles, Completed_Miles, Percent_Complete fields
 - **WorkStudio API Layer Refactoring** (2026-02-01)
   - `WorkStudioApiService` now acts as facade, delegating to `GetQueryService`
   - `WorkStudioApiInterface` updated to 6-method contract

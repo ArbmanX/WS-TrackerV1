@@ -12,6 +12,16 @@
 
 ---
 
+## AI Context Management
+
+- look for context management file in .claude folder if one does not exist create one. 
+- use the context management file to continue work / tasks after context is cleared by user. 
+- warn user when context is at 60% 
+- at 70% context update the context management file in the .claude folder with the relevant info for the current tasks
+- at 70% context prompt user to clear context and refer agent to context file to continue where you left off
+
+---
+
 ## Git Workflow
 
 1. **Before starting a new phase:**
