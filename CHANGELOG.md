@@ -12,7 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `PROJECT_RULES.md` — Development standards and guidelines
 - AI session management rules in `CLAUDE.md`
-- Testing & monitoring task list queued for implementation
+- **Testing & Monitoring Infrastructure** (2026-02-01)
+  - Laravel Dusk for browser testing (`tests/Browser/`)
+  - Spatie Laravel Health with custom WorkStudio API check (`/health`, `/health/dashboard`)
+  - Spatie Laravel Activitylog on User model (365-day retention)
+  - Laravel Pulse performance monitoring (`/pulse`)
+  - Health check tests (`tests/Feature/HealthCheckTest.php`)
+  - WorkStudioApiService unit tests (`tests/Unit/WorkStudioApiServiceTest.php`)
+  - Scheduled cleanup commands in `routes/console.php`
 
 ### Changed
 - **WorkStudio API Layer Refactoring** (2026-02-01)

@@ -290,8 +290,16 @@ These rules govern AI agent behavior during development sessions on this project
 
 ## Documentation
 
-- **Maintain CHANGELOG.md** — Update with each meaningful change
 - **Read PROJECT_RULES.md** — Follow all project development rules
+
+### CHANGELOG.md Maintenance
+
+- **Update CHANGELOG.md before every commit** with meaningful changes
+- Follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
+- Use these categories: `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`
+- Add entries under `## [Unreleased]` section
+- Be specific: include file names, feature names, and brief descriptions
+- Group related changes together
 
 ## Session Handoff Template
 
