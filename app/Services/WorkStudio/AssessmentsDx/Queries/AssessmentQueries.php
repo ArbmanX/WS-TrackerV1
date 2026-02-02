@@ -347,7 +347,14 @@ class AssessmentQueries
         $dailyRecords = self::dailyRecordsQuery('WSREQSS.JOBGUID', false);
 
         return "SELECT
-                        {$scopeYear} AS Scope_Year,  
+                        {$scopeYear} AS Scope_Year, 
+                        SS.JOBGUID AS Job_GUID,
+                        SS.WO AS Work_Order,
+                        SS.EXT AS Extension,
+                        SS.STATUS AS Status,
+                        VEGJOB.LINENAME AS Line_Name,
+                        VEGJOB.REGION AS Region,
+                        VEGJOB.CYCLETYPE AS Cycle_Type,
                         CAST(VEGJOB.LENGTH AS DECIMAL(10,2)) AS Total_Miles,
                         CAST(VEGJOB.LENGTHCOMP AS DECIMAL(10,2)) AS Completed_Miles,
                         VEGJOB.PRCENT AS Percent_Complete,
@@ -441,9 +448,9 @@ class AssessmentQueries
                     {$stationsWithUnits} AS Stations
 
                 FROM SS
-                INNER JOIN SS AS WSREQSS ON SS.JOBGUID = WSREQSS.JOBGUID
-                INNER JOIN VEGJOB ON SS.JOBGUID = VEGJOB.JOBGUID
-                LEFT JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID
+                    INNER JOIN SS AS WSREQSS ON SS.JOBGUID = WSREQSS.JOBGUID
+                    INNER JOIN VEGJOB ON SS.JOBGUID = VEGJOB.JOBGUID
+                    LEFT JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID
                 WHERE WSREQSS.JOBGUID = '{$jobGuid}'
                 FOR JSON PATH, WITHOUT_ARRAY_WRAPPER";
     }
