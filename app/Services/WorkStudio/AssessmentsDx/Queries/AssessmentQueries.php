@@ -388,7 +388,7 @@ class AssessmentQueries
      * Includes nested Stations array with Units sub-array.
      *
      * @param  string  $jobGuid  The circuit's JOBGUID
-     *                           =========================================================================
+     *=========================================================================
      */
     public static function getAllByJobGuid(string $jobGuid): string
     {
