@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Dashboard\Overview;
 use App\Livewire\Onboarding\ChangePassword;
 use App\Livewire\Onboarding\WorkStudioSetup;
 use Illuminate\Support\Facades\Route;
@@ -28,7 +29,7 @@ Route::middleware(['auth'])->prefix('onboarding')->name('onboarding.')->group(fu
 |--------------------------------------------------------------------------
 | These routes require full authentication and completed onboarding.
 */
-Route::view('dashboard', 'dashboard')
+Route::get('dashboard', Overview::class)
     ->middleware(['auth', 'verified', 'onboarding'])
     ->name('dashboard');
 

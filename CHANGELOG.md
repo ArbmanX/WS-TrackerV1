@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Overview Dashboard** (2026-02-04)
+  - `Overview` Livewire component (`app/Livewire/Dashboard/Overview.php`)
+  - Dashboard view with cards/table toggle (`resources/views/livewire/dashboard/overview.blade.php`)
+  - UI components: `stat-card`, `metric-pill`, `view-toggle` (`resources/views/components/ui/`)
+  - Dashboard components: `region-card`, `region-table` (`resources/views/components/dashboard/`)
+  - Integrated with `WorkStudioApiService` for real-time API data
+  - URL-persisted state for view mode and sorting (`#[Url]` attributes)
+  - Responsive grid layouts for all screen sizes
+- **Blade Heroicons** (2026-02-04)
+  - Added `blade-ui-kit/blade-heroicons` package for icon components
+
 - **WS Module Integration** (2026-02-04)
   - Integrated WorkStudio Database Intelligence module (`_bmad/ws/`)
   - Schema Architect, Query Specialist, Laravel Generator agents available
