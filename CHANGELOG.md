@@ -10,6 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **User Onboarding & Authentication System** (2026-02-03)
+  - `user_settings` table for preferences, onboarding status, and theme settings
+  - WorkStudio columns on `users` table (`ws_username`, `ws_full_name`, `ws_domain`, `ws_groups`, `ws_validated_at`)
+  - `UserSetting` model with factory states (`firstLogin()`, `onboarded()`)
+  - `UserDetailsService` for GETUSERDETAILS protocol integration
+  - `UserDetailsServiceInterface` contract with custom exceptions
+  - `EnsurePasswordChanged` middleware for onboarding flow enforcement
+  - `ChangePassword` Livewire component for first-login password change
+  - `WorkStudioSetup` Livewire component for WorkStudio validation
+  - `SudoAdminSeeder` for initial system administrator creation
+  - Onboarding routes (`/onboarding/password`, `/onboarding/workstudio`)
+  - Comprehensive test coverage for onboarding flow and middleware
 - `PROJECT_RULES.md` — Development standards and guidelines
 - AI Context Management rules in `PROJECT_RULES.md` (context file tracking, warnings at 60%/70%)
 - AI session management rules in `CLAUDE.md`
@@ -23,6 +35,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Scheduled cleanup commands in `routes/console.php`
 
 ### Changed
+- **User Onboarding Flow** (2026-02-03)
+  - Home route (`/`) now redirects to login
+  - Dashboard requires completed onboarding (`onboarding` middleware)
+  - Login page updated to show "Contact administrator" instead of registration link
+  - Registration disabled in Fortify configuration (admin creates users)
+  - `User` model updated with `settings()` relationship and WS field casts
 - `AssessmentQueries::getAllJobGUIDsForEntireScopeYear()` — Added Total_Miles, Completed_Miles, Percent_Complete fields
 - **WorkStudio API Layer Refactoring** (2026-02-01)
   - `WorkStudioApiService` now acts as facade, delegating to `GetQueryService`

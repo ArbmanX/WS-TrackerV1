@@ -123,4 +123,18 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Sudo Admin Configuration
+    |--------------------------------------------------------------------------
+    |
+    | These settings define the initial system administrator account that is
+    | created during deployment via the SudoAdminSeeder. This account bypasses
+    | the normal onboarding flow and has full system access.
+    |
+    */
+
+    'sudo_admin_email' => env('SUDO_ADMIN_EMAIL', 'admin@example.com'),
+    'sudo_admin_password' => env('SUDO_ADMIN_PASSWORD'),
+
 ];

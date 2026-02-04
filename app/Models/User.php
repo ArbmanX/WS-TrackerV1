@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
@@ -25,6 +26,11 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'ws_username',
+        'ws_full_name',
+        'ws_domain',
+        'ws_groups',
+        'ws_validated_at',
     ];
 
     /**
@@ -49,7 +55,33 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'ws_groups' => 'array',
+            'ws_validated_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Get the user's settings.
+     */
+    public function settings(): HasOne
+    {
+        return $this->hasOne(UserSetting::class);
+    }
+
+    /**
+     * Check if the user has completed onboarding.
+     */
+    public function isOnboardingComplete(): bool
+    {
+        return $this->settings?->onboarding_completed_at !== null;
+    }
+
+    /**
+     * Check if this is the user's first login.
+     */
+    public function isFirstLogin(): bool
+    {
+        return $this->settings?->first_login ?? true;
     }
 
     /**

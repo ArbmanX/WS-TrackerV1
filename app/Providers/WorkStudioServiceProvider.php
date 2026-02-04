@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Services\WorkStudio\Contracts\UserDetailsServiceInterface;
 use App\Services\WorkStudio\Contracts\WorkStudioApiInterface;
+use App\Services\WorkStudio\Services\UserDetailsService;
 use App\Services\WorkStudio\WorkStudioApiService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\ServiceProvider;
@@ -17,6 +19,11 @@ class WorkStudioServiceProvider extends ServiceProvider
         $this->app->bind(
             WorkStudioApiInterface::class,
             WorkStudioApiService::class
+        );
+
+        $this->app->bind(
+            UserDetailsServiceInterface::class,
+            UserDetailsService::class
         );
     }
 

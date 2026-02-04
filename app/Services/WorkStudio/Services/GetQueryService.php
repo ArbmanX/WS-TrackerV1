@@ -187,7 +187,6 @@ class GetQueryService
         $sql =
         AssessmentQueries::getAllByJobGuid($jobGuid);
 
-        dd($sql);
         return $this->executeAndHandle($sql, null);
     }
 

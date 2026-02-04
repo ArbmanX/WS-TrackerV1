@@ -72,11 +72,8 @@
             </button>
         </form>
 
-        @if (Route::has('register'))
-            <div class="space-x-1 text-sm text-center rtl:space-x-reverse text-base-content/70">
-                <span>{{ __('Don\'t have an account?') }}</span>
-                <a href="{{ route('register') }}" wire:navigate class="link link-primary">{{ __('Sign up') }}</a>
-            </div>
-        @endif
+        <div class="text-sm text-center text-base-content/60">
+            <p>{{ __('Contact your administrator if you need an account.') }}</p>
+        </div>
     </div>
 </x-layouts::auth>
