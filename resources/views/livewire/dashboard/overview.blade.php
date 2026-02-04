@@ -64,17 +64,20 @@
     </div>
 
     {{-- Content --}}
-    <div class="bg-base-100 rounded-box shadow">
-        @if ($viewMode === 'cards')
-            <div class="p-4">
+    @if ($viewMode === 'cards')
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            {{-- Left: Region Cards (2x2 sub-grid) --}}
+            <div>
                 @if ($this->regionalMetrics->isEmpty())
-                    <div class="text-center py-12">
-                        <x-heroicon-o-map class="size-12 mx-auto mb-4 text-base-content/30" />
-                        <h3 class="text-lg font-medium mb-1">No Regions Found</h3>
-                        <p class="text-base-content/60">There are no active regions to display.</p>
+                    <div class="card bg-base-100 shadow">
+                        <div class="card-body text-center py-12">
+                            <x-heroicon-o-map class="size-12 mx-auto mb-4 text-base-content/30" />
+                            <h3 class="text-lg font-medium mb-1">No Regions Found</h3>
+                            <p class="text-base-content/60">There are no active regions to display.</p>
+                        </div>
                     </div>
                 @else
-                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    <div class="grid grid-cols-2 gap-4">
                         @foreach ($this->regionalMetrics as $region)
                             <x-dashboard.region-card
                                 :region="$region"
@@ -84,14 +87,27 @@
                     </div>
                 @endif
             </div>
-        @else
-            <x-dashboard.region-table
-                :regions="$this->regionalMetrics"
-                :sortBy="$sortBy"
-                :sortDir="$sortDir"
-            />
-        @endif
-    </div>
+
+            {{-- Right: Active Assessments --}}
+            <div class="relative">
+                <livewire:dashboard.active-assessments />
+            </div>
+        </div>
+    @else
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <div class="bg-base-100 rounded-box shadow xl:col-span-1">
+                <x-dashboard.region-table
+                    :regions="$this->regionalMetrics"
+                    :sortBy="$sortBy"
+                    :sortDir="$sortDir"
+                />
+            </div>
+
+            <div class="relative xl:col-span-1">
+                <livewire:dashboard.active-assessments />
+            </div>
+        </div>
+    @endif
 
     {{-- Loading Overlay --}}
     <div

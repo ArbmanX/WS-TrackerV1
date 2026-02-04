@@ -460,6 +460,118 @@ class AssessmentQueries
     */
 
     /** =========================================================================
+     * Active Assessments Ordered by Oldest Unit
+     * =========================================================================
+     * Retrieves N circuits filtered by:
+     *   - STATUS = 'ACTIV'
+     *   - TAKEN = 1 (true)
+     *   - TAKENBY domain matches configured (default from contractors config)
+     *   - Assessment started (LENGTHCOMP > 0)
+     * Ordered by oldest first assessed unit (cascading down)
+     *
+     * @param  int  $limit  Number of results to return (default 50)
+     * @param  string|null  $domain  Domain filter (e.g., 'ASPLUNDH'). Defaults to first contractor in config.
+     *                               =========================================================================
+     */
+    public static function getActiveAssessmentsOrderedByOldest(int $limit = 5, ?string $domain = null): string
+    {
+        $resourceGroupsServ = app(ResourceGroupAccessService::class);
+        $resGrpArr = $resourceGroupsServ->getRegionsForRole('planner');
+        $resourceGroups = WSHelpers::toSqlInClause($resGrpArr);
+        $filterScopeYear = config('ws_assessment_query.scope_year');
+
+        // Default domain from first contractor in config, uppercase for matching
+        $domainFilter = strtoupper($domain ?? config('ws_assessment_query.contractors.0', 'ASPLUNDH'));
+        $contractors = WSHelpers::toSqlInClause(config('ws_assessment_query.contractors'));
+        $jobTypes = WSHelpers::toSqlInClause(config('ws_assessment_query.job_types'));
+
+        $lastSync = self::formatToEasternTime('SS.EDITDATE');
+
+        // Reuse parseMsDateToDate pattern: CAST(CAST(REPLACE(REPLACE(..., '/Date(', ''), ')/', '') AS DATETIME) AS DATE)
+        $firstEditDate = self::parseMsDateToDate('MIN(V.ASSDDATE)');
+        $lastEditDate = self::parseMsDateToDate('MAX(V.ASSDDATE)');
+        $oldestRaw = self::parseMsDateToDate('MIN(V.ASSDDATE)');
+
+        return "SELECT TOP ({$limit})
+                    -- Current Owner (full username)
+                    SS.TAKENBY AS Current_Owner,
+
+                    -- Line Name
+                    VEGJOB.LINENAME AS Line_Name,
+
+                    -- Job Identifiers
+                    SS.JOBGUID AS Job_GUID,
+                    SS.WO AS Work_Order,
+
+                    -- Miles
+                    CAST(VEGJOB.LENGTH AS DECIMAL(10,2)) AS Total_Miles,
+                    CAST(VEGJOB.LENGTHCOMP AS DECIMAL(10,2)) AS Completed_Miles,
+
+                    -- First Edit Date (oldest assessed unit)
+                    FORMAT(UnitDates.First_Edit_Date, 'MM/dd/yyyy') AS First_Edit_Date,
+
+                    -- Last Edit Date (most recent assessed unit)
+                    FORMAT(UnitDates.Last_Edit_Date, 'MM/dd/yyyy') AS Last_Edit_Date,
+
+                    -- Last Sync
+                    {$lastSync} AS Last_Sync
+
+                FROM SS
+                INNER JOIN VEGJOB ON SS.JOBGUID = VEGJOB.JOBGUID
+                LEFT JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID
+
+                -- Get first/last assessed dates and raw oldest date for ordering
+                CROSS APPLY (
+                    SELECT
+                        {$firstEditDate} AS First_Edit_Date,
+                        {$lastEditDate} AS Last_Edit_Date,
+                        {$oldestRaw} AS Oldest_Unit_Date
+                    FROM VEGUNIT V
+                    WHERE V.JOBGUID = SS.JOBGUID
+                      AND V.ASSDDATE IS NOT NULL
+                      AND V.ASSDDATE != ''
+                      AND V.UNIT IS NOT NULL
+                      AND V.UNIT != ''
+                      AND V.UNIT != 'NW'
+                ) AS UnitDates
+
+                WHERE
+                    -- Must be ACTIV status
+                    SS.STATUS = 'ACTIV'
+
+                    -- Must be taken (checked out)
+                    AND SS.TAKEN = 1
+
+                    -- Resource group / region filter
+                    AND VEGJOB.REGION IN ({$resourceGroups})
+
+                    -- Scope year filter
+                    AND WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$filterScopeYear}%'
+
+                    -- Contractor filter
+                    AND VEGJOB.CONTRACTOR IN ({$contractors})
+
+                    -- Job type filter
+                    AND SS.JOBTYPE IN ({$jobTypes})
+
+                    -- Exclude reactive cycle types
+                    AND VEGJOB.CYCLETYPE NOT IN ('Reactive', 'Storm Follow Up', 'Misc. Project Work', 'PUC-STORM FOLLOW UP')
+
+                    -- Domain must match (extract part before backslash)
+                    AND UPPER(LEFT(SS.TAKENBY, CHARINDEX('\\', SS.TAKENBY + '\\') - 1)) = '{$domainFilter}'
+
+                    -- Assessment must be started (completed miles > 0)
+                    AND VEGJOB.LENGTHCOMP > 0
+
+                -- Order by oldest assessed unit first
+                ORDER BY UnitDates.Oldest_Unit_Date ASC";
+    }
+    /* =========================================================================
+    * END
+    * =========================================================================
+    */
+
+    /** =========================================================================
      * Gets JOBGUID for Entire Scope Year
      * =========================================================================
      */

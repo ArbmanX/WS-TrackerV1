@@ -182,4 +182,12 @@ class WorkStudioApiService implements WorkStudioApiInterface
     {
         return $this->queryService->getRegionalMetrics();
     }
+
+    /**
+     * Get active assessments ordered by oldest assessed unit.
+     */
+    public function getActiveAssessmentsOrderedByOldest(int $limit = 50, ?string $domain = null): Collection
+    {
+        return $this->queryService->getActiveAssessmentsOrderedByOldest($limit, $domain);
+    }
 }

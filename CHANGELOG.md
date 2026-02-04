@@ -10,6 +10,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Active Assessments Component** (2026-02-04)
+  - `ActiveAssessments` Livewire component (`app/Livewire/Dashboard/ActiveAssessments.php`) with error-resilient API calls
+  - Active assessments card view with scrollable list, empty state, loading overlay (`resources/views/livewire/dashboard/active-assessments.blade.php`)
+  - Assessment row Blade component — card-style list items with avatar initials, progress bar, miles remaining (`resources/views/components/dashboard/assessment-row.blade.php`)
+  - `getActiveAssessmentsOrderedByOldest()` added to `WorkStudioApiInterface` and `WorkStudioApiService`
+  - SQL query in `AssessmentQueries` filtered by resource groups, scope year 2026, contractors, job types, and cycle type exclusions
+  - Feature tests for empty state, data display, count badge, and refresh (`tests/Feature/Dashboard/ActiveAssessmentsTest.php`)
+
+### Changed
+- **Overview Dashboard Layout** (2026-02-04)
+  - Stats grid restored to standalone `grid-cols-2 md:grid-cols-4` row
+  - Content section restructured: region cards (2x2 left) + active assessments card (right) in `xl:grid-cols-2` layout
+  - Active assessments appears alongside regions in both cards and table view modes
+
+### Fixed
+- **Active Assessments SQL** (2026-02-04)
+  - Fixed `ASSDDATE` casting: uses `parseMsDateToDate()` (DATETIME) instead of incorrect BIGINT epoch conversion
+  - Added missing resource group, scope year, contractor, job type, and cycle type filters to match other queries
+
+### Added (Previous)
 - **App Shell Layout** (2026-02-04)
   - `config/themes.php` — Theme configuration with 16 DaisyUI themes organized by category
   - `resources/js/alpine/stores.js` — Alpine.js stores for theme and sidebar state management

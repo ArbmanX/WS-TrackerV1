@@ -190,6 +190,25 @@ class GetQueryService
         return $this->executeAndHandle($sql, null);
     }
 
+    /**
+     * Get active assessments ordered by oldest unit first.
+     *
+     * Filters:
+     *   - STATUS = 'ACTIV'
+     *   - TAKEN = true (checked out)
+     *   - Username domain matches (default from config)
+     *   - Assessment started (completed miles > 0)
+     *
+     * @param  int  $limit  Number of results (default 50)
+     * @param  string|null  $domain  Domain filter (e.g., 'ASPLUNDH'). Defaults to first contractor.
+     */
+    public function getActiveAssessmentsOrderedByOldest(int $limit = 50, ?string $domain = null): Collection
+    {
+        $sql = AssessmentQueries::getActiveAssessmentsOrderedByOldest($limit, $domain);
+
+        return $this->executeAndHandle($sql, null);
+    }
+
     public function queryAll(): Collection
     {
         $timer = new ExecutionTimer;

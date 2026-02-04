@@ -53,4 +53,13 @@ interface WorkStudioApiInterface
      * @return Collection Collection of regional metric data
      */
     public function getRegionalMetrics(): Collection;
+
+    /**
+     * Get active assessments ordered by oldest assessed unit.
+     *
+     * @param  int  $limit  Number of results (default 50)
+     * @param  string|null  $domain  Domain filter (e.g., 'ASPLUNDH')
+     * @return Collection Collection of active assessment records
+     */
+    public function getActiveAssessmentsOrderedByOldest(int $limit = 50, ?string $domain = null): Collection;
 }
