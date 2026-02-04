@@ -1,5 +1,7 @@
 @import 'tailwindcss';
-@plugin "daisyui";
+@plugin "daisyui" {
+    themes: light, dark, corporate, cupcake, emerald, retro, garden, winter, autumn, silk, synthwave, cyberpunk, dracula, night, forest, coffee;
+}
 
 @source '../views';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
