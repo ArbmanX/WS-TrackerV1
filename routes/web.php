@@ -1,6 +1,5 @@
 <?php
 
-use App\Livewire\Dashboard\Overview;
 use App\Livewire\Onboarding\ChangePassword;
 use App\Livewire\Onboarding\WorkStudioSetup;
 use Illuminate\Support\Facades\Route;
@@ -27,11 +26,8 @@ Route::middleware(['auth'])->prefix('onboarding')->name('onboarding.')->group(fu
 |--------------------------------------------------------------------------
 | Protected Routes
 |--------------------------------------------------------------------------
-| These routes require full authentication and completed onboarding.
+| Dashboard and other protected routes are defined in workstudioAPI.php
 */
-Route::get('dashboard', Overview::class)
-    ->middleware(['auth', 'verified', 'onboarding'])
-    ->name('dashboard');
 
 /*
 |--------------------------------------------------------------------------

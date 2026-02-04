@@ -1,8 +1,27 @@
 <?php
 
+use App\Livewire\Dashboard\Overview;
 use App\Services\WorkStudio\Services\GetQueryService;
 use Illuminate\Support\Facades\Route;
 
+/*
+|--------------------------------------------------------------------------
+| Dashboard Routes
+|--------------------------------------------------------------------------
+*/
+Route::get('dashboard', Overview::class)
+    ->middleware(['auth', 'verified', 'onboarding'])
+    ->name('dashboard');
+
+// Testing route - no auth required (remove in production)
+Route::get('dashboard/test', Overview::class)
+    ->name('dashboard.test');
+
+/*
+|--------------------------------------------------------------------------
+| WorkStudio API Routes
+|--------------------------------------------------------------------------
+*/
 Route::get('/assessment-jobguids', function (GetQueryService $queryService) {
     $data = $queryService->getJobGuids();
     if (config('app.debug')) {
