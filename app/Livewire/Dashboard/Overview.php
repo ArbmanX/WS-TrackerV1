@@ -9,7 +9,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
-#[Layout('layouts.app', ['title' => 'Overview Dashboard'])]
+#[Layout('components.layout.app-shell', ['title' => 'Overview Dashboard', 'breadcrumbs' => [['label' => 'Dashboard', 'icon' => 'home']]])]
 class Overview extends Component
 {
     #[Url]

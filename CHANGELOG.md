@@ -10,6 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **App Shell Layout** (2026-02-04)
+  - `config/themes.php` — Theme configuration with 16 DaisyUI themes organized by category
+  - `resources/js/alpine/stores.js` — Alpine.js stores for theme and sidebar state management
+  - Updated `resources/js/app.js` to import Alpine stores
+  - UI components: `icon`, `tooltip`, `breadcrumbs`, `theme-toggle`, `theme-picker`
+  - Layout components: `app-shell`, `sidebar`, `header`, `user-menu`
+  - Full theme picker with categorized themes (Recommended, Light, Dark)
+  - FOUC prevention script for instant theme application
+  - Responsive sidebar: drawer on mobile, collapsible on tablet/desktop
+  - localStorage persistence for theme and sidebar preferences
+  - Updated Overview component to use new app-shell layout
+
 - **Overview Dashboard** (2026-02-04)
   - `Overview` Livewire component (`app/Livewire/Dashboard/Overview.php`)
   - Dashboard view with cards/table toggle (`resources/views/livewire/dashboard/overview.blade.php`)
