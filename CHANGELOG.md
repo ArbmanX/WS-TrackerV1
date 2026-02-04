@@ -10,6 +10,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **WS Module Integration** (2026-02-04)
+  - Integrated WorkStudio Database Intelligence module (`_bmad/ws/`)
+  - Schema Architect, Query Specialist, Laravel Generator agents available
+  - Query optimization workflows for WorkStudio API queries
+  - Updated `CLAUDE.md` with WS module documentation
+
+### Removed
+- **UI Cleanup for Dashboard Rebuild** (2026-02-04)
+  - Removed Settings Livewire components (`Profile`, `Password`, `Appearance`, `TwoFactor`, `DeleteUserForm`)
+  - Removed Settings views (`resources/views/livewire/settings/`)
+  - Removed UI components: `desktop-user-menu`, `placeholder-pattern`, `settings/layout`, `settings-heading`, `app/header`
+  - Removed Settings tests (`tests/Feature/Settings/`)
+  - Backed up TwoFactor components to `app/Livewire/_backup/` for future reference
+
+### Changed
+- **UI Simplification** (2026-02-04)
+  - Dashboard view replaced with minimal "Coming Soon" stub
+  - App layout simplified from drawer/sidebar to minimal header with logout
+  - Settings routes now redirect to dashboard (temporarily disabled)
+
+### Added (Previous)
 - **User Onboarding & Authentication System** (2026-02-03)
   - `user_settings` table for preferences, onboarding status, and theme settings
   - WorkStudio columns on `users` table (`ws_username`, `ws_full_name`, `ws_domain`, `ws_groups`, `ws_validated_at`)

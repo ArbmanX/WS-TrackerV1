@@ -27,6 +27,21 @@ This application is a Laravel application and its main Laravel ecosystems packag
 
 This project has domain-specific skills available. You MUST activate the relevant skill whenever you work in that domain—don't wait until you're stuck.
 
+### WS Module (WorkStudio Database Intelligence)
+
+The WS module is available at `_bmad/ws/` and provides:
+- **Schema Architect** — Database structure expert (`/ws:schema-architect`)
+- **Query Specialist** — SQL queries and optimization (`/ws:query-specialist`)
+- **Laravel Generator** — TALL stack code generation (`/ws:laravel-generator`)
+
+**Workflows available:**
+- `table-explorer` — Interactive deep-dive into any table
+- `model-generator` — Generate Laravel models with relationships
+- `query-builder` — Guided SQL query construction
+- `livewire-scaffold` — Generate Livewire CRUD components
+
+Use WS module when working with WorkStudio API queries, database schemas, or generating Laravel code for WorkStudio data.
+
 - `livewire-development` — Develops reactive Livewire 4 components. Activates when creating, updating, or modifying Livewire components; working with wire:model, wire:click, wire:loading, or any wire: directives; adding real-time updates, loading states, or reactivity; debugging component behavior; writing Livewire tests; or when the user mentions Livewire, component, counter, or reactive UI.
 - `pest-testing` — Tests applications using the Pest 4 PHP framework. Activates when writing tests, creating unit or feature tests, adding assertions, testing Livewire components, browser testing, debugging test failures, working with datasets or mocking; or when the user mentions test, spec, TDD, expects, assertion, coverage, or needs to verify functionality works.
 - `tailwindcss-development` — Styles applications using Tailwind CSS v4 utilities. Activates when adding styles, restyling components, working with gradients, spacing, layout, flex, grid, responsive design, dark mode, colors, typography, or borders; or when the user mentions CSS, styling, classes, Tailwind, restyle, hero section, cards, buttons, or any visual/UI changes.
