@@ -65,9 +65,9 @@
 
     {{-- Content --}}
     @if ($viewMode === 'cards')
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {{-- Left: Region Cards (2x2 sub-grid) --}}
-            <div>
+            <div class="lg:col-span-2">
                 @if ($this->regionalMetrics->isEmpty())
                     <div class="card bg-base-100 shadow">
                         <div class="card-body text-center py-12">
@@ -89,7 +89,7 @@
             </div>
 
             {{-- Right: Active Assessments --}}
-            <div class="relative">
+            <div class="relative lg:col-span-1">
                 <livewire:dashboard.active-assessments />
             </div>
         </div>
