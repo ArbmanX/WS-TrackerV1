@@ -1,7 +1,7 @@
 <?php
 
 use App\Livewire\Dashboard\ActiveAssessments;
-use App\Services\WorkStudio\WorkStudioApiService;
+use App\Services\WorkStudio\Services\CachedQueryService;
 use Illuminate\Support\Collection;
 use Livewire\Livewire;
 
@@ -13,11 +13,11 @@ beforeEach(function () {
 
 function mockApiService(Collection $assessments): void
 {
-    $mock = Mockery::mock(WorkStudioApiService::class);
+    $mock = Mockery::mock(CachedQueryService::class);
     $mock->shouldReceive('getActiveAssessmentsOrderedByOldest')
         ->andReturn($assessments);
 
-    app()->instance(WorkStudioApiService::class, $mock);
+    app()->instance(CachedQueryService::class, $mock);
 }
 
 test('renders empty state when no active assessments', function () {

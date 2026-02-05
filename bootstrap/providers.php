@@ -4,4 +4,5 @@ return [
     App\Providers\AppServiceProvider::class,
     App\Providers\FortifyServiceProvider::class,
     App\Providers\HealthCheckServiceProvider::class,
+    App\Providers\WorkStudioServiceProvider::class,
 ];

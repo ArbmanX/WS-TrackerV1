@@ -2,7 +2,7 @@
 
 namespace App\Livewire\Dashboard;
 
-use App\Services\WorkStudio\WorkStudioApiService;
+use App\Services\WorkStudio\Services\CachedQueryService;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -28,13 +28,13 @@ class Overview extends Component
     #[Computed]
     public function systemMetrics(): Collection
     {
-        return app(WorkStudioApiService::class)->getSystemWideMetrics();
+        return app(CachedQueryService::class)->getSystemWideMetrics();
     }
 
     #[Computed]
     public function regionalMetrics(): Collection
     {
-        $metrics = app(WorkStudioApiService::class)->getRegionalMetrics();
+        $metrics = app(CachedQueryService::class)->getRegionalMetrics();
 
         return $this->sortMetrics($metrics);
     }

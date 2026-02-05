@@ -10,6 +10,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Driver-Agnostic Cache Layer** (2026-02-04)
+  - `CachedQueryService` decorator wrapping `GetQueryService` with per-dataset TTL caching (`app/Services/WorkStudio/Services/CachedQueryService.php`)
+  - Cache config file (`config/ws_cache.php`) with per-dataset TTLs, key prefix, dataset definitions, registry key
+  - Driver-agnostic metadata tracking via registry pattern (hit/miss counts, cached_at timestamps)
+  - Methods: `getSystemWideMetrics()`, `getRegionalMetrics()`, `getDailyActivitiesForAllAssessments()`, `getActiveAssessmentsOrderedByOldest()`, `getJobGuids()` — all with `forceRefresh` parameter
+  - Admin methods: `invalidateAll()`, `invalidateDataset()`, `warmAll()`, `getCacheStatus()`, `getDriverName()`
+  - Cache key pattern: `ws:{scope_year}:{dataset_name}`
+  - Unit tests for caching, force refresh, invalidation, warm, status, hit tracking (`tests/Unit/CachedQueryServiceTest.php`)
+
+- **Cache Admin Dashboard** (2026-02-04)
+  - `CacheControls` Livewire component under Data Management section (`app/Livewire/DataManagement/CacheControls.php`)
+  - Dashboard view with stats row, dataset table with status badges, TTL progress bars, hit/miss counts (`resources/views/livewire/data-management/cache-controls.blade.php`)
+  - Actions: per-dataset refresh, clear all (with confirmation), warm cache
+  - Flash message system with auto-dismiss
+  - Loading overlays for bulk operations
+  - Data Management routes (`routes/data-management.php`) at `/data-management/cache`
+  - Feature tests for auth guard, page display, all actions (`tests/Feature/DataManagement/CacheControlsTest.php`)
+
+### Changed
+- **Dashboard components now use CachedQueryService** (2026-02-04)
+  - `Overview.php` switched from `WorkStudioApiService` to `CachedQueryService` for `systemMetrics` and `regionalMetrics`
+  - `ActiveAssessments.php` switched from `WorkStudioApiService` to `CachedQueryService` for assessment data
+  - Existing `ActiveAssessmentsTest.php` updated to mock `CachedQueryService`
+
+- **Sidebar Navigation** (2026-02-04)
+  - Added "Data Management" section with "Cache Controls" sub-item (icon: server-stack)
+
+### Fixed
+- **WorkStudioServiceProvider registration** (2026-02-04)
+  - Added `WorkStudioServiceProvider::class` to `bootstrap/providers.php` — was previously missing, meaning interface bindings and `Http::macro('workstudio')` were never loaded
+
 - **Active Assessments Component** (2026-02-04)
   - `ActiveAssessments` Livewire component (`app/Livewire/Dashboard/ActiveAssessments.php`) with error-resilient API calls
   - Active assessments card view with scrollable list, empty state, loading overlay (`resources/views/livewire/dashboard/active-assessments.blade.php`)

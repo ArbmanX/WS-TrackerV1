@@ -2,7 +2,7 @@
 
 namespace App\Livewire\Dashboard;
 
-use App\Services\WorkStudio\WorkStudioApiService;
+use App\Services\WorkStudio\Services\CachedQueryService;
 use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -11,13 +11,13 @@ use Livewire\Component;
 
 class ActiveAssessments extends Component
 {
-    public int $limit = 50;
+    public int $limit = 5;
 
     #[Computed]
     public function assessments(): Collection
     {
         try {
-            return app(WorkStudioApiService::class)->getActiveAssessmentsOrderedByOldest($this->limit);
+            return app(CachedQueryService::class)->getActiveAssessmentsOrderedByOldest($this->limit);
         } catch (Exception $e) {
             Log::warning('ActiveAssessments: failed to fetch data', [
                 'error' => $e->getMessage(),

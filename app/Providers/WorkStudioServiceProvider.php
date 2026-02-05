@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Services\WorkStudio\Contracts\UserDetailsServiceInterface;
 use App\Services\WorkStudio\Contracts\WorkStudioApiInterface;
+use App\Services\WorkStudio\Services\CachedQueryService;
 use App\Services\WorkStudio\Services\UserDetailsService;
 use App\Services\WorkStudio\WorkStudioApiService;
 use Illuminate\Support\Facades\Http;
@@ -25,6 +26,8 @@ class WorkStudioServiceProvider extends ServiceProvider
             UserDetailsServiceInterface::class,
             UserDetailsService::class
         );
+
+        $this->app->singleton(CachedQueryService::class);
     }
 
     /**

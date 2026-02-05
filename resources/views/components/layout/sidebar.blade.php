@@ -17,7 +17,6 @@
 --}}
 
 @php
-    // Simplified navigation - Overview only as per context.md
     $navigation = [
         [
             'section' => 'Dashboard',
@@ -26,6 +25,16 @@
                     'label' => 'Overview',
                     'route' => 'dashboard',
                     'icon' => 'chart-bar',
+                ],
+            ],
+        ],
+        [
+            'section' => 'Data Management',
+            'items' => [
+                [
+                    'label' => 'Cache Controls',
+                    'route' => 'data-management.cache',
+                    'icon' => 'server-stack',
                 ],
             ],
         ],
