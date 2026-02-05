@@ -66,3 +66,16 @@ Route::get('/allByJobGUID', function (GetQueryService $queryService) {
 
     return response()->json($data);
 });
+
+// Testing route: /field-lookup/{table}/{field}
+// e.g. /field-lookup/VEGUNIT/LASTNAME
+//      /field-lookup/VEGUNIT/CITY
+//      /field-lookup/VEGJOB/REGION
+Route::get('/field-lookup/{table}/{field}', function (GetQueryService $queryService, string $table, string $field) {
+    $data = $queryService->getDistinctFieldValues($table, $field);
+    if (config('app.debug')) {
+        dump($data);
+    }
+
+    return response()->json($data);
+});

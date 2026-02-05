@@ -209,6 +209,20 @@ class GetQueryService
         return $this->executeAndHandle($sql, null);
     }
 
+    /**
+     * Get distinct values of a field from a table, scoped to active assessments.
+     *
+     * @param  string  $table  Table name (e.g., 'VEGUNIT', 'STATIONS')
+     * @param  string  $field  Column name (e.g., 'LASTNAME', 'CITY')
+     * @param  int  $limit  Max rows to return (default 500)
+     */
+    public function getDistinctFieldValues(string $table, string $field, int $limit = 500): Collection
+    {
+        $sql = AssessmentQueries::getDistinctFieldValues($table, $field, $limit);
+
+        return $this->executeAndHandle($sql, null);
+    }
+
     public function queryAll(): Collection
     {
         $timer = new ExecutionTimer;
