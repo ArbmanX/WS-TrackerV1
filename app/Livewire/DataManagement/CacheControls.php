@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Livewire\DataManagement;
 
 use App\Services\WorkStudio\Services\CachedQueryService;
+use App\Services\WorkStudio\ValueObjects\UserQueryContext;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -26,7 +28,7 @@ class CacheControls extends Component
     #[Computed]
     public function cacheStatus(): array
     {
-        return app(CachedQueryService::class)->getCacheStatus();
+        return app(CachedQueryService::class)->getCacheStatus($this->userContext());
     }
 
     #[Computed]
@@ -62,6 +64,7 @@ class CacheControls extends Component
     public function refreshDataset(string $dataset): void
     {
         $service = app(CachedQueryService::class);
+        $context = $this->userContext();
         $datasets = config('ws_cache.datasets');
 
         if (! isset($datasets[$dataset])) {
@@ -70,11 +73,11 @@ class CacheControls extends Component
             return;
         }
 
-        $service->invalidateDataset($dataset);
+        $service->invalidateDataset($dataset, $context);
         $method = $datasets[$dataset]['method'];
 
         try {
-            $service->{$method}();
+            $service->{$method}($context);
             $this->flash("Refreshed {$datasets[$dataset]['label']} successfully.");
         } catch (\Throwable $e) {
             $this->flash("Failed to refresh {$datasets[$dataset]['label']}: {$e->getMessage()}", 'error');
@@ -92,7 +95,7 @@ class CacheControls extends Component
 
     public function warmAll(): void
     {
-        $results = app(CachedQueryService::class)->warmAll();
+        $results = app(CachedQueryService::class)->warmAllForContext($this->userContext());
         $successes = collect($results)->where('success', true)->count();
         $failures = collect($results)->where('success', false)->count();
 
@@ -108,6 +111,11 @@ class CacheControls extends Component
     public function render()
     {
         return view('livewire.data-management.cache-controls');
+    }
+
+    private function userContext(): UserQueryContext
+    {
+        return UserQueryContext::fromUser(Auth::user());
     }
 
     private function flash(string $message, string $type = 'success'): void

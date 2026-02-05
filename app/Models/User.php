@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Services\WorkStudio\ValueObjects\UserQueryContext;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -30,6 +31,7 @@ class User extends Authenticatable
         'ws_full_name',
         'ws_domain',
         'ws_groups',
+        'ws_resource_groups',
         'ws_validated_at',
     ];
 
@@ -56,6 +58,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'ws_groups' => 'array',
+            'ws_resource_groups' => 'array',
             'ws_validated_at' => 'datetime',
         ];
     }
@@ -82,6 +85,14 @@ class User extends Authenticatable
     public function isFirstLogin(): bool
     {
         return $this->settings?->first_login ?? true;
+    }
+
+    /**
+     * Build a UserQueryContext from this user's WS fields.
+     */
+    public function queryContext(): UserQueryContext
+    {
+        return UserQueryContext::fromUser($this);
     }
 
     /**

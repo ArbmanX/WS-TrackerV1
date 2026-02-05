@@ -3,6 +3,8 @@
 return [
     'scope_year' => '2026',
 
+    // Contractors are now derived from User->ws_domain via UserQueryContext.
+    // Kept as fallback default for UserQueryContext::fromConfig().
     'contractors' => [
         'Asplundh',
     ],

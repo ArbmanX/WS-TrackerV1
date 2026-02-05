@@ -26,8 +26,8 @@ return [
     ],
 
     'default' => [
-       'DISTRIBUTION',
-       'VEG_PLANNER',
+        'DISTRIBUTION',
+        'VEG_PLANNER',
     ],
 
     /*
@@ -48,21 +48,33 @@ return [
             'VEG_ASSESSORS',
             'VEG_PLANNERS',
         ],
-        
+
         '*' => config('workstudio_resource_groups.all'),
         'admin' => config('workstudio_resource_groups.all'),      // Full access
         'sudo_admin' => config('workstudio_resource_groups.all'), // Full access
     ],
 
-                /*
-            |--------------------------------------------------------------------------
-            | User-Specific Region Restrictions (Optional)
-            |--------------------------------------------------------------------------
-            | Override role-based access for specific users.
-            | Useful when a planner is limited to certain geographic regions.
-            */
-
-    'users' => [
-        'Adam Miller' => ['LANCASTER', 'HARRISBURG'],
+    /*
+      |--------------------------------------------------------------------------
+      | WS Group → Region Mapping
+      |--------------------------------------------------------------------------
+      | Maps WorkStudio group names (domain prefix stripped) to VEGJOB.REGION values.
+      | Used by ResourceGroupAccessService::resolveRegionsFromGroups() during
+      | onboarding to determine which regions a user can access.
+      |
+      | If a group name directly matches a known region in 'all', it's auto-resolved
+      | without needing an entry here.
+      */
+    'group_to_region_map' => [
+        'VEG_PLANNERS' => [
+            'CENTRAL',
+            'HARRISBURG',
+            'LEHIGH',
+            'LANCASTER',
+            'DISTRIBUTION',
+            'PRE_PLANNER',
+            'VEG_ASSESSORS',
+            'VEG_PLANNERS',
+        ],
     ],
 ];

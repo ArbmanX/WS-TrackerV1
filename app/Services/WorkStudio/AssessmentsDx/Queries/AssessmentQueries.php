@@ -3,29 +3,44 @@
 namespace App\Services\WorkStudio\AssessmentsDx\Queries;
 
 use App\Services\WorkStudio\Helpers\WSHelpers;
-use App\Services\WorkStudio\Services\ResourceGroupAccessService;
+use App\Services\WorkStudio\ValueObjects\UserQueryContext;
 
 class AssessmentQueries
 {
     use SqlFragmentHelpers;
 
+    private string $resourceGroupsSql;
+
+    private string $contractorsSql;
+
+    private string $excludedUsersSql;
+
+    private string $jobTypesSql;
+
+    private string $scopeYear;
+
+    /**
+     * @param  UserQueryContext  $context  User-specific query parameters
+     */
+    public function __construct(private readonly UserQueryContext $context)
+    {
+        $this->resourceGroupsSql = WSHelpers::toSqlInClause($context->resourceGroups);
+        $this->contractorsSql = WSHelpers::toSqlInClause($context->contractors);
+
+        // System-level values stay in config
+        $this->excludedUsersSql = WSHelpers::toSqlInClause(config('ws_assessment_query.excludedUsers'));
+        $this->jobTypesSql = WSHelpers::toSqlInClause(config('ws_assessment_query.job_types'));
+        $this->scopeYear = config('ws_assessment_query.scope_year');
+    }
+
     /* =========================================================================
     * System Wide Data - This is broad counts and totals of data
     * =========================================================================
     */
-    public static function systemWideDataQuery(): string
+    public function systemWideDataQuery(): string
     {
-        $resourceGroupsServ = app(ResourceGroupAccessService::class);
-        $resGrpArr = $resourceGroupsServ->getRegionsForRole('planner');
-        $resourceGroups = WSHelpers::toSqlInClause($resGrpArr);
-        $filterScopeYear = config('ws_assessment_query.scope_year');
-
-        $excludedUsers = WSHelpers::toSqlInClause(config('ws_assessment_query.excludedUsers'));
-        $jobTypes = WSHelpers::toSqlInClause(config('ws_assessment_query.job_types'));
-        $contractors = WSHelpers::toSqlInClause(config('ws_assessment_query.contractors'));
-
         return "SELECT
-                (SELECT TOP 1 CONTRACTOR FROM VEGJOB WHERE VEGJOB.CONTRACTOR IN ({$contractors})) AS contractor, 
+                (SELECT TOP 1 CONTRACTOR FROM VEGJOB WHERE VEGJOB.CONTRACTOR IN ({$this->contractorsSql})) AS contractor,
                         -- Circuit Counts
                         COUNT(*) AS total_assessments,
                         SUM(CASE WHEN SS.STATUS = 'ACTIV' THEN 1 ELSE 0 END) AS active_count,
@@ -45,13 +60,13 @@ class AssessmentQueries
                     INNER JOIN VEGJOB ON SS.JOBGUID = VEGJOB.JOBGUID
                     LEFT JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID
 
-                    WHERE VEGJOB.REGION IN ({$resourceGroups})
-                    AND WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$filterScopeYear}%'
+                    WHERE VEGJOB.REGION IN ({$this->resourceGroupsSql})
+                    AND WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$this->scopeYear}%'
                     AND VEGJOB.CYCLETYPE NOT IN ('Reactive')
-                    AND VEGJOB.CONTRACTOR IN ({$contractors})
+                    AND VEGJOB.CONTRACTOR IN ({$this->contractorsSql})
                     AND SS.STATUS IN ('ACTIV', 'QC', 'REWRK', 'CLOSE')
-                    AND SS.TAKENBY NOT IN ({$excludedUsers})
-                    AND SS.JOBTYPE IN ({$jobTypes})
+                    AND SS.TAKENBY NOT IN ({$this->excludedUsersSql})
+                    AND SS.JOBTYPE IN ({$this->jobTypesSql})
                     AND VEGJOB.CYCLETYPE NOT IN ('Reactive', 'Storm Follow Up', 'Misc. Project Work', 'PUC-STORM FOLLOW UP')";
     }
     /* =========================================================================
@@ -78,17 +93,8 @@ class AssessmentQueries
         *    - total bucket trimmimg | linear feet
     * =========================================================================
     */
-    public static function groupedByRegionDataQuery(): string
+    public function groupedByRegionDataQuery(): string
     {
-        $resourceGroupsServ = app(ResourceGroupAccessService::class);
-        $resGrpArr = $resourceGroupsServ->getRegionsForRole('planner');
-        $resourceGroups = WSHelpers::toSqlInClause($resGrpArr);
-        $filterScopeYear = config('ws_assessment_query.scope_year');
-
-        $excludedUsers = WSHelpers::toSqlInClause(config('ws_assessment_query.excludedUsers'));
-        $jobTypes = WSHelpers::toSqlInClause(config('ws_assessment_query.job_types'));
-        $contractors = WSHelpers::toSqlInClause(config('ws_assessment_query.contractors'));
-
         return "SELECT
                     -- Region Identifier
                     VEGJOB.REGION AS Region,
@@ -162,12 +168,12 @@ class AssessmentQueries
                     WHERE JOBVEGETATIONUNITS.JOBGUID = SS.JOBGUID
                 ) AS WorkData
 
-                WHERE VEGJOB.REGION IN ({$resourceGroups})
-                AND WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$filterScopeYear}%'
+                WHERE VEGJOB.REGION IN ({$this->resourceGroupsSql})
+                AND WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$this->scopeYear}%'
                 AND SS.STATUS IN ('ACTIV', 'QC', 'REWRK', 'CLOSE')
-                AND VEGJOB.CONTRACTOR IN ({$contractors})
-                AND SS.TAKENBY NOT IN ({$excludedUsers})
-                AND SS.JOBTYPE IN ({$jobTypes})
+                AND VEGJOB.CONTRACTOR IN ({$this->contractorsSql})
+                AND SS.TAKENBY NOT IN ({$this->excludedUsersSql})
+                AND SS.JOBTYPE IN ({$this->jobTypesSql})
                 AND VEGJOB.CYCLETYPE NOT IN ('Reactive', 'Storm Follow Up', 'Misc. Project Work', 'PUC-STORM FOLLOW UP')
 
                 GROUP BY VEGJOB.REGION
@@ -197,17 +203,8 @@ class AssessmentQueries
         *    - total length of units | 'SPB', 'MPB', 'SPM', 'MPM'
     * =========================================================================
     */
-    public static function groupedByCircuitDataQuery(): string
+    public function groupedByCircuitDataQuery(): string
     {
-        $resourceGroupsServ = app(ResourceGroupAccessService::class);
-        $resGrpArr = $resourceGroupsServ->getRegionsForRole('planner');
-        $resourceGroups = WSHelpers::toSqlInClause($resGrpArr);
-        $filterScopeYear = config('ws_assessment_query.scope_year');
-
-        $excludedUsers = WSHelpers::toSqlInClause(config('ws_assessment_query.excludedUsers'));
-        $jobTypes = WSHelpers::toSqlInClause(config('ws_assessment_query.job_types'));
-        $contractors = WSHelpers::toSqlInClause(config('ws_assessment_query.contractors'));
-
         $lastSync = self::formatToEasternTime('SS.EDITDATE');
 
         return "SELECT
@@ -306,12 +303,12 @@ class AssessmentQueries
                     WHERE JOBVEGETATIONUNITS.JOBGUID = SS.JOBGUID
                 ) AS WorkData
 
-                WHERE VEGJOB.REGION IN ({$resourceGroups})
-                AND WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$filterScopeYear}%'
+                WHERE VEGJOB.REGION IN ({$this->resourceGroupsSql})
+                AND WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$this->scopeYear}%'
                 AND SS.STATUS IN ('ACTIV', 'QC', 'REWRK', 'CLOSE')
-                AND VEGJOB.CONTRACTOR IN ({$contractors})
-                AND SS.TAKENBY NOT IN ({$excludedUsers})
-                AND SS.JOBTYPE IN ({$jobTypes})
+                AND VEGJOB.CONTRACTOR IN ({$this->contractorsSql})
+                AND SS.TAKENBY NOT IN ({$this->excludedUsersSql})
+                AND SS.JOBTYPE IN ({$this->jobTypesSql})
                 AND VEGJOB.CYCLETYPE NOT IN ('Reactive', 'Storm Follow Up', 'Misc. Project Work', 'PUC-STORM FOLLOW UP', 'FFP CPM Maintenance')
 
                 ORDER BY VEGJOB.REGION, SS.STATUS, SS.WO";
@@ -326,28 +323,18 @@ class AssessmentQueries
         *  There should be no permission relevant data collected here
     * =========================================================================
     */
-    public static function getAllAssessmentsDailyActivities(): string
+    public function getAllAssessmentsDailyActivities(): string
     {
-        $resourceGroupsServ = app(ResourceGroupAccessService::class);
-        $resGrpArr = $resourceGroupsServ->getRegionsForRole('planner');
         $scopeYear = self::extractYearFromMsDate('WPStartDate_Assessment_Xrefs.WP_STARTDATE');
 
-        $filterScopeYear = config('ws_assessment_query.scope_year');
-        $resourceGroups = WSHelpers::toSqlInClause($resGrpArr);
-        $jobTypes = WSHelpers::toSqlInClause(config('ws_assessment_query.job_types'));
         $cycleTypes = WSHelpers::toSqlInClause(config('ws_assessment_query.cycle_types'));
-        $contractors = WSHelpers::toSqlInClause(config('ws_assessment_query.contractors'));
         $statues = WSHelpers::toSqlInClause(config('ws_assessment_query.statuses.planner_concern'));
 
-        // $upContractors = str($contractors[0])->upper() . '\\%';
-        // Build reusable fragments
-
         $lastSync = self::formatToEasternTime('SS.EDITDATE');
-        // $unitCountsCrossApply = self::unitCountsCrossApply();
         $dailyRecords = self::dailyRecordsQuery('WSREQSS.JOBGUID', false);
 
         return "SELECT
-                        {$scopeYear} AS Scope_Year, 
+                        {$scopeYear} AS Scope_Year,
                         SS.JOBGUID AS Job_GUID,
                         SS.WO AS Work_Order,
                         SS.EXT AS Extension,
@@ -362,16 +349,16 @@ class AssessmentQueries
                         {$lastSync} AS Last_Sync,
 
                         {$dailyRecords} AS Daily_Records
-                        
+
                     FROM SS
                         INNER JOIN SS AS WSREQSS ON SS.JOBGUID = WSREQSS.JOBGUID
                         INNER JOIN VEGJOB ON SS.JOBGUID = VEGJOB.JOBGUID
                         LEFT JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID
-                    WHERE VEGJOB.REGION IN ({$resourceGroups})
-                    AND WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$filterScopeYear}%'
+                    WHERE VEGJOB.REGION IN ({$this->resourceGroupsSql})
+                    AND WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$this->scopeYear}%'
                     AND WSREQSS.STATUS IN ({$statues})
-                    AND VEGJOB.CONTRACTOR IN ({$contractors})
-                    AND WSREQSS.JOBTYPE IN ({$jobTypes})
+                    AND VEGJOB.CONTRACTOR IN ({$this->contractorsSql})
+                    AND WSREQSS.JOBTYPE IN ({$this->jobTypesSql})
                     AND VEGJOB.CYCLETYPE NOT IN ({$cycleTypes})
 
                     ORDER BY SS.EDITDATE DESC, SS.WO DESC, SS.EXT DESC
@@ -390,7 +377,7 @@ class AssessmentQueries
      * @param  string  $jobGuid  The circuit's JOBGUID
      *=========================================================================
      */
-    public static function getAllByJobGuid(string $jobGuid): string
+    public function getAllByJobGuid(string $jobGuid): string
     {
         // Build reusable fragments
         $scopeYear = self::extractYearFromMsDate('WPStartDate_Assessment_Xrefs.WP_STARTDATE');
@@ -465,29 +452,18 @@ class AssessmentQueries
      * Retrieves N circuits filtered by:
      *   - STATUS = 'ACTIV'
      *   - TAKEN = 1 (true)
-     *   - TAKENBY domain matches configured (default from contractors config)
+     *   - TAKENBY domain matches user's domain
      *   - Assessment started (LENGTHCOMP > 0)
      * Ordered by oldest first assessed unit (cascading down)
      *
      * @param  int  $limit  Number of results to return (default 50)
-     * @param  string|null  $domain  Domain filter (e.g., 'ASPLUNDH'). Defaults to first contractor in config.
-     *                               =========================================================================
+     *                      =========================================================================
      */
-    public static function getActiveAssessmentsOrderedByOldest(int $limit = 5, ?string $domain = null): string
+    public function getActiveAssessmentsOrderedByOldest(int $limit = 5): string
     {
-        $resourceGroupsServ = app(ResourceGroupAccessService::class);
-        $resGrpArr = $resourceGroupsServ->getRegionsForRole('planner');
-        $resourceGroups = WSHelpers::toSqlInClause($resGrpArr);
-        $filterScopeYear = config('ws_assessment_query.scope_year');
-
-        // Default domain from first contractor in config, uppercase for matching
-        $domainFilter = strtoupper($domain ?? config('ws_assessment_query.contractors.0', 'ASPLUNDH'));
-        $contractors = WSHelpers::toSqlInClause(config('ws_assessment_query.contractors'));
-        $jobTypes = WSHelpers::toSqlInClause(config('ws_assessment_query.job_types'));
+        $domainFilter = $this->context->domain;
 
         $lastSync = self::formatToEasternTime('SS.EDITDATE');
-
-        // Reuse parseMsDateToDate pattern: CAST(CAST(REPLACE(REPLACE(..., '/Date(', ''), ')/', '') AS DATETIME) AS DATE)
         $firstEditDate = self::parseMsDateToDate('MIN(V.ASSDDATE)');
         $lastEditDate = self::parseMsDateToDate('MAX(V.ASSDDATE)');
         $oldestRaw = self::parseMsDateToDate('MIN(V.ASSDDATE)');
@@ -543,16 +519,16 @@ class AssessmentQueries
                     AND SS.TAKEN = 1
 
                     -- Resource group / region filter
-                    AND VEGJOB.REGION IN ({$resourceGroups})
+                    AND VEGJOB.REGION IN ({$this->resourceGroupsSql})
 
                     -- Scope year filter
-                    AND WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$filterScopeYear}%'
+                    AND WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$this->scopeYear}%'
 
                     -- Contractor filter
-                    AND VEGJOB.CONTRACTOR IN ({$contractors})
+                    AND VEGJOB.CONTRACTOR IN ({$this->contractorsSql})
 
                     -- Job type filter
-                    AND SS.JOBTYPE IN ({$jobTypes})
+                    AND SS.JOBTYPE IN ({$this->jobTypesSql})
 
                     -- Exclude reactive cycle types
                     AND VEGJOB.CYCLETYPE NOT IN ('Reactive', 'Storm Follow Up', 'Misc. Project Work', 'PUC-STORM FOLLOW UP')
@@ -575,21 +551,14 @@ class AssessmentQueries
      * Gets JOBGUID for Entire Scope Year
      * =========================================================================
      */
-    public static function getAllJobGUIDsForEntireScopeYear(): string
+    public function getAllJobGUIDsForEntireScopeYear(): string
     {
-        $resourceGroupsServ = app(ResourceGroupAccessService::class);
-        $resGrpArr = $resourceGroupsServ->getRegionsForRole('planner');
-        $resourceGroups = WSHelpers::toSqlInClause($resGrpArr);
-
         $lastSync = self::formatToEasternTime('SS.EDITDATE');
         $scopeYear = self::extractYearFromMsDate('WPStartDate_Assessment_Xrefs.WP_STARTDATE');
-        $filterScopeYear = config('ws_assessment_query.scope_year');
 
-        $jobTypes = WSHelpers::toSqlInClause(config('ws_assessment_query.job_types'));
         $statues = WSHelpers::toSqlInClause(config('ws_assessment_query.statuses.planner_concern'));
-        $contractors = WSHelpers::toSqlInClause(config('ws_assessment_query.contractors'));
 
-        return "SELECT 
+        return "SELECT
                 -- getAllJobGUIDsForEntireScopeYear
                             {$scopeYear} AS Scope_Year,
                             SS.JOBGUID AS JOB_GUID,
@@ -607,7 +576,7 @@ class AssessmentQueries
                             SS.JOBTYPE AS Job_Type,
                             VEGJOB.CYCLETYPE AS Cycle_Type,
 
-                            VEGJOB.CONTRACTOR AS Contractor, 
+                            VEGJOB.CONTRACTOR AS Contractor,
                             {$lastSync} AS Last_Sync,
                             SS.MODIFIEDBY AS Last_User_To_Edit,
                             SS.TAKENBY AS Current_Owner
@@ -615,12 +584,12 @@ class AssessmentQueries
                             FROM SS
                             INNER JOIN VEGJOB ON SS.JOBGUID = VEGJOB.JOBGUID
                             LEFT JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID
-                            WHERE VEGJOB.REGION IN ({$resourceGroups})
+                            WHERE VEGJOB.REGION IN ({$this->resourceGroupsSql})
                             AND SS.STATUS IN ({$statues})
-                            AND VEGJOB.CONTRACTOR IN ({$contractors})
-                            AND WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$filterScopeYear}%'
+                            AND VEGJOB.CONTRACTOR IN ({$this->contractorsSql})
+                            AND WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$this->scopeYear}%'
                             AND VEGJOB.CYCLETYPE NOT IN ('Reactive', 'Storm Follow Up', 'Misc. Project Work', 'PUC-STORM FOLLOW UP')
-                            AND SS.JOBTYPE IN ({$jobTypes})
+                            AND SS.JOBTYPE IN ({$this->jobTypesSql})
                         ORDER BY SS.EDITDATE DESC, SS.WO DESC, SS.EXT DESC";
     }
     /* =========================================================================
@@ -642,20 +611,12 @@ class AssessmentQueries
     * @param  int     $limit  Max rows to return (default 500)
     * =========================================================================
     */
-    public static function getDistinctFieldValues(string $table, string $field, int $limit = 500): string
+    public function getDistinctFieldValues(string $table, string $field, int $limit = 500): string
     {
         // Validate table/field names — alphanumeric + underscore only
         if (! preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $table) || ! preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $field)) {
             throw new \InvalidArgumentException('Invalid table or field name.');
         }
-
-        $resourceGroupsServ = app(ResourceGroupAccessService::class);
-        $resGrpArr = $resourceGroupsServ->getRegionsForRole('planner');
-        $resourceGroups = WSHelpers::toSqlInClause($resGrpArr);
-        $filterScopeYear = config('ws_assessment_query.scope_year');
-
-        $contractors = WSHelpers::toSqlInClause(config('ws_assessment_query.contractors'));
-        $jobTypes = WSHelpers::toSqlInClause(config('ws_assessment_query.job_types'));
 
         // Determine the qualified column reference and any extra JOIN needed
         $upperTable = strtoupper($table);
@@ -673,12 +634,12 @@ class AssessmentQueries
                 INNER JOIN VEGJOB ON SS.JOBGUID = VEGJOB.JOBGUID
                 LEFT JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID
                 {$extraJoin}
-                WHERE VEGJOB.REGION IN ({$resourceGroups})
-                AND WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$filterScopeYear}%'
+                WHERE VEGJOB.REGION IN ({$this->resourceGroupsSql})
+                AND WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$this->scopeYear}%'
                 AND SS.STATUS = 'ACTIV'
                 AND SS.TAKEN = 1
-                AND VEGJOB.CONTRACTOR IN ({$contractors})
-                AND SS.JOBTYPE IN ({$jobTypes})
+                AND VEGJOB.CONTRACTOR IN ({$this->contractorsSql})
+                AND SS.JOBTYPE IN ({$this->jobTypesSql})
                 AND VEGJOB.CYCLETYPE NOT IN ('Reactive', 'Storm Follow Up', 'Misc. Project Work', 'PUC-STORM FOLLOW UP')
                 AND {$qualifiedField} IS NOT NULL
                 AND {$qualifiedField} != ''

@@ -3,8 +3,10 @@
 namespace App\Livewire\Dashboard;
 
 use App\Services\WorkStudio\Services\CachedQueryService;
+use App\Services\WorkStudio\ValueObjects\UserQueryContext;
 use Exception;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
@@ -17,7 +19,9 @@ class ActiveAssessments extends Component
     public function assessments(): Collection
     {
         try {
-            return app(CachedQueryService::class)->getActiveAssessmentsOrderedByOldest($this->limit);
+            $context = UserQueryContext::fromUser(Auth::user());
+
+            return app(CachedQueryService::class)->getActiveAssessmentsOrderedByOldest($context, $this->limit);
         } catch (Exception $e) {
             Log::warning('ActiveAssessments: failed to fetch data', [
                 'error' => $e->getMessage(),

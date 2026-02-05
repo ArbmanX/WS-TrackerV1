@@ -5,6 +5,7 @@ namespace App\Services\WorkStudio;
 use App\Services\WorkStudio\Contracts\WorkStudioApiInterface;
 use App\Services\WorkStudio\Managers\ApiCredentialManager;
 use App\Services\WorkStudio\Services\GetQueryService;
+use App\Services\WorkStudio\ValueObjects\UserQueryContext;
 use Exception;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
@@ -162,32 +163,32 @@ class WorkStudioApiService implements WorkStudioApiInterface
     /**
      * Get all job GUIDs for the entire scope year.
      */
-    public function getJobGuids(): Collection
+    public function getJobGuids(UserQueryContext $context): Collection
     {
-        return $this->queryService->getJobGuids();
+        return $this->queryService->getJobGuids($context);
     }
 
     /**
      * Get system-wide aggregated metrics.
      */
-    public function getSystemWideMetrics(): Collection
+    public function getSystemWideMetrics(UserQueryContext $context): Collection
     {
-        return $this->queryService->getSystemWideMetrics();
+        return $this->queryService->getSystemWideMetrics($context);
     }
 
     /**
      * Get metrics grouped by region.
      */
-    public function getRegionalMetrics(): Collection
+    public function getRegionalMetrics(UserQueryContext $context): Collection
     {
-        return $this->queryService->getRegionalMetrics();
+        return $this->queryService->getRegionalMetrics($context);
     }
 
     /**
      * Get active assessments ordered by oldest assessed unit.
      */
-    public function getActiveAssessmentsOrderedByOldest(int $limit = 50, ?string $domain = null): Collection
+    public function getActiveAssessmentsOrderedByOldest(UserQueryContext $context, int $limit = 50): Collection
     {
-        return $this->queryService->getActiveAssessmentsOrderedByOldest($limit, $domain);
+        return $this->queryService->getActiveAssessmentsOrderedByOldest($context, $limit);
     }
 }

@@ -5,6 +5,7 @@ namespace App\Livewire\Onboarding;
 use App\Services\WorkStudio\Contracts\UserDetailsServiceInterface;
 use App\Services\WorkStudio\Exceptions\UserNotFoundException;
 use App\Services\WorkStudio\Exceptions\WorkStudioApiException;
+use App\Services\WorkStudio\Services\ResourceGroupAccessService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -42,6 +43,10 @@ class WorkStudioSetup extends Component
         try {
             $this->userDetails = $userDetailsService->getDetails($this->ws_username);
 
+            // Resolve resource groups from WS groups
+            $resolvedRegions = app(ResourceGroupAccessService::class)
+                ->resolveRegionsFromGroups($this->userDetails['groups'] ?? []);
+
             // Store the user details
             $user = Auth::user();
 
@@ -50,6 +55,7 @@ class WorkStudioSetup extends Component
                 'ws_full_name' => $this->userDetails['full_name'],
                 'ws_domain' => $this->userDetails['domain'],
                 'ws_groups' => $this->userDetails['groups'],
+                'ws_resource_groups' => $resolvedRegions,
                 'ws_validated_at' => now(),
             ]);
 

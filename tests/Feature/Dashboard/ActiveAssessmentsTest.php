@@ -2,11 +2,12 @@
 
 use App\Livewire\Dashboard\ActiveAssessments;
 use App\Services\WorkStudio\Services\CachedQueryService;
+use App\Services\WorkStudio\ValueObjects\UserQueryContext;
 use Illuminate\Support\Collection;
 use Livewire\Livewire;
 
 beforeEach(function () {
-    $user = \App\Models\User::factory()->create();
+    $user = \App\Models\User::factory()->withWorkStudio()->create();
     \App\Models\UserSetting::factory()->onboarded()->create(['user_id' => $user->id]);
     $this->actingAs($user);
 });
@@ -15,6 +16,7 @@ function mockApiService(Collection $assessments): void
 {
     $mock = Mockery::mock(CachedQueryService::class);
     $mock->shouldReceive('getActiveAssessmentsOrderedByOldest')
+        ->withArgs(fn ($context) => $context instanceof UserQueryContext)
         ->andReturn($assessments);
 
     app()->instance(CachedQueryService::class, $mock);

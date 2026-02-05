@@ -46,6 +46,26 @@ class UserFactory extends Factory
     }
 
     /**
+     * Indicate that the user has completed WorkStudio onboarding.
+     *
+     * @param  array<string, mixed>  $overrides  Override any WS field
+     */
+    public function withWorkStudio(array $overrides = []): static
+    {
+        return $this->state(fn (array $attributes) => array_merge([
+            'ws_username' => 'jsmith',
+            'ws_full_name' => 'John Smith',
+            'ws_domain' => 'ASPLUNDH',
+            'ws_groups' => ['WorkStudio\\Everyone', 'ASPLUNDH\\VEG_PLANNERS'],
+            'ws_resource_groups' => [
+                'CENTRAL', 'HARRISBURG', 'LEHIGH', 'LANCASTER',
+                'DISTRIBUTION', 'PRE_PLANNER', 'VEG_ASSESSORS', 'VEG_PLANNERS',
+            ],
+            'ws_validated_at' => now(),
+        ], $overrides));
+    }
+
+    /**
      * Indicate that the model has two-factor authentication configured.
      */
     public function withTwoFactor(): static

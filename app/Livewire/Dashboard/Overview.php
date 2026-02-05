@@ -3,7 +3,9 @@
 namespace App\Livewire\Dashboard;
 
 use App\Services\WorkStudio\Services\CachedQueryService;
+use App\Services\WorkStudio\ValueObjects\UserQueryContext;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
@@ -28,13 +30,16 @@ class Overview extends Component
     #[Computed]
     public function systemMetrics(): Collection
     {
-        return app(CachedQueryService::class)->getSystemWideMetrics();
+        $context = UserQueryContext::fromUser(Auth::user());
+
+        return app(CachedQueryService::class)->getSystemWideMetrics($context);
     }
 
     #[Computed]
     public function regionalMetrics(): Collection
     {
-        $metrics = app(CachedQueryService::class)->getRegionalMetrics();
+        $context = UserQueryContext::fromUser(Auth::user());
+        $metrics = app(CachedQueryService::class)->getRegionalMetrics($context);
 
         return $this->sortMetrics($metrics);
     }

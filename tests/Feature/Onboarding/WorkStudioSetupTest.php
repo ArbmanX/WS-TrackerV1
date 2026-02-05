@@ -74,6 +74,8 @@ it('validates workstudio username and stores user details on success', function 
     expect($user->ws_full_name)->toBe('John Smith');
     expect($user->ws_domain)->toBe('ASPLUNDH');
     expect($user->ws_groups)->toBe(['WorkStudio\\Everyone', 'ASPLUNDH\\VEG_PLANNERS']);
+    expect($user->ws_resource_groups)->toBeArray();
+    expect($user->ws_resource_groups)->toContain('CENTRAL', 'HARRISBURG');
     expect($user->ws_validated_at)->not->toBeNull();
 
     $user->settings->refresh();

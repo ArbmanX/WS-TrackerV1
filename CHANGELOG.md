@@ -10,6 +10,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **User-Scoped Assessment Queries** (2026-02-05)
+  - `UserQueryContext` value object (`app/Services/WorkStudio/ValueObjects/UserQueryContext.php`) — immutable readonly class encapsulating user-specific query parameters (resource groups, contractors, domain, username)
+  - `fromUser(User)` builds context from authenticated user's WS fields; `fromConfig()` provides backward-compatible fallback
+  - `cacheHash()` produces deterministic MD5 — users with identical access share cache entries
+  - Migration: `ws_resource_groups` JSON column on `users` table for pre-computed REGION values
+  - `resolveRegionsFromGroups()` on `ResourceGroupAccessService` — three-tier resolution: explicit map → direct region match → planner defaults
+  - `group_to_region_map` config in `workstudio_resource_groups.php` for WS group-to-region mapping
+  - `withWorkStudio()` factory state on `UserFactory` for test setup
+  - `ws:backfill-resource-groups` Artisan command with `--dry-run` flag for backfilling existing onboarded users
+  - Unit tests: `UserQueryContextTest` (11 tests), `ResourceGroupResolutionTest` (8 tests), `AssessmentQueriesTest` (10 tests)
+
+### Changed
+- **AssessmentQueries refactored from static to instance** (2026-02-05)
+  - Constructor accepts `UserQueryContext`; pre-computes SQL fragments from user's resource groups and contractors
+  - System-level values (excludedUsers, job_types, scope_year) remain config-driven
+- **GetQueryService methods accept UserQueryContext** (2026-02-05)
+  - All data methods (`getSystemWideMetrics`, `getRegionalMetrics`, `getJobGuids`, `getActiveAssessmentsOrderedByOldest`, etc.) now require `UserQueryContext` parameter
+- **CachedQueryService context-scoped caching** (2026-02-05)
+  - Cache key pattern changed from `ws:{year}:{dataset}` to `ws:{year}:ctx:{hash}:{dataset}`
+  - Context hash tracking for admin invalidation across all user contexts
+  - Updated methods: `invalidateAll()`, `invalidateDataset()`, `warmAllForContext()`, `getCacheStatus()`
+- **WorkStudioApiService and interface updated** (2026-02-05)
+  - `WorkStudioApiInterface` and `WorkStudioApiService` delegation methods accept `UserQueryContext`
+- **Dashboard Livewire components pass user context** (2026-02-05)
+  - `Overview`, `ActiveAssessments`, `CacheControls` all build `UserQueryContext::fromUser(Auth::user())`
+- **Onboarding resolves and stores ws_resource_groups** (2026-02-05)
+  - `WorkStudioSetup` calls `resolveRegionsFromGroups()` during WS validation, stores result on User model
+- **All tests updated for UserQueryContext** (2026-02-05)
+  - `CachedQueryServiceTest`, `WorkStudioApiServiceTest`, `ActiveAssessmentsTest`, `CacheControlsTest`, `WorkStudioSetupTest` all pass context-aware mocks
+
+### Removed
+- **Dead code cleanup** (2026-02-05)
+  - Removed `getRegionsForUser()` method from `ResourceGroupAccessService` (replaced by `resolveRegionsFromGroups()` + User model)
+  - Removed `users` config key from `workstudio_resource_groups.php` (per-user regions now on User model)
+
 - **Driver-Agnostic Cache Layer** (2026-02-04)
   - `CachedQueryService` decorator wrapping `GetQueryService` with per-dataset TTL caching (`app/Services/WorkStudio/Services/CachedQueryService.php`)
   - Cache config file (`config/ws_cache.php`) with per-dataset TTLs, key prefix, dataset definitions, registry key

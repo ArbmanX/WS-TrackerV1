@@ -5,6 +5,7 @@ namespace App\Services\WorkStudio\Services;
 use App\Services\WorkStudio\AssessmentsDx\Queries\AssessmentQueries;
 use App\Services\WorkStudio\Helpers\ExecutionTimer;
 use App\Services\WorkStudio\Managers\ApiCredentialManager;
+use App\Services\WorkStudio\ValueObjects\UserQueryContext;
 use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
@@ -12,9 +13,6 @@ use Illuminate\Support\Facades\Log;
 
 class GetQueryService
 {
-    //  TODO: eventually will need to get signed in users credentials to use for parameters.
-    // credential manager is already pluged in
-
     public $sqlState;
 
     public function __construct(
@@ -146,48 +144,45 @@ class GetQueryService
         return collect([$data]) ?? [];
     }
 
-    // TODO
-    // Exctact the code below to its own class, it only gets the structure sql statement as a string
-
-    public function getJobGuids(): Collection
+    public function getJobGuids(UserQueryContext $context): Collection
     {
-        $sql =
-        AssessmentQueries::getAllJobGUIDsForEntireScopeYear();
+        $queries = new AssessmentQueries($context);
+        $sql = $queries->getAllJobGUIDsForEntireScopeYear();
 
-        return $this->executeAndHandle($sql, null);
+        return $this->executeAndHandle($sql, $context->userId);
     }
 
-    public function getSystemWideMetrics(): Collection
+    public function getSystemWideMetrics(UserQueryContext $context): Collection
     {
-        $sql =
-        AssessmentQueries::systemWideDataQuery();
+        $queries = new AssessmentQueries($context);
+        $sql = $queries->systemWideDataQuery();
 
-        return $this->executeAndHandle($sql, null);
+        return $this->executeAndHandle($sql, $context->userId);
     }
 
-    public function getRegionalMetrics(): Collection
+    public function getRegionalMetrics(UserQueryContext $context): Collection
     {
-        $sql =
-        AssessmentQueries::groupedByRegionDataQuery();
+        $queries = new AssessmentQueries($context);
+        $sql = $queries->groupedByRegionDataQuery();
 
-        return $this->executeAndHandle($sql, null);
+        return $this->executeAndHandle($sql, $context->userId);
     }
 
-    public function getDailyActivitiesForAllAssessments(): Collection
+    public function getDailyActivitiesForAllAssessments(UserQueryContext $context): Collection
     {
-        $sql =
-        AssessmentQueries::getAllAssessmentsDailyActivities();
+        $queries = new AssessmentQueries($context);
+        $sql = $queries->getAllAssessmentsDailyActivities();
 
-        return $this->executeAndHandle($sql, null);
+        return $this->executeAndHandle($sql, $context->userId);
     }
 
-    public function getAll(): Collection
+    public function getAll(UserQueryContext $context): Collection
     {
+        $queries = new AssessmentQueries($context);
         $jobGuid = '{9C2BFF24-4C3D-42D5-9E4E-7FCBEFAE7DF2}';
-        $sql =
-        AssessmentQueries::getAllByJobGuid($jobGuid);
+        $sql = $queries->getAllByJobGuid($jobGuid);
 
-        return $this->executeAndHandle($sql, null);
+        return $this->executeAndHandle($sql, $context->userId);
     }
 
     /**
@@ -196,17 +191,17 @@ class GetQueryService
      * Filters:
      *   - STATUS = 'ACTIV'
      *   - TAKEN = true (checked out)
-     *   - Username domain matches (default from config)
+     *   - Username domain matches user's domain
      *   - Assessment started (completed miles > 0)
      *
      * @param  int  $limit  Number of results (default 50)
-     * @param  string|null  $domain  Domain filter (e.g., 'ASPLUNDH'). Defaults to first contractor.
      */
-    public function getActiveAssessmentsOrderedByOldest(int $limit = 50, ?string $domain = null): Collection
+    public function getActiveAssessmentsOrderedByOldest(UserQueryContext $context, int $limit = 50): Collection
     {
-        $sql = AssessmentQueries::getActiveAssessmentsOrderedByOldest($limit, $domain);
+        $queries = new AssessmentQueries($context);
+        $sql = $queries->getActiveAssessmentsOrderedByOldest($limit);
 
-        return $this->executeAndHandle($sql, null);
+        return $this->executeAndHandle($sql, $context->userId);
     }
 
     /**
@@ -216,34 +211,33 @@ class GetQueryService
      * @param  string  $field  Column name (e.g., 'LASTNAME', 'CITY')
      * @param  int  $limit  Max rows to return (default 500)
      */
-    public function getDistinctFieldValues(string $table, string $field, int $limit = 500): Collection
+    public function getDistinctFieldValues(UserQueryContext $context, string $table, string $field, int $limit = 500): Collection
     {
-        $sql = AssessmentQueries::getDistinctFieldValues($table, $field, $limit);
+        $queries = new AssessmentQueries($context);
+        $sql = $queries->getDistinctFieldValues($table, $field, $limit);
 
-        return $this->executeAndHandle($sql, null);
+        return $this->executeAndHandle($sql, $context->userId);
     }
 
-    public function queryAll(): Collection
+    public function queryAll(UserQueryContext $context): Collection
     {
+        $queries = new AssessmentQueries($context);
         $timer = new ExecutionTimer;
         $timer->startTotal();
 
         $timer->start('systemWideDataQuery');
-        $sql =
-        AssessmentQueries::systemWideDataQuery();
-        $systemWideDataQuery = $this->executeAndHandle($sql, null);
+        $sql = $queries->systemWideDataQuery();
+        $systemWideDataQuery = $this->executeAndHandle($sql, $context->userId);
         $timer->stop('systemWideDataQuery');
 
         $timer->start('groupedByRegionDataQuery');
-        $sql =
-        AssessmentQueries::groupedByRegionDataQuery();
-        $groupedByRegionDataQuery = $this->executeAndHandle($sql, null);
+        $sql = $queries->groupedByRegionDataQuery();
+        $groupedByRegionDataQuery = $this->executeAndHandle($sql, $context->userId);
         $timer->stop('groupedByRegionDataQuery');
 
         $timer->start('groupedByCircuitDataQuery');
-        $sql =
-        AssessmentQueries::groupedByCircuitDataQuery();
-        $groupedByCircuitDataQuery = $this->executeAndHandle($sql, null);
+        $sql = $queries->groupedByCircuitDataQuery();
+        $groupedByCircuitDataQuery = $this->executeAndHandle($sql, $context->userId);
         $timer->stop('groupedByCircuitDataQuery');
 
         dump('$systemWideDataQuery', $systemWideDataQuery);

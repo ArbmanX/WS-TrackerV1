@@ -2,6 +2,7 @@
 
 namespace App\Services\WorkStudio\Contracts;
 
+use App\Services\WorkStudio\ValueObjects\UserQueryContext;
 use Illuminate\Support\Collection;
 
 /**
@@ -38,28 +39,27 @@ interface WorkStudioApiInterface
      *
      * @return Collection Collection of job GUID records
      */
-    public function getJobGuids(): Collection;
+    public function getJobGuids(UserQueryContext $context): Collection;
 
     /**
      * Get system-wide aggregated metrics.
      *
      * @return Collection Collection of system-wide metric data
      */
-    public function getSystemWideMetrics(): Collection;
+    public function getSystemWideMetrics(UserQueryContext $context): Collection;
 
     /**
      * Get metrics grouped by region.
      *
      * @return Collection Collection of regional metric data
      */
-    public function getRegionalMetrics(): Collection;
+    public function getRegionalMetrics(UserQueryContext $context): Collection;
 
     /**
      * Get active assessments ordered by oldest assessed unit.
      *
      * @param  int  $limit  Number of results (default 50)
-     * @param  string|null  $domain  Domain filter (e.g., 'ASPLUNDH')
      * @return Collection Collection of active assessment records
      */
-    public function getActiveAssessmentsOrderedByOldest(int $limit = 50, ?string $domain = null): Collection;
+    public function getActiveAssessmentsOrderedByOldest(UserQueryContext $context, int $limit = 50): Collection;
 }

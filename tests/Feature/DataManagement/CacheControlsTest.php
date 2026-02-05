@@ -2,10 +2,11 @@
 
 use App\Livewire\DataManagement\CacheControls;
 use App\Services\WorkStudio\Services\CachedQueryService;
+use App\Services\WorkStudio\ValueObjects\UserQueryContext;
 use Livewire\Livewire;
 
 beforeEach(function () {
-    $user = \App\Models\User::factory()->create();
+    $user = \App\Models\User::factory()->withWorkStudio()->create();
     \App\Models\UserSetting::factory()->onboarded()->create(['user_id' => $user->id]);
     $this->actingAs($user);
 });
@@ -14,30 +15,32 @@ function mockCacheService(): \Mockery\MockInterface
 {
     $mock = Mockery::mock(CachedQueryService::class);
 
-    $mock->shouldReceive('getCacheStatus')->andReturn([
-        'system_wide_metrics' => [
-            'label' => 'System-Wide Metrics',
-            'description' => 'Aggregated metrics across all regions.',
-            'key' => 'ws:2026:system_wide_metrics',
-            'cached' => true,
-            'cached_at' => now()->subMinutes(5)->toIso8601String(),
-            'ttl_seconds' => 900,
-            'ttl_remaining' => 600,
-            'hit_count' => 12,
-            'miss_count' => 3,
-        ],
-        'regional_metrics' => [
-            'label' => 'Regional Metrics',
-            'description' => 'Metrics grouped by region.',
-            'key' => 'ws:2026:regional_metrics',
-            'cached' => false,
-            'cached_at' => null,
-            'ttl_seconds' => 900,
-            'ttl_remaining' => null,
-            'hit_count' => 0,
-            'miss_count' => 0,
-        ],
-    ]);
+    $mock->shouldReceive('getCacheStatus')
+        ->withArgs(fn ($context) => $context instanceof UserQueryContext)
+        ->andReturn([
+            'system_wide_metrics' => [
+                'label' => 'System-Wide Metrics',
+                'description' => 'Aggregated metrics across all regions.',
+                'key' => 'ws:2026:ctx:a1b2c3d4:system_wide_metrics',
+                'cached' => true,
+                'cached_at' => now()->subMinutes(5)->toIso8601String(),
+                'ttl_seconds' => 900,
+                'ttl_remaining' => 600,
+                'hit_count' => 12,
+                'miss_count' => 3,
+            ],
+            'regional_metrics' => [
+                'label' => 'Regional Metrics',
+                'description' => 'Metrics grouped by region.',
+                'key' => 'ws:2026:ctx:a1b2c3d4:regional_metrics',
+                'cached' => false,
+                'cached_at' => null,
+                'ttl_seconds' => 900,
+                'ttl_remaining' => null,
+                'hit_count' => 0,
+                'miss_count' => 0,
+            ],
+        ]);
     $mock->shouldReceive('getDriverName')->andReturn('database');
 
     app()->instance(CachedQueryService::class, $mock);
@@ -79,8 +82,13 @@ test('page displays all dataset rows', function () {
 
 test('refreshDataset action works and shows flash', function () {
     $mock = mockCacheService();
-    $mock->shouldReceive('invalidateDataset')->with('system_wide_metrics')->once();
-    $mock->shouldReceive('getSystemWideMetrics')->once()->andReturn(collect([]));
+    $mock->shouldReceive('invalidateDataset')
+        ->withArgs(fn ($dataset, $context) => $dataset === 'system_wide_metrics' && $context instanceof UserQueryContext)
+        ->once();
+    $mock->shouldReceive('getSystemWideMetrics')
+        ->withArgs(fn ($context) => $context instanceof UserQueryContext)
+        ->once()
+        ->andReturn(collect([]));
 
     Livewire::test(CacheControls::class)
         ->call('refreshDataset', 'system_wide_metrics')
@@ -98,10 +106,13 @@ test('clearAll action works', function () {
 
 test('warmAll action works', function () {
     $mock = mockCacheService();
-    $mock->shouldReceive('warmAll')->once()->andReturn([
-        'system_wide_metrics' => ['success' => true],
-        'regional_metrics' => ['success' => true],
-    ]);
+    $mock->shouldReceive('warmAllForContext')
+        ->withArgs(fn ($context) => $context instanceof UserQueryContext)
+        ->once()
+        ->andReturn([
+            'system_wide_metrics' => ['success' => true],
+            'regional_metrics' => ['success' => true],
+        ]);
 
     Livewire::test(CacheControls::class)
         ->call('warmAll')
