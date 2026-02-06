@@ -23,12 +23,12 @@
 |----------|-------|---------|-------------|-----------|------------|
 | Security | 6 | 4 | 0 | 2 | 0 |
 | Cleanup | 9 | 1 | 0 | 8 | 0 |
-| Refactor | 10 | 10 | 0 | 0 | 2 |
+| Refactor | 11 | 10 | 0 | 1 | 2 |
 | Feature | 8 | 6 | 0 | 1 | 4 |
 | UI/UX | 12 | 11 | 0 | 1 | 1 |
 | Testing | 10 | 10 | 0 | 0 | 3 |
 | Performance | 7 | 7 | 0 | 0 | 0 |
-| **Totals** | **62** | **49** | **0** | **12** | **10** |
+| **Totals** | **63** | **49** | **0** | **13** | **10** |
 
 ---
 
@@ -68,6 +68,7 @@
 | REF-006 | Replace dynamic method invocation in CacheControls | Refactor | pending | — | [CODE-REVIEW.md #4.3](CODE-REVIEW.md#43-cachecontrols--dynamic-method-invocation) |
 | REF-007 | Make ApiCredentialManager updates transactional | Refactor | pending | — | [CODE-REVIEW.md #5.5](CODE-REVIEW.md#55-apicredentialmanager--non-transactional-double-updates) |
 | REF-010 | Extract duplicate SQL filters to shared helpers | Refactor | pending | REF-003 | [CODE-REVIEW.md #4.6](CODE-REVIEW.md#46-duplicate-sql-filters) |
+| REF-011 | Domain-driven folder restructure | Refactor | **completed** | — | — |
 | FT-001 | Planner Daily Activity System | Feature | pending | REF-003 | [plans/](plans/) — see detail |
 | FT-006 | Unified toast/notification system | Feature | pending | — | NEEDS PLAN |
 | FT-007 | Historical Assessment Archival & Analytics | Feature | pending | — | [tech-spec](../../BMAD_WS/implementation-artifacts/tech-spec-historical-assessment-archival.md) |
@@ -624,7 +625,7 @@ Progress calculations (`$completedMiles / $totalMiles * 100`) are done in `@php`
 | **Plan** | [CODE-REVIEW.md #5.4](CODE-REVIEW.md#54-missing-interface-for-cachedqueryservice) |
 | **Source** | Code Review #14 |
 | **Est. Effort** | 30 min |
-| **Files** | New: `app/Services/WorkStudio/Contracts/CachedQueryServiceInterface.php`, `WorkStudioServiceProvider.php` |
+| **Files** | New: `app/Services/WorkStudio/Shared/Contracts/CachedQueryServiceInterface.php`, `WorkStudioServiceProvider.php` |
 
 **Description:**
 Per project rules: "Services must implement interfaces." `CachedQueryService` is bound as singleton but has no interface. Create one and update the provider binding.
@@ -878,6 +879,36 @@ The same cycle type exclusion filter (`VEGJOB.CYCLETYPE NOT IN (...)`) appears i
 | **Time Elapsed** | — |
 | **Files Changed** | — |
 | **Notes** | — |
+
+</details>
+
+---
+
+#### REF-011: Domain-Driven Folder Restructure
+
+| Field | Value |
+|-------|-------|
+| **Priority** | P2 |
+| **Status** | **completed** |
+| **Category** | Refactor |
+| **Depends On** | — |
+| **Plan** | — |
+| **Source** | Architecture discussion |
+| **Est. Effort** | 1 hr |
+| **Files** | 32 files changed — 15 moved via `git mv`, 24 files updated (imports) |
+
+**Description:**
+Reorganized `app/Services/WorkStudio/` from flat technical layers into domain-driven namespaces: `Client/` (HTTP infrastructure), `Shared/` (cross-domain utilities, cache, value objects, exceptions), `Assessments/` (assessment-specific queries). Removed old directories: `Services/`, `Managers/`, `Contracts/`, `ValueObjects/`, `Helpers/`, `Exceptions/`, `AssessmentsDx/`. Updated 53 import statements across 24 files. Prepares for future `WorkJobs/` and `Planner/` domain modules.
+
+<details>
+<summary>Completion Record</summary>
+
+| Field | Value |
+|-------|-------|
+| **Completed** | 2026-02-06 |
+| **Time Elapsed** | ~45 min |
+| **Files Changed** | 32 files (15 renamed, 17 import updates) |
+| **Notes** | Branch `refactor/domain-folder-structure`, merged to main (c547a65). Git preserved full rename history (84-99% similarity). All 107 tests pass. |
 
 </details>
 
@@ -2085,6 +2116,7 @@ The following TODOs require a plan/spec before implementation can begin. Use `/b
 | 2026-02-05 | SEC-006 | Remove $sqlState property entirely | cleanup/dead-code-removal | GetQueryService.php |
 | 2026-02-05 | UI-007 | Fix app-logo branding inconsistency | cleanup/dead-code-removal | app-logo.blade.php |
 | 2026-02-06 | FT-008 | Query Explorer admin tool | ~30 min | QueryExplorer.php, query-explorer.blade.php, data-management.php, sidebar.blade.php, QueryExplorerTest.php |
+| 2026-02-06 | REF-011 | Domain-driven folder restructure | ~45 min | 32 files (15 renamed, 17 import updates across app/, tests/, routes/) |
 
 ---
 
