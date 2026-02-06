@@ -31,7 +31,7 @@
                 <div class="flex-none gap-2">
                     <!-- User Info -->
                     <div class="hidden sm:flex items-center gap-2 text-sm text-base-content/70">
-                        <div class="avatar placeholder">
+                        <div class="avatar avatar-placeholder">
                             <div class="bg-neutral text-neutral-content rounded-full w-8">
                                 <span class="text-xs">{{ auth()->user()->initials() }}</span>
                             </div>
