@@ -22,6 +22,17 @@
 
 ---
 
+**Once finished with new phase:** 
+
+  1. ensure the TODO tracker and changelog is up to date.
+  2. Check if wip file is clear. If not clear prompt user to decide what to do next.
+
+**Before starting any new phase:**
+
+  1. ensure the TODO tracker and changelog is up to date.
+  2. Check for wip file and it is clear. If it doesent exitst or is not clear prompt user to decide what to do next.
+  3. Clear wip file once branch is commited and merged.
+
 ## Git Workflow
 
 1. **Before starting a new phase:**

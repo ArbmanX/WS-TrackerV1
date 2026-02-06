@@ -406,6 +406,8 @@ protected function isAccessible(User $user, ?string $path = null): bool
 # AI Session Management Rules
 
 These rules govern AI agent behavior during development sessions on this project.
+Review the docs directory
+
 
 ## Context Management
 
