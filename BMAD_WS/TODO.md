@@ -2,7 +2,7 @@
 
 > **Project:** WS-TrackerV1
 > **Created:** 2026-02-05
-> **Last Updated:** 2026-02-05
+> **Last Updated:** 2026-02-06
 
 ---
 
@@ -24,11 +24,11 @@
 | Security | 6 | 4 | 0 | 2 | 0 |
 | Cleanup | 9 | 1 | 0 | 8 | 0 |
 | Refactor | 10 | 10 | 0 | 0 | 2 |
-| Feature | 7 | 7 | 0 | 0 | 4 |
+| Feature | 8 | 6 | 0 | 1 | 4 |
 | UI/UX | 12 | 11 | 0 | 1 | 1 |
 | Testing | 10 | 10 | 0 | 0 | 3 |
 | Performance | 7 | 7 | 0 | 0 | 0 |
-| **Totals** | **61** | **50** | **0** | **11** | **10** |
+| **Totals** | **62** | **49** | **0** | **12** | **10** |
 
 ---
 
@@ -71,6 +71,7 @@
 | FT-001 | Planner Daily Activity System | Feature | pending | REF-003 | [plans/](plans/) — see detail |
 | FT-006 | Unified toast/notification system | Feature | pending | — | NEEDS PLAN |
 | FT-007 | Historical Assessment Archival & Analytics | Feature | pending | — | [tech-spec](../../BMAD_WS/implementation-artifacts/tech-spec-historical-assessment-archival.md) |
+| FT-008 | Query Explorer admin tool | Feature | **completed** | — | — |
 | UI-003 | Improve mobile responsiveness | UI/UX | pending | — | [CODE-REVIEW.md #7.3](CODE-REVIEW.md#73-region-cards--mobile-responsiveness) |
 | UI-004 | Add accessibility attributes | UI/UX | pending | — | [CODE-REVIEW.md #7.7](CODE-REVIEW.md#77-accessibility-issues) |
 | UI-011 | Add eager loading for User->settings in middleware | UI/UX | pending | — | [CODE-REVIEW.md #6.3](CODE-REVIEW.md#63-n1-query-risks) |
@@ -1131,6 +1132,36 @@ Archive closed assessment data from WorkStudio API into local database for histo
 
 ---
 
+#### FT-008: Query Explorer Admin Tool
+
+| Field | Value |
+|-------|-------|
+| **Priority** | P2 |
+| **Status** | **completed** |
+| **Category** | Feature |
+| **Depends On** | — |
+| **Plan** | — |
+| **Source** | Admin tooling need |
+| **Est. Effort** | 1 hr |
+| **Files** | `app/Livewire/DataManagement/QueryExplorer.php`, `resources/views/livewire/data-management/query-explorer.blade.php`, `routes/data-management.php`, `resources/views/components/layout/sidebar.blade.php`, `tests/Feature/DataManagement/QueryExplorerTest.php` |
+
+**Description:**
+Livewire component under Data Management that builds and executes raw SQL SELECT queries against the WorkStudio API. Table dropdown (VEGJOB, VEGUNIT, STATIONS + custom), fields input, TOP limit (1-500), optional WHERE clause. Displays raw JSON results with row count, query timing, and executed SQL. Uses `config('workstudio.service_account.*')` credentials, bypassing GetQueryService hardcoded creds. 9 Pest feature tests.
+
+<details>
+<summary>Completion Record</summary>
+
+| Field | Value |
+|-------|-------|
+| **Completed** | 2026-02-06 |
+| **Time Elapsed** | ~30 min |
+| **Files Changed** | `QueryExplorer.php`, `query-explorer.blade.php`, `data-management.php`, `sidebar.blade.php`, `QueryExplorerTest.php`, `CHANGELOG.md` |
+| **Notes** | Committed directly on main (f5630da). Future features will use branch workflow. |
+
+</details>
+
+---
+
 ### UI/UX
 
 ---
@@ -2053,6 +2084,7 @@ The following TODOs require a plan/spec before implementation can begin. Use `/b
 | 2026-02-05 | SEC-002 | Protect/remove unauthed API routes | cleanup/dead-code-removal | workstudioAPI.php |
 | 2026-02-05 | SEC-006 | Remove $sqlState property entirely | cleanup/dead-code-removal | GetQueryService.php |
 | 2026-02-05 | UI-007 | Fix app-logo branding inconsistency | cleanup/dead-code-removal | app-logo.blade.php |
+| 2026-02-06 | FT-008 | Query Explorer admin tool | ~30 min | QueryExplorer.php, query-explorer.blade.php, data-management.php, sidebar.blade.php, QueryExplorerTest.php |
 
 ---
 
