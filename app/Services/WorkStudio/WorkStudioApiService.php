@@ -22,8 +22,6 @@ use Illuminate\Support\Facades\Log;
  */
 class WorkStudioApiService implements WorkStudioApiInterface
 {
-    private ?int $currentUserId = null;
-
     public function __construct(
         private ?ApiCredentialManager $credentialManager = null,
         private ?GetQueryService $queryService = null,
@@ -56,7 +54,7 @@ class WorkStudioApiService implements WorkStudioApiInterface
      */
     public function getCurrentCredentialsInfo(): array
     {
-        return $this->credentialManager->getCredentialsInfo($this->currentUserId);
+        return $this->credentialManager->getCredentialsInfo(null);
     }
 
     /**

@@ -68,30 +68,6 @@
 
     {{-- Right Section --}}
     <div class="navbar-end gap-1">
-        {{-- Search Placeholder --}}
-        <x-ui.tooltip text="Search (Coming Soon)" position="bottom">
-            <button
-                type="button"
-                class="btn btn-ghost btn-circle"
-                disabled
-            >
-                <x-ui.icon name="magnifying-glass" />
-            </button>
-        </x-ui.tooltip>
-
-        {{-- Notifications Placeholder --}}
-        <x-ui.tooltip text="Notifications (Coming Soon)" position="bottom">
-            <button
-                type="button"
-                class="btn btn-ghost btn-circle"
-                disabled
-            >
-                <div class="indicator">
-                    <x-ui.icon name="bell" />
-                </div>
-            </button>
-        </x-ui.tooltip>
-
         {{-- Theme Toggle --}}
         <x-ui.theme-toggle />
 

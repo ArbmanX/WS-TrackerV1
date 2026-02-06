@@ -36,6 +36,7 @@ class UserDetailsService implements UserDetailsServiceInterface
         ];
 
         try {
+            /** @var \Illuminate\Http\Client\Response $response */
             $response = Http::withBasicAuth(
                 config('workstudio.service_account.username'),
                 config('workstudio.service_account.password')

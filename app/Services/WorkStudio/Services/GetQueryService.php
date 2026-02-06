@@ -3,7 +3,6 @@
 namespace App\Services\WorkStudio\Services;
 
 use App\Services\WorkStudio\AssessmentsDx\Queries\AssessmentQueries;
-use App\Services\WorkStudio\Helpers\ExecutionTimer;
 use App\Services\WorkStudio\Managers\ApiCredentialManager;
 use App\Services\WorkStudio\ValueObjects\UserQueryContext;
 use Exception;
@@ -13,8 +12,6 @@ use Illuminate\Support\Facades\Log;
 
 class GetQueryService
 {
-    public $sqlState;
-
     public function __construct(
         private ?ApiCredentialManager $credentialManager = null,
     ) {}
@@ -41,7 +38,6 @@ class GetQueryService
         ];
 
         $url = rtrim(config('workstudio.base_url'), '/').'/GETQUERY';
-        $this->sqlState = $sql;
 
         try {
             /** @var \Illuminate\Http\Client\Response $response */
@@ -176,15 +172,6 @@ class GetQueryService
         return $this->executeAndHandle($sql, $context->userId);
     }
 
-    public function getAll(UserQueryContext $context): Collection
-    {
-        $queries = new AssessmentQueries($context);
-        $jobGuid = '{9C2BFF24-4C3D-42D5-9E4E-7FCBEFAE7DF2}';
-        $sql = $queries->getAllByJobGuid($jobGuid);
-
-        return $this->executeAndHandle($sql, $context->userId);
-    }
-
     /**
      * Get active assessments ordered by oldest unit first.
      *
@@ -217,35 +204,6 @@ class GetQueryService
         $sql = $queries->getDistinctFieldValues($table, $field, $limit);
 
         return $this->executeAndHandle($sql, $context->userId);
-    }
-
-    public function queryAll(UserQueryContext $context): Collection
-    {
-        $queries = new AssessmentQueries($context);
-        $timer = new ExecutionTimer;
-        $timer->startTotal();
-
-        $timer->start('systemWideDataQuery');
-        $sql = $queries->systemWideDataQuery();
-        $systemWideDataQuery = $this->executeAndHandle($sql, $context->userId);
-        $timer->stop('systemWideDataQuery');
-
-        $timer->start('groupedByRegionDataQuery');
-        $sql = $queries->groupedByRegionDataQuery();
-        $groupedByRegionDataQuery = $this->executeAndHandle($sql, $context->userId);
-        $timer->stop('groupedByRegionDataQuery');
-
-        $timer->start('groupedByCircuitDataQuery');
-        $sql = $queries->groupedByCircuitDataQuery();
-        $groupedByCircuitDataQuery = $this->executeAndHandle($sql, $context->userId);
-        $timer->stop('groupedByCircuitDataQuery');
-
-        dump('$systemWideDataQuery', $systemWideDataQuery);
-        dump('$groupedByRegionDataQuery', $groupedByRegionDataQuery);
-        dump('$groupedByCircuitDataQuery', $groupedByCircuitDataQuery);
-        $timer->logTotalTime();
-
-        return collect($groupedByCircuitDataQuery);
     }
 
     /**

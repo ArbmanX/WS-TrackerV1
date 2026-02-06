@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- **Dead Code Cleanup** (2026-02-05)
+  - Deleted `app/Livewire/_backup/` directory (deprecated TwoFactor components)
+  - Deleted `resources/views/welcome.blade.php` (never served — `/` redirects to login)
+  - Deleted `resources/views/dashboard.blade.php` ("Coming Soon" stub — Livewire Overview renders instead)
+  - Deleted `resources/views/livewire/auth/register.blade.php` (registration disabled)
+  - Deleted `app/Services/WorkStudio/Helpers/ExecutionTimer.php` (debug helper with `echo` output)
+  - Deleted `app/Actions/Fortify/CreateNewUser.php` and `app/Concerns/ProfileValidationRules.php` (registration scaffolding)
+  - Deleted `routes/settings.php` (all routes were just redirects to dashboard)
+  - Removed `Fortify::createUsersUsing()` and `Fortify::registerView()` from `FortifyServiceProvider`
+  - Removed `getAll()` debug method from `GetQueryService` (hardcoded GUID)
+  - Removed `queryAll()` debug method from `GetQueryService` (dump calls, ExecutionTimer usage)
+  - Removed `public $sqlState` property and assignment from `GetQueryService` (set but never read)
+  - Removed `$currentUserId` unused property from `WorkStudioApiService`
+  - Removed disabled Search and Notifications placeholder buttons from header
+  - Removed `/dashboard/test` unauthenticated test route
+  - Removed `/allByJobGUID` debug route (used deleted `getAll()` method)
+
+### Fixed
+- **App Logo Branding** (2026-02-05) — Changed "Laravel Starter Kit" to "WS-Tracker" in `app-logo.blade.php`
+
+### Security
+- **Protected API Routes** (2026-02-05) — Wrapped WorkStudio API routes (`/assessment-jobguids`, `/system-wide-metrics`, `/regional-metrics`, `/daily-activities/all-assessments`, `/field-lookup`) in `auth` middleware group; added `UserQueryContext::fromUser()` to fix broken closures missing required context parameter
+
 ### Added
 - **User-Scoped Assessment Queries** (2026-02-05)
   - `UserQueryContext` value object (`app/Services/WorkStudio/ValueObjects/UserQueryContext.php`) — immutable readonly class encapsulating user-specific query parameters (resource groups, contractors, domain, username)

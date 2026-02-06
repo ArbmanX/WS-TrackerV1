@@ -294,9 +294,12 @@ These rules govern AI agent behavior during development sessions on this project
 ## Git Workflow Enforcement
 
 - **Before starting any new phase:**
-  1. Confirm previous phase was merged to `main`
-  2. Confirm current branch is `main`
-  3. Create new branch for the phase
+  1. ensure the TODO tracker is up to date. 
+  2. Check if wip file is clear. If not clear prompt user to decide what to do next. 
+  3. create a wip file and update it after every phase. Clear wip file once branch is commited and merged. 
+  4. Confirm previous phase was merged to `main`
+  5. Confirm current branch is `main`
+  6. Create new branch for the phase
 
 - **Always get user confirmation before:**
   - Pushing to origin (`git push`)

@@ -2,6 +2,7 @@
 
 use App\Livewire\Dashboard\Overview;
 use App\Services\WorkStudio\Services\GetQueryService;
+use App\Services\WorkStudio\ValueObjects\UserQueryContext;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -13,69 +14,47 @@ Route::get('dashboard', Overview::class)
     ->middleware(['auth', 'verified', 'onboarding'])
     ->name('dashboard');
 
-// Testing route - no auth required (remove in production)
-Route::get('dashboard/test', Overview::class)
-    ->name('dashboard.test');
-
 /*
 |--------------------------------------------------------------------------
-| WorkStudio API Routes
+| WorkStudio API Routes (Auth Protected)
 |--------------------------------------------------------------------------
+| These routes require authentication. They build a UserQueryContext from
+| the authenticated user to scope all queries to the user's access level.
+| TODO: CLN-009 — Refactor closures to use UserQueryContext properly.
 */
-Route::get('/assessment-jobguids', function (GetQueryService $queryService) {
-    $data = $queryService->getJobGuids();
-    if (config('app.debug')) {
-        dump($data);
-    }
+Route::middleware(['auth'])->group(function () {
+    Route::get('/assessment-jobguids', function (GetQueryService $queryService) {
+        $context = UserQueryContext::fromUser(auth()->user());
+        $data = $queryService->getJobGuids($context);
 
-    return response()->json($data);
-});
+        return response()->json($data);
+    });
 
-Route::get('/system-wide-metrics', function (GetQueryService $queryService) {
-    $data = $queryService->getSystemWideMetrics();
-    if (config('app.debug')) {
-        dump($data->first());
-    }
+    Route::get('/system-wide-metrics', function (GetQueryService $queryService) {
+        $context = UserQueryContext::fromUser(auth()->user());
+        $data = $queryService->getSystemWideMetrics($context);
 
-    return response()->json($data);
-});
+        return response()->json($data);
+    });
 
-Route::get('/regional-metrics', function (GetQueryService $queryService) {
-    $data = $queryService->getRegionalMetrics();
-    if (config('app.debug')) {
-        dump($data);
-    }
+    Route::get('/regional-metrics', function (GetQueryService $queryService) {
+        $context = UserQueryContext::fromUser(auth()->user());
+        $data = $queryService->getRegionalMetrics($context);
 
-    return response()->json($data);
-});
+        return response()->json($data);
+    });
 
-Route::get('/daily-activities/all-assessments', function (GetQueryService $queryService) {
-    $data = $queryService->getDailyActivitiesForAllAssessments();
-    if (config('app.debug')) {
-        dump($data);
-    }
+    Route::get('/daily-activities/all-assessments', function (GetQueryService $queryService) {
+        $context = UserQueryContext::fromUser(auth()->user());
+        $data = $queryService->getDailyActivitiesForAllAssessments($context);
 
-    return response()->json($data);
-});
+        return response()->json($data);
+    });
 
-Route::get('/allByJobGUID', function (GetQueryService $queryService) {
-    $data = $queryService->getAll();
-    if (config('app.debug')) {
-        dump($data);
-    }
+    Route::get('/field-lookup/{table}/{field}', function (GetQueryService $queryService, string $table, string $field) {
+        $context = UserQueryContext::fromUser(auth()->user());
+        $data = $queryService->getDistinctFieldValues($context, $table, $field);
 
-    return response()->json($data);
-});
-
-// Testing route: /field-lookup/{table}/{field}
-// e.g. /field-lookup/VEGUNIT/LASTNAME
-//      /field-lookup/VEGUNIT/CITY
-//      /field-lookup/VEGJOB/REGION
-Route::get('/field-lookup/{table}/{field}', function (GetQueryService $queryService, string $table, string $field) {
-    $data = $queryService->getDistinctFieldValues($table, $field);
-    if (config('app.debug')) {
-        dump($data);
-    }
-
-    return response()->json($data);
+        return response()->json($data);
+    });
 });
