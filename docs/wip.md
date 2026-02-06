@@ -1,42 +1,32 @@
-# WIP: Spatie Laravel Permission v6 Implementation
+# WIP — User Management: Create User
 
-**Branch:** `feature/permissions-system`
+**Branch:** `feature/create-user`
 **Started:** 2026-02-06
-**Status:** Complete — ready for commit
 
-## Summary
-Implemented Spatie Laravel Permission v6 with 5 roles, 7 permissions, route protection, sidebar gating, and 10 new tests. Fixes SEC-005.
+## Scope
+- Route file `routes/user-management.php` with `manage-users` permission guard
+- Livewire `CreateUser` component (form + success state)
+- Sidebar "User Management" section with placeholder items
+- Feature tests + PermissionTest additions
 
-## Steps
-- [x] Publish Spatie config & run migrations
-- [x] Add HasRoles trait to User model
-- [x] Create RolePermissionSeeder
-- [x] Register Spatie middleware aliases
-- [x] Fix AppServiceProvider Pulse gate
-- [x] Protect routes with permission middleware
-- [x] Add permission checks to sidebar
-- [x] Add withRole() factory state & update existing tests
-- [x] Write permission tests (10 tests, all passing)
-- [x] Update CHANGELOG & TODO, run tests, format code
+## Files
+| Action | File |
+|--------|------|
+| NEW | `routes/user-management.php` |
+| NEW | `app/Livewire/UserManagement/CreateUser.php` |
+| NEW | `resources/views/livewire/user-management/create-user.blade.php` |
+| NEW | `tests/Feature/UserManagement/CreateUserTest.php` |
+| MODIFY | `routes/web.php` (+1 line) |
+| MODIFY | `resources/views/components/layout/sidebar.blade.php` (add nav section) |
+| MODIFY | `tests/Feature/PermissionTest.php` (+3 tests) |
+| MODIFY | `CHANGELOG.md` |
 
-## Files Modified
-- `app/Models/User.php` — Added HasRoles trait
-- `app/Providers/AppServiceProvider.php` — Fixed Pulse gate
-- `bootstrap/app.php` — Registered Spatie middleware aliases
-- `config/permission.php` — Published from Spatie (new)
-- `database/migrations/2026_02_06_184301_create_permission_tables.php` — Published from Spatie (new)
-- `database/seeders/RolePermissionSeeder.php` — New, 5 roles + 7 permissions
-- `database/seeders/DatabaseSeeder.php` — Added RolePermissionSeeder call
-- `database/factories/UserFactory.php` — Added withRole() factory state
-- `routes/data-management.php` — Added permission middleware
-- `routes/web.php` — Added permission middleware to health dashboard
-- `resources/views/components/layout/sidebar.blade.php` — Permission-gated nav items
-- `tests/Feature/PermissionTest.php` — New, 10 tests
-- `tests/Feature/DataManagement/CacheControlsTest.php` — Seed permissions + sudo-admin role
-- `tests/Feature/DataManagement/QueryExplorerTest.php` — Seed permissions + sudo-admin role
-- `tests/Feature/HealthCheckTest.php` — Seed permissions + sudo-admin role
-- `CHANGELOG.md` — Updated
-- `docs/TODO.md` — SEC-005 marked completed
-
-## Test Results
-117 passed, 2 skipped, 0 failures (289 assertions)
+## Status
+- [x] Branch created
+- [x] Route file + web.php
+- [x] Sidebar navigation
+- [x] Livewire component
+- [x] Blade view
+- [x] Tests (15 CreateUser + 3 PermissionTest = 18 new tests)
+- [x] CHANGELOG, Pint, full test suite (135 passed)
+- [ ] Ready for commit and merge

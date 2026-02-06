@@ -25,10 +25,10 @@
 | Cleanup | 9 | 1 | 0 | 8 | 0 |
 | Refactor | 11 | 10 | 0 | 1 | 2 |
 | Feature | 8 | 6 | 0 | 1 | 4 |
-| UI/UX | 12 | 11 | 0 | 1 | 1 |
+| UI/UX | 13 | 12 | 0 | 1 | 1 |
 | Testing | 10 | 10 | 0 | 0 | 3 |
 | Performance | 7 | 7 | 0 | 0 | 0 |
-| **Totals** | **63** | **48** | **0** | **14** | **10** |
+| **Totals** | **64** | **49** | **0** | **14** | **10** |
 
 ---
 
@@ -98,6 +98,7 @@
 | UI-008 | Fix dynamic Tailwind color classes | UI/UX | pending | — | — |
 | UI-009 | Add aria-labels to 2FA code inputs | UI/UX | pending | — | — |
 | UI-010 | Add i18n __() wrappers to remaining views | UI/UX | pending | — | — |
+| UI-013 | Fix DaisyUI v5 avatar class across all views | UI/UX | pending | — | — |
 | TST-001 | GetQueryService unit tests (mocked HTTP) | Testing | pending | — | — |
 | TST-002 | Feature test: API routes return JSON | Testing | pending | SEC-002, CLN-009 | — |
 | TST-003 | Livewire component tests | Testing | pending | — | NEEDS PLAN |
@@ -1542,6 +1543,36 @@ Many user-facing strings in dashboard/sidebar/cache views are hardcoded English 
 
 **Description:**
 Sort and panel operations trigger a fixed full-viewport overlay. Use targeted loading indicators (spinner in column header for sort, skeleton in panel area).
+
+<details>
+<summary>Completion Record</summary>
+
+| Field | Value |
+|-------|-------|
+| **Completed** | — |
+| **Time Elapsed** | — |
+| **Files Changed** | — |
+| **Notes** | — |
+
+</details>
+
+---
+
+#### UI-013: Fix DaisyUI v5 Avatar Class Across All Views
+
+| Field | Value |
+|-------|-------|
+| **Priority** | P3 |
+| **Status** | pending |
+| **Category** | UI/UX |
+| **Depends On** | — |
+| **Plan** | — |
+| **Source** | DaisyUI v4 → v5 migration |
+| **Est. Effort** | 10 min |
+| **Files** | `user-menu.blade.php`, `assessment-row.blade.php` |
+
+**Description:**
+DaisyUI v5 changed avatar placeholder syntax from `class="avatar placeholder"` to `class="avatar avatar-placeholder"`. Several views still use the old v4 syntax. The `create-user.blade.php` and `sidebar.blade.php` are already correct. Fix remaining instances in `user-menu.blade.php` (lines 22, 46) and `assessment-row.blade.php` (line 26).
 
 <details>
 <summary>Completion Record</summary>

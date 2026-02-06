@@ -125,6 +125,34 @@ test('user with no role can still access dashboard', function () {
 });
 
 // ──────────────────────────────────────────
+// User Management — Create User
+// ──────────────────────────────────────────
+
+test('users without manage-users get 403 on create user', function () {
+    $user = createUserWithRole('user');
+
+    $this->actingAs($user)
+        ->get(route('user-management.create'))
+        ->assertForbidden();
+});
+
+test('manager cannot access create user', function () {
+    $user = createUserWithRole('manager');
+
+    $this->actingAs($user)
+        ->get(route('user-management.create'))
+        ->assertForbidden();
+});
+
+test('sudo-admin can access create user', function () {
+    $user = createUserWithRole('sudo-admin');
+
+    $this->actingAs($user)
+        ->get(route('user-management.create'))
+        ->assertOk();
+});
+
+// ──────────────────────────────────────────
 // Seeder idempotency
 // ──────────────────────────────────────────
 

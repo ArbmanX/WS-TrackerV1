@@ -47,6 +47,36 @@
                 ],
             ],
         ],
+        [
+            'section' => 'User Management',
+            'permission' => 'manage-users',
+            'items' => [
+                [
+                    'label' => 'Create User',
+                    'route' => 'user-management.create',
+                    'icon' => 'user-plus',
+                    'permission' => 'manage-users',
+                ],
+                [
+                    'label' => 'Edit Users',
+                    'route' => 'user-management.edit',
+                    'icon' => 'pencil-square',
+                    'permission' => 'manage-users',
+                ],
+                [
+                    'label' => 'User Activity',
+                    'route' => 'user-management.activity',
+                    'icon' => 'clock',
+                    'permission' => 'manage-users',
+                ],
+                [
+                    'label' => 'User Settings',
+                    'route' => 'user-management.settings',
+                    'icon' => 'cog-6-tooth',
+                    'permission' => 'manage-users',
+                ],
+            ],
+        ],
     ];
 
     // Helper to check if route is active

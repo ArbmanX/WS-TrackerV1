@@ -45,3 +45,4 @@ Route::get('/health/dashboard', HealthCheckResultsController::class)
 
 require __DIR__.'/workstudioAPI.php';
 require __DIR__.'/data-management.php';
+require __DIR__.'/user-management.php';

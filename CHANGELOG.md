@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **User Management — Create User** (2026-02-06)
+  - `CreateUser` Livewire component (`app/Livewire/UserManagement/CreateUser.php`) for admin user creation
+  - Form with name, email, and role selection; auto-generates 16-char temporary password
+  - Success state displays temp password with `select-all` for easy copy
+  - "Create Another User" button resets form for batch creation
+  - New users get `email_verified_at` set (pre-verified) and `UserSetting` with `first_login: true` (triggers onboarding flow)
+  - Route file `routes/user-management.php` at `/user-management/create`, gated by `permission:manage-users`
+  - Sidebar "User Management" section (visible to `manage-users` holders) with Create User active link + 3 placeholder items (Edit Users, User Activity, User Settings)
+  - 15 Pest feature tests (`tests/Feature/UserManagement/CreateUserTest.php`): auth guard, permission gating, validation (name, email format, email uniqueness, role), successful creation with role + settings, temp password verification, form reset, role dropdown
+  - 3 route-level permission tests added to `tests/Feature/PermissionTest.php`
+
 - **Spatie Laravel Permission v6 — Role-Based Access Control** (2026-02-06)
   - Published `config/permission.php` and Spatie permission migration (5 tables: `roles`, `permissions`, `model_has_roles`, `model_has_permissions`, `role_has_permissions`)
   - 5 roles: `sudo-admin`, `manager`, `planner`, `general-foreman`, `user`
