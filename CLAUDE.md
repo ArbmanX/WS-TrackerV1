@@ -110,7 +110,7 @@ Pest 4 with `RefreshDatabase` trait for Feature tests. Browser tests extend `Dus
 - **Run `vendor/bin/pint --dirty`** before committing
 - **Run tests** before merging: `php artisan test --compact`
 - **Get user confirmation** before `git push`, force operations, or merging to main
-- **Check `BMAD_WS/` folder** for WIP files and TODO tracker before starting new work
+- **Check `docs/` folder** for WIP files and TODO tracker before starting new work
 - **DaisyUI theming** — Use theme variables, not hardcoded colors; components must support theme switching
 
 ## Known Issues (P0)
@@ -411,7 +411,7 @@ These rules govern AI agent behavior during development sessions on this project
 
 - **At 60% context usage:** Ask user if they would like to create a context/handoff file summarizing current work
 - **At 65% context usage:** Create a markdown summary of current activities and offer to clear context with user confirmation
-- **Context file location:** Save to `BMAD_WS/session-handoffs/` with timestamp
+- **Context file location:** Save to `docs/session-handoffs/` with timestamp
 
 ## Git Workflow Enforcement
 

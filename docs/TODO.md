@@ -71,7 +71,7 @@
 | REF-011 | Domain-driven folder restructure | Refactor | **completed** | — | — |
 | FT-001 | Planner Daily Activity System | Feature | pending | REF-003 | [plans/](plans/) — see detail |
 | FT-006 | Unified toast/notification system | Feature | pending | — | NEEDS PLAN |
-| FT-007 | Historical Assessment Archival & Analytics | Feature | pending | — | [tech-spec](../../BMAD_WS/implementation-artifacts/tech-spec-historical-assessment-archival.md) |
+| FT-007 | Historical Assessment Archival & Analytics | Feature | pending | — | [tech-spec](specs/tech-spec-historical-assessment-archival.md) |
 | FT-008 | Query Explorer admin tool | Feature | **completed** | — | — |
 | UI-003 | Improve mobile responsiveness | UI/UX | pending | — | [CODE-REVIEW.md #7.3](CODE-REVIEW.md#73-region-cards--mobile-responsiveness) |
 | UI-004 | Add accessibility attributes | UI/UX | pending | — | [CODE-REVIEW.md #7.7](CODE-REVIEW.md#77-accessibility-issues) |
@@ -106,15 +106,15 @@
 | TST-006 | Dusk: Key user workflows | Testing | pending | TST-004, TST-005 | NEEDS PLAN |
 | TST-007 | Code coverage report setup | Testing | pending | TST-001, TST-003 | — |
 | TST-008 | Add Dusk to CI pipeline | Testing | pending | TST-004 | NEEDS PLAN |
-| TST-009 | PlannerActivityService tests | Testing | pending | FT-001 | [task-4](../docs/plans/task-4-sql-integration-plan.md#part-3-testing-plan) |
-| TST-010 | PlannerActivity API integration tests | Testing | pending | FT-001, TST-009 | [task-4](../docs/plans/task-4-sql-integration-plan.md#part-3-testing-plan) |
-| PERF-001 | Optimize Q1: systemWideDataQuery | Performance | pending | — | [task-5](../docs/plans/task-5-query-optimization-plan.md#q1-systemwidedataquery) |
-| PERF-002 | Optimize Q2: groupedByRegionDataQuery | Performance | pending | PERF-001 | [task-5](../docs/plans/task-5-query-optimization-plan.md#q2q3-regional-and-circuit-data-queries) |
-| PERF-003 | Optimize Q3: groupedByCircuitDataQuery | Performance | pending | PERF-002 | [task-5](../docs/plans/task-5-query-optimization-plan.md#q2q3-regional-and-circuit-data-queries) |
-| PERF-004 | Optimize Q4: getAllAssessmentsDailyActivities | Performance | pending | — | [task-5](../docs/plans/task-5-query-optimization-plan.md#q4-getallassessmentsdailyactivities) |
-| PERF-005 | Optimize Q5: getAllByJobGuid (CTE refactor) | Performance | pending | — | [task-5](../docs/plans/task-5-query-optimization-plan.md#q5-getallbyjobguid) |
-| PERF-006 | Optimize Q7: dailyRecordsQuery fragment | Performance | pending | — | [task-5](../docs/plans/task-5-query-optimization-plan.md#q7-dailyrecordsquery-fragment) |
-| PERF-007 | Database index recommendations | Performance | pending | PERF-001 | [task-5](../docs/plans/task-5-query-optimization-plan.md#43-index-recommendations) |
+| TST-009 | PlannerActivityService tests | Testing | pending | FT-001 | [task-4](plans/task-4-sql-integration-plan.md#part-3-testing-plan) |
+| TST-010 | PlannerActivity API integration tests | Testing | pending | FT-001, TST-009 | [task-4](plans/task-4-sql-integration-plan.md#part-3-testing-plan) |
+| PERF-001 | Optimize Q1: systemWideDataQuery | Performance | pending | — | [task-5](plans/task-5-query-optimization-plan.md#q1-systemwidedataquery) |
+| PERF-002 | Optimize Q2: groupedByRegionDataQuery | Performance | pending | PERF-001 | [task-5](plans/task-5-query-optimization-plan.md#q2q3-regional-and-circuit-data-queries) |
+| PERF-003 | Optimize Q3: groupedByCircuitDataQuery | Performance | pending | PERF-002 | [task-5](plans/task-5-query-optimization-plan.md#q2q3-regional-and-circuit-data-queries) |
+| PERF-004 | Optimize Q4: getAllAssessmentsDailyActivities | Performance | pending | — | [task-5](plans/task-5-query-optimization-plan.md#q4-getallassessmentsdailyactivities) |
+| PERF-005 | Optimize Q5: getAllByJobGuid (CTE refactor) | Performance | pending | — | [task-5](plans/task-5-query-optimization-plan.md#q5-getallbyjobguid) |
+| PERF-006 | Optimize Q7: dailyRecordsQuery fragment | Performance | pending | — | [task-5](plans/task-5-query-optimization-plan.md#q7-dailyrecordsquery-fragment) |
+| PERF-007 | Database index recommendations | Performance | pending | PERF-001 | [task-5](plans/task-5-query-optimization-plan.md#43-index-recommendations) |
 
 ---
 
@@ -931,10 +931,10 @@ Reorganized `app/Services/WorkStudio/` from flat technical layers into domain-dr
 | **Est. Effort** | 20+ hr |
 
 **Plan Documents:**
-- Business Rules: [`~/WorkStudioDev/BMAD_WS/implementation-artifacts/planner-activity-rules.md`](../../BMAD_WS/implementation-artifacts/planner-activity-rules.md)
-- Implementation Prompt: [`~/WorkStudioDev/BMAD_WS/implementation-artifacts/archived/prompt-planner-daily-activity-query.md`](../../BMAD_WS/implementation-artifacts/archived/prompt-planner-daily-activity-query.md)
-- SQL Integration Plan: [`docs/plans/task-4-sql-integration-plan.md`](../docs/plans/task-4-sql-integration-plan.md)
-- Data Flow Diagram: [`~/WorkStudioDev/BMAD_WS/excalidraw-diagrams/planner-activity-dataflow.excalidraw`](../../BMAD_WS/excalidraw-diagrams/planner-activity-dataflow.excalidraw)
+- Business Rules: [`docs/specs/planner-activity-rules.md`](specs/planner-activity-rules.md)
+- Implementation Prompt: [`docs/archive/prompt-planner-daily-activity-query.md`](archive/prompt-planner-daily-activity-query.md)
+- SQL Integration Plan: [`docs/plans/task-4-sql-integration-plan.md`](plans/task-4-sql-integration-plan.md)
+- Data Flow Diagram: [`docs/diagrams/planner-activity-dataflow.excalidraw`](diagrams/planner-activity-dataflow.excalidraw)
 
 **Description:**
 Full planner daily activity tracking system with "First Unit Wins" footage attribution logic. Includes:
@@ -1116,7 +1116,7 @@ Replace inconsistent flash/notification patterns (custom flash in CacheControls,
 | **Status** | pending |
 | **Category** | Feature |
 | **Depends On** | — |
-| **Plan** | [tech-spec-historical-assessment-archival.md](../../BMAD_WS/implementation-artifacts/tech-spec-historical-assessment-archival.md) |
+| **Plan** | [tech-spec-historical-assessment-archival.md](specs/tech-spec-historical-assessment-archival.md) |
 | **Source** | Quick Spec Workflow Session |
 | **Est. Effort** | 25+ hr |
 
@@ -1570,7 +1570,7 @@ Sort and panel operations trigger a fixed full-viewport overlay. Use targeted lo
 | **Category** | Testing |
 | **Depends On** | — |
 | **Plan** | — |
-| **Source** | [Testing Monitoring Setup](../../BMAD_WS/implementation-artifacts/archived/testing-monitoring-setup.md) §5a |
+| **Source** | [Testing Monitoring Setup](archive/testing-monitoring-setup.md) §5a |
 | **Est. Effort** | 2 hr |
 | **Files** | New: `tests/Unit/GetQueryServiceTest.php` |
 
@@ -1806,7 +1806,7 @@ Configure CI to run `php artisan dusk` with Chrome/Chromium. Handle headless bro
 | **Status** | pending |
 | **Category** | Testing |
 | **Depends On** | FT-001 |
-| **Plan** | [task-4 §3.1](../docs/plans/task-4-sql-integration-plan.md#part-3-testing-plan) |
+| **Plan** | [task-4 §3.1](plans/task-4-sql-integration-plan.md#part-3-testing-plan) |
 | **Source** | Task-4 SQL Integration Plan |
 | **Est. Effort** | 3 hr |
 | **Files** | New: `tests/Feature/Services/PlannerActivityServiceTest.php` |
@@ -1836,7 +1836,7 @@ Test daily activity returns expected structure, date/planner filtering, non-work
 | **Status** | pending |
 | **Category** | Testing |
 | **Depends On** | FT-001, TST-009 |
-| **Plan** | [task-4 §3.2](../docs/plans/task-4-sql-integration-plan.md#part-3-testing-plan) |
+| **Plan** | [task-4 §3.2](plans/task-4-sql-integration-plan.md#part-3-testing-plan) |
 | **Source** | Task-4 SQL Integration Plan |
 | **Est. Effort** | 2 hr |
 | **Files** | New: `tests/Feature/Api/PlannerActivityApiTest.php` |
@@ -1870,7 +1870,7 @@ API endpoint accessibility, JSON response structure validation, query parameter 
 | **Status** | pending |
 | **Category** | Performance |
 | **Depends On** | — |
-| **Plan** | [Query Optimization Plan](../docs/plans/task-5-query-optimization-plan.md) |
+| **Plan** | [Query Optimization Plan](plans/task-5-query-optimization-plan.md) |
 | **Source** | Task-5 (Priority P6) |
 | **Est. Effort** | 2 hr |
 | **Files** | `AssessmentQueries.php`, `SqlFragmentHelpers.php` |
@@ -1901,7 +1901,7 @@ Remove inefficient `TOP 1` subquery for CONTRACTOR. Use window function. Good ba
 | **Status** | pending |
 | **Category** | Performance |
 | **Depends On** | PERF-001 |
-| **Plan** | [Query Optimization Plan](../docs/plans/task-5-query-optimization-plan.md) |
+| **Plan** | [Query Optimization Plan](plans/task-5-query-optimization-plan.md) |
 | **Source** | Task-5 (Priority P4) |
 | **Est. Effort** | 3 hr |
 | **Files** | `AssessmentQueries.php`, `SqlFragmentHelpers.php` |
@@ -1932,7 +1932,7 @@ Remove inefficient `TOP 1` subquery for CONTRACTOR. Use window function. Good ba
 | **Status** | pending |
 | **Category** | Performance |
 | **Depends On** | PERF-002 |
-| **Plan** | [Query Optimization Plan](../docs/plans/task-5-query-optimization-plan.md) |
+| **Plan** | [Query Optimization Plan](plans/task-5-query-optimization-plan.md) |
 | **Source** | Task-5 (Priority P3) |
 | **Est. Effort** | 3 hr |
 | **Files** | `AssessmentQueries.php`, `SqlFragmentHelpers.php` |
@@ -1963,7 +1963,7 @@ Large result set, 2 CROSS APPLYs + STRING_AGG subquery. Apply same CTE approach 
 | **Status** | pending |
 | **Category** | Performance |
 | **Depends On** | — |
-| **Plan** | [Query Optimization Plan](../docs/plans/task-5-query-optimization-plan.md) |
+| **Plan** | [Query Optimization Plan](plans/task-5-query-optimization-plan.md) |
 | **Source** | Task-5 (Priority P1 — highest query complexity) |
 | **Est. Effort** | 4 hr |
 | **Files** | `AssessmentQueries.php`, `SqlFragmentHelpers.php` |
@@ -1994,7 +1994,7 @@ Most complex query — FOR JSON PATH, nested subqueries, highest execution time.
 | **Status** | pending |
 | **Category** | Performance |
 | **Depends On** | — |
-| **Plan** | [SQL Integration Plan](../docs/plans/task-4-sql-integration-plan.md) + [Query Optimization Plan](../docs/plans/task-5-query-optimization-plan.md) |
+| **Plan** | [SQL Integration Plan](plans/task-4-sql-integration-plan.md) + [Query Optimization Plan](plans/task-5-query-optimization-plan.md) |
 | **Source** | Task-4 Part 1, Task-5 (Priority P2) |
 | **Est. Effort** | 3 hr |
 | **Files** | `AssessmentQueries.php`, `SqlFragmentHelpers.php`, `config/ws_assessment_query.php` |
@@ -2025,7 +2025,7 @@ Most complex query — FOR JSON PATH, nested subqueries, highest execution time.
 | **Status** | pending |
 | **Category** | Performance |
 | **Depends On** | — |
-| **Plan** | [Query Optimization Plan](../docs/plans/task-5-query-optimization-plan.md) |
+| **Plan** | [Query Optimization Plan](plans/task-5-query-optimization-plan.md) |
 | **Source** | Task-5 (Priority P5) |
 | **Est. Effort** | 2 hr |
 | **Files** | `SqlFragmentHelpers.php` |
@@ -2056,7 +2056,7 @@ Triple-nested derived tables, ROW_NUMBER with complex partitioning, multiple VEG
 | **Status** | pending |
 | **Category** | Performance |
 | **Depends On** | PERF-001 |
-| **Plan** | [SQL Integration Plan §4.3](../docs/plans/task-4-sql-integration-plan.md#43-index-recommendations) |
+| **Plan** | [SQL Integration Plan §4.3](plans/task-4-sql-integration-plan.md#43-index-recommendations) |
 | **Source** | Task-4 Part 4, Task-5 |
 | **Est. Effort** | 1 hr (documentation) |
 
@@ -2124,17 +2124,17 @@ The following TODOs require a plan/spec before implementation can begin. Use `/b
 
 | Document | Location | Purpose |
 |----------|----------|---------|
-| Code Review | [`BMAD_WS/CODE-REVIEW.md`](CODE-REVIEW.md) | Full code review with fixes and guidance |
-| Rebuild Plan (archived) | [`BMAD_WS/archive/WS-Tracker-Rebuild-Plan.md`](archive/WS-Tracker-Rebuild-Plan.md) | Original rebuild roadmap — tasks extracted |
-| Planner Activity Rules | [`~/WorkStudioDev/BMAD_WS/implementation-artifacts/planner-activity-rules.md`](../../BMAD_WS/implementation-artifacts/planner-activity-rules.md) | Business rules for FT-001 |
-| Planner Activity Prompt | [`~/WorkStudioDev/BMAD_WS/implementation-artifacts/archived/prompt-planner-daily-activity-query.md`](../../BMAD_WS/implementation-artifacts/archived/prompt-planner-daily-activity-query.md) | Implementation prompt for FT-001 |
-| API Refactoring (completed) | [`~/WorkStudioDev/BMAD_WS/implementation-artifacts/archived/tech-spec-workstudio-api-layer-refactoring-archived-2026-02-01.md`](../../BMAD_WS/implementation-artifacts/archived/tech-spec-workstudio-api-layer-refactoring-archived-2026-02-01.md) | Historical reference |
-| Testing & Monitoring Setup | [`~/WorkStudioDev/BMAD_WS/implementation-artifacts/archived/testing-monitoring-setup.md`](../../BMAD_WS/implementation-artifacts/archived/testing-monitoring-setup.md) | Incomplete testing items extracted |
-| Dashboard Plan | [`docs/plans/task-3-dashboard-plan.md`](../docs/plans/task-3-dashboard-plan.md) | Dashboard implementation (completed) |
-| SQL Integration Plan | [`docs/plans/task-4-sql-integration-plan.md`](../docs/plans/task-4-sql-integration-plan.md) | Planner Activity + query optimization |
-| Query Optimization Plan | [`docs/plans/task-5-query-optimization-plan.md`](../docs/plans/task-5-query-optimization-plan.md) | Systematic query optimization workflow |
-| Data Flow Diagram | [`~/WorkStudioDev/BMAD_WS/excalidraw-diagrams/planner-activity-dataflow.excalidraw`](../../BMAD_WS/excalidraw-diagrams/planner-activity-dataflow.excalidraw) | Visual data flow for FT-001 |
-| Historical Assessment Archival Spec | [`~/WorkStudioDev/BMAD_WS/implementation-artifacts/tech-spec-historical-assessment-archival.md`](../../BMAD_WS/implementation-artifacts/tech-spec-historical-assessment-archival.md) | Full spec for FT-007 |
+| Code Review | [`docs/CODE-REVIEW.md`](CODE-REVIEW.md) | Full code review with fixes and guidance |
+| Rebuild Plan (archived) | [`docs/archive/WS-Tracker-Rebuild-Plan.md`](archive/WS-Tracker-Rebuild-Plan.md) | Original rebuild roadmap — tasks extracted |
+| Planner Activity Rules | [`docs/specs/planner-activity-rules.md`](specs/planner-activity-rules.md) | Business rules for FT-001 |
+| Planner Activity Prompt | [`docs/archive/prompt-planner-daily-activity-query.md`](archive/prompt-planner-daily-activity-query.md) | Implementation prompt for FT-001 |
+| API Refactoring (completed) | [`docs/archive/tech-spec-workstudio-api-layer-refactoring-archived-2026-02-01.md`](archive/tech-spec-workstudio-api-layer-refactoring-archived-2026-02-01.md) | Historical reference |
+| Testing & Monitoring Setup | [`docs/archive/testing-monitoring-setup.md`](archive/testing-monitoring-setup.md) | Incomplete testing items extracted |
+| Dashboard Plan | [`docs/plans/task-3-dashboard-plan.md`](plans/task-3-dashboard-plan.md) | Dashboard implementation (completed) |
+| SQL Integration Plan | [`docs/plans/task-4-sql-integration-plan.md`](plans/task-4-sql-integration-plan.md) | Planner Activity + query optimization |
+| Query Optimization Plan | [`docs/plans/task-5-query-optimization-plan.md`](plans/task-5-query-optimization-plan.md) | Systematic query optimization workflow |
+| Data Flow Diagram | [`docs/diagrams/planner-activity-dataflow.excalidraw`](diagrams/planner-activity-dataflow.excalidraw) | Visual data flow for FT-001 |
+| Historical Assessment Archival Spec | [`docs/specs/tech-spec-historical-assessment-archival.md`](specs/tech-spec-historical-assessment-archival.md) | Full spec for FT-007 |
 
 ---
 

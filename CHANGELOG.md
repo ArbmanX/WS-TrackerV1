@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Consolidated project documentation into `docs/`** (2026-02-06)
+  - Moved `TODO.md`, `CODE-REVIEW.md` to `docs/` (already tracked there)
+  - Created `docs/specs/` — planner-activity-rules.md, tech-spec-historical-assessment-archival.md
+  - Created `docs/queries/` — planner-activity-query-reference.md, discovery-query-results.md (renamed from QueryInfo/)
+  - Created `docs/diagrams/` — planner-activity-dataflow.excalidraw
+  - Created `docs/archive/` — WS-Tracker-Rebuild-Plan.md, prompt-planner-daily-activity-query.md, tech-spec-workstudio-api-layer-refactoring-archived-2026-02-01.md, testing-monitoring-setup.md
+  - Created `docs/session-handoffs/` for AI context workflow
+  - Updated 30+ internal links in TODO.md, CLAUDE.md, query reference docs
+  - Added redirect READMEs in old `BMAD_WS/` locations
+  - Eliminated confusing `../../BMAD_WS/` cross-directory paths
+
 - **Domain-driven folder restructure for WorkStudio services** (2026-02-06)
   - Reorganized `app/Services/WorkStudio/` from flat technical layers into domain namespaces:
     - `Client/` — HTTP infrastructure: `GetQueryService`, `ApiCredentialManager`, `WorkStudioApiService`, `WorkStudioApiInterface`
