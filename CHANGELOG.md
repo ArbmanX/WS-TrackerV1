@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Query Explorer** (2026-02-06)
+  - `QueryExplorer` Livewire component for raw SQL SELECT queries against WorkStudio API (`app/Livewire/DataManagement/QueryExplorer.php`)
+  - Query builder UI with table dropdown (VEGJOB, VEGUNIT, STATIONS + custom), fields input, TOP limit (1-500), optional WHERE clause
+  - Results display with row count badge, query timing, executed SQL in monospace, raw JSON output
+  - Uses `config('workstudio.service_account.*')` credentials — bypasses `GetQueryService` hardcoded creds
+  - Blade view (`resources/views/livewire/data-management/query-explorer.blade.php`) with DaisyUI cards, loading states
+  - Route at `/data-management/query-explorer` (`routes/data-management.php`)
+  - Sidebar navigation item under "Data Management" with `code-bracket` icon
+  - Feature tests: auth guard, page render, validation, query execution with mocked HTTP, error handling, clear state (`tests/Feature/DataManagement/QueryExplorerTest.php`)
+
 ### Removed
 - **Dead Code Cleanup** (2026-02-05)
   - Deleted `app/Livewire/_backup/` directory (deprecated TwoFactor components)

@@ -36,6 +36,11 @@
                     'route' => 'data-management.cache',
                     'icon' => 'server-stack',
                 ],
+                [
+                    'label' => 'Query Explorer',
+                    'route' => 'data-management.query-explorer',
+                    'icon' => 'code-bracket',
+                ],
             ],
         ],
     ];
