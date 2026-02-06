@@ -66,6 +66,16 @@ class UserFactory extends Factory
     }
 
     /**
+     * Assign a role to the user after creation.
+     */
+    public function withRole(string $role): static
+    {
+        return $this->afterCreating(function ($user) use ($role) {
+            $user->assignRole($role);
+        });
+    }
+
+    /**
      * Indicate that the model has two-factor authentication configured.
      */
     public function withTwoFactor(): static

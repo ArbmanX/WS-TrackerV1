@@ -25,21 +25,25 @@
                     'label' => 'Overview',
                     'route' => 'dashboard',
                     'icon' => 'chart-bar',
+                    'permission' => 'view-dashboard',
                 ],
             ],
         ],
         [
             'section' => 'Data Management',
+            'permission' => 'access-data-management',
             'items' => [
                 [
                     'label' => 'Cache Controls',
                     'route' => 'data-management.cache',
                     'icon' => 'server-stack',
+                    'permission' => 'access-data-management',
                 ],
                 [
                     'label' => 'Query Explorer',
                     'route' => 'data-management.query-explorer',
                     'icon' => 'code-bracket',
+                    'permission' => 'execute-queries',
                 ],
             ],
         ],
@@ -87,58 +91,70 @@
     <nav class="p-2">
         <ul class="menu menu-sm gap-1">
             @foreach($navigation as $section)
-                {{-- Section Title --}}
-                <li
-                    x-show="$store.sidebar.showLabels"
-                    class="menu-title mt-4 first:mt-0"
-                >
-                    {{ $section['section'] }}
-                </li>
+                @php
+                    $sectionPermission = $section['permission'] ?? null;
+                @endphp
 
-                {{-- Section Items --}}
-                @foreach($section['items'] as $item)
-                    @php
-                        $active = $isActive($item['route'] ?? '');
-                        $routeExists = Route::has($item['route'] ?? '');
-                    @endphp
-
-                    <li>
-                        @if($routeExists)
-                            <a
-                                href="{{ route($item['route']) }}"
-                                wire:navigate
-                                @class([
-                                    'flex items-center gap-3',
-                                    'menu-active' => $active,
-                                ])
-                            >
-                                <x-ui.tooltip
-                                    :text="$item['label']"
-                                    position="right"
-                                    x-show="!$store.sidebar.showLabels"
-                                >
-                                    <x-ui.icon :name="$item['icon']" size="md" />
-                                </x-ui.tooltip>
-                                <x-ui.icon
-                                    :name="$item['icon']"
-                                    size="md"
-                                    x-show="$store.sidebar.showLabels"
-                                />
-                                <span x-show="$store.sidebar.showLabels">
-                                    {{ $item['label'] }}
-                                </span>
-                            </a>
-                        @else
-                            {{-- Route doesn't exist yet - show disabled --}}
-                            <span class="flex items-center gap-3 opacity-50 cursor-not-allowed">
-                                <x-ui.icon :name="$item['icon']" size="md" />
-                                <span x-show="$store.sidebar.showLabels">
-                                    {{ $item['label'] }}
-                                </span>
-                            </span>
-                        @endif
+                @if(!$sectionPermission || auth()->user()?->can($sectionPermission))
+                    {{-- Section Title --}}
+                    <li
+                        x-show="$store.sidebar.showLabels"
+                        class="menu-title mt-4 first:mt-0"
+                    >
+                        {{ $section['section'] }}
                     </li>
-                @endforeach
+
+                    {{-- Section Items --}}
+                    @foreach($section['items'] as $item)
+                        @php
+                            $itemPermission = $item['permission'] ?? null;
+                        @endphp
+
+                        @if(!$itemPermission || auth()->user()?->can($itemPermission))
+                            @php
+                                $active = $isActive($item['route'] ?? '');
+                                $routeExists = Route::has($item['route'] ?? '');
+                            @endphp
+
+                            <li>
+                                @if($routeExists)
+                                    <a
+                                        href="{{ route($item['route']) }}"
+                                        wire:navigate
+                                        @class([
+                                            'flex items-center gap-3',
+                                            'menu-active' => $active,
+                                        ])
+                                    >
+                                        <x-ui.tooltip
+                                            :text="$item['label']"
+                                            position="right"
+                                            x-show="!$store.sidebar.showLabels"
+                                        >
+                                            <x-ui.icon :name="$item['icon']" size="md" />
+                                        </x-ui.tooltip>
+                                        <x-ui.icon
+                                            :name="$item['icon']"
+                                            size="md"
+                                            x-show="$store.sidebar.showLabels"
+                                        />
+                                        <span x-show="$store.sidebar.showLabels">
+                                            {{ $item['label'] }}
+                                        </span>
+                                    </a>
+                                @else
+                                    {{-- Route doesn't exist yet - show disabled --}}
+                                    <span class="flex items-center gap-3 opacity-50 cursor-not-allowed">
+                                        <x-ui.icon :name="$item['icon']" size="md" />
+                                        <span x-show="$store.sidebar.showLabels">
+                                            {{ $item['label'] }}
+                                        </span>
+                                    </span>
+                                @endif
+                            </li>
+                        @endif
+                    @endforeach
+                @endif
             @endforeach
         </ul>
     </nav>

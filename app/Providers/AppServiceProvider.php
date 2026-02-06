@@ -37,7 +37,7 @@ class AppServiceProvider extends ServiceProvider
         // Allow access in local environment, or by admin users in production
         Gate::define('viewPulse', function ($user) {
             return app()->environment('local')
-                || $user->hasRole('admin');
+                || $user->hasPermissionTo('access-pulse');
         });
 
         // Don't record Pulse's own requests

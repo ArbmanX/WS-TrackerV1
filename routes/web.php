@@ -40,7 +40,7 @@ Route::get('/health', HealthCheckJsonResultsController::class)
 
 // HTML dashboard (admin only)
 Route::get('/health/dashboard', HealthCheckResultsController::class)
-    ->middleware(['auth'])
+    ->middleware(['auth', 'permission:access-health-dashboard'])
     ->name('health.dashboard');
 
 require __DIR__.'/workstudioAPI.php';

@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Spatie Laravel Permission v6 — Role-Based Access Control** (2026-02-06)
+  - Published `config/permission.php` and Spatie permission migration (5 tables: `roles`, `permissions`, `model_has_roles`, `model_has_permissions`, `role_has_permissions`)
+  - 5 roles: `sudo-admin`, `manager`, `planner`, `general-foreman`, `user`
+  - 7 permissions: `view-dashboard`, `access-data-management`, `manage-cache`, `execute-queries`, `access-pulse`, `access-health-dashboard`, `manage-users`
+  - `RolePermissionSeeder` (idempotent) — defines all roles and permissions, registered in `DatabaseSeeder`
+  - `HasRoles` trait on `User` model — enables `assignRole()`, `hasPermissionTo()`, `can()` etc.
+  - `role`, `permission`, `role_or_permission` middleware aliases in `bootstrap/app.php`
+  - `withRole()` factory state on `UserFactory` for test setup
+  - Permission-gated sidebar navigation — sections and items hidden when user lacks permission
+  - Permission middleware on data management routes (`permission:access-data-management`, `permission:execute-queries`)
+  - Permission middleware on health dashboard route (`permission:access-health-dashboard`)
+  - 10 permission tests (`tests/Feature/PermissionTest.php`): 403 for unauthorized users, role-based access verification, seeder idempotency
+
+### Fixed
+- **SEC-005: `hasRole()` missing method** (2026-02-06) — Added `HasRoles` trait to User model; replaced broken `$user->hasRole('admin')` in Pulse gate with `$user->hasPermissionTo('access-pulse')`
+
 ### Changed
 - **Consolidated project documentation into `docs/`** (2026-02-06)
   - Moved `TODO.md`, `CODE-REVIEW.md` to `docs/` (already tracked there)

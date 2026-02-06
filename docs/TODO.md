@@ -21,14 +21,14 @@
 
 | Category | Total | Pending | In Progress | Completed | Needs Plan |
 |----------|-------|---------|-------------|-----------|------------|
-| Security | 6 | 4 | 0 | 2 | 0 |
+| Security | 6 | 3 | 0 | 3 | 0 |
 | Cleanup | 9 | 1 | 0 | 8 | 0 |
 | Refactor | 11 | 10 | 0 | 1 | 2 |
 | Feature | 8 | 6 | 0 | 1 | 4 |
 | UI/UX | 12 | 11 | 0 | 1 | 1 |
 | Testing | 10 | 10 | 0 | 0 | 3 |
 | Performance | 7 | 7 | 0 | 0 | 0 |
-| **Totals** | **63** | **49** | **0** | **13** | **10** |
+| **Totals** | **63** | **48** | **0** | **14** | **10** |
 
 ---
 
@@ -42,7 +42,7 @@
 | SEC-002 | Protect/remove unauthed API routes | Security | **completed** | — | [CODE-REVIEW.md #2.3](CODE-REVIEW.md#23-unprotected-apitest-routes) |
 | SEC-003 | Fix SQL injection in getAllByJobGuid | Security | pending | — | [CODE-REVIEW.md #2.2](CODE-REVIEW.md#22-sql-injection-vulnerability) |
 | SEC-004 | Enable SSL verification | Security | pending | — | [CODE-REVIEW.md #2.4](CODE-REVIEW.md#24-ssl-verification-disabled) |
-| SEC-005 | Fix hasRole() missing method | Security | pending | — | [CODE-REVIEW.md #5.6](CODE-REVIEW.md#56-appserviceprovider--missing-hasrole-method) |
+| SEC-005 | Fix hasRole() missing method | Security | **completed** | — | [CODE-REVIEW.md #5.6](CODE-REVIEW.md#56-appserviceprovider--missing-hasrole-method) |
 | CLN-001 | Remove debug code (dump, queryAll, etc.) | Cleanup | **completed** | — | [CODE-REVIEW.md #5.7](CODE-REVIEW.md#57-debug-code-in-production) |
 
 ### P1 — High Priority (Next Sprint)
@@ -251,7 +251,7 @@ The `Http::macro('workstudio')` sets `['verify' => false]` which disables SSL ce
 | Field | Value |
 |-------|-------|
 | **Priority** | P0 |
-| **Status** | pending |
+| **Status** | **completed** |
 | **Category** | Security |
 | **Depends On** | — |
 | **Plan** | [CODE-REVIEW.md #5.6](CODE-REVIEW.md#56-appserviceprovider--missing-hasrole-method) |
@@ -267,10 +267,10 @@ The `Http::macro('workstudio')` sets `['verify' => false]` which disables SSL ce
 
 | Field | Value |
 |-------|-------|
-| **Completed** | — |
-| **Time Elapsed** | — |
-| **Files Changed** | — |
-| **Notes** | — |
+| **Completed** | 2026-02-06 |
+| **Time Elapsed** | Part of feature/permissions-system branch |
+| **Files Changed** | `app/Models/User.php`, `app/Providers/AppServiceProvider.php` |
+| **Notes** | Added `HasRoles` trait to User model. Replaced `$user->hasRole('admin')` with `$user->hasPermissionTo('access-pulse')` in Pulse gate. Full Spatie Permission v6 integration with 5 roles, 7 permissions, route guards, and sidebar gating. |
 
 </details>
 
@@ -2117,6 +2117,7 @@ The following TODOs require a plan/spec before implementation can begin. Use `/b
 | 2026-02-05 | UI-007 | Fix app-logo branding inconsistency | cleanup/dead-code-removal | app-logo.blade.php |
 | 2026-02-06 | FT-008 | Query Explorer admin tool | ~30 min | QueryExplorer.php, query-explorer.blade.php, data-management.php, sidebar.blade.php, QueryExplorerTest.php |
 | 2026-02-06 | REF-011 | Domain-driven folder restructure | ~45 min | 32 files (15 renamed, 17 import updates across app/, tests/, routes/) |
+| 2026-02-06 | SEC-005 | Fix hasRole() missing method + full Spatie Permission integration | feature/permissions-system | User.php, AppServiceProvider.php, bootstrap/app.php, permission.php, RolePermissionSeeder.php, DatabaseSeeder.php, data-management.php, web.php, sidebar.blade.php, UserFactory.php, PermissionTest.php, CacheControlsTest.php, QueryExplorerTest.php, HealthCheckTest.php |
 
 ---
 

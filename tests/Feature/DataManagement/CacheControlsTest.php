@@ -6,7 +6,8 @@ use App\Services\WorkStudio\Shared\ValueObjects\UserQueryContext;
 use Livewire\Livewire;
 
 beforeEach(function () {
-    $user = \App\Models\User::factory()->withWorkStudio()->create();
+    $this->seed(\Database\Seeders\RolePermissionSeeder::class);
+    $user = \App\Models\User::factory()->withWorkStudio()->withRole('sudo-admin')->create();
     \App\Models\UserSetting::factory()->onboarded()->create(['user_id' => $user->id]);
     $this->actingAs($user);
 });

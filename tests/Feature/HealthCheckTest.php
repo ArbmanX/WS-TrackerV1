@@ -33,8 +33,9 @@ describe('Health Checks', function () {
         expect($checkNames)->toContain('WorkStudio API');
     });
 
-    test('health dashboard returns HTML for authenticated users', function () {
-        $user = User::factory()->create();
+    test('health dashboard returns HTML for authorized users', function () {
+        $this->seed(\Database\Seeders\RolePermissionSeeder::class);
+        $user = User::factory()->withRole('sudo-admin')->create();
 
         actingAs($user)
             ->get('/health/dashboard')
