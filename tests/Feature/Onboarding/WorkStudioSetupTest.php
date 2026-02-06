@@ -3,8 +3,8 @@
 use App\Livewire\Onboarding\WorkStudioSetup;
 use App\Models\User;
 use App\Models\UserSetting;
-use App\Services\WorkStudio\Contracts\UserDetailsServiceInterface;
-use App\Services\WorkStudio\Exceptions\UserNotFoundException;
+use App\Services\WorkStudio\Shared\Contracts\UserDetailsServiceInterface;
+use App\Services\WorkStudio\Shared\Exceptions\UserNotFoundException;
 use Livewire\Livewire;
 use Mockery\MockInterface;
 

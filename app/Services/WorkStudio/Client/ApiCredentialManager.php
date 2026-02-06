@@ -1,5 +1,5 @@
 <?php
-namespace App\Services\WorkStudio\Managers;
+namespace App\Services\WorkStudio\Client;
 
 use App\Models\User;
 use App\Models\UserWsCredential;

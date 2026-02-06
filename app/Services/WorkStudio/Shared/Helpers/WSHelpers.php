@@ -1,5 +1,5 @@
 <?php
-namespace App\Services\WorkStudio\Helpers;
+namespace App\Services\WorkStudio\Shared\Helpers;
 
 class WSHelpers
 {

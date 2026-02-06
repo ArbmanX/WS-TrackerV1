@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\WorkStudio\Contracts;
+namespace App\Services\WorkStudio\Shared\Contracts;
 
 interface UserDetailsServiceInterface
 {
@@ -17,8 +17,8 @@ interface UserDetailsServiceInterface
      *     groups: array<string>
      * }
      *
-     * @throws \App\Services\WorkStudio\Exceptions\UserNotFoundException
-     * @throws \App\Services\WorkStudio\Exceptions\WorkStudioApiException
+     * @throws \App\Services\WorkStudio\Shared\Exceptions\UserNotFoundException
+     * @throws \App\Services\WorkStudio\Shared\Exceptions\WorkStudioApiException
      */
     public function getDetails(string $username): array;
 }

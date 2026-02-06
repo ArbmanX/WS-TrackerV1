@@ -1,8 +1,8 @@
 <?php
 
 use App\Livewire\Dashboard\Overview;
-use App\Services\WorkStudio\Services\GetQueryService;
-use App\Services\WorkStudio\ValueObjects\UserQueryContext;
+use App\Services\WorkStudio\Client\GetQueryService;
+use App\Services\WorkStudio\Shared\ValueObjects\UserQueryContext;
 use Illuminate\Support\Facades\Route;
 
 /*

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Livewire\DataManagement;
 
-use App\Services\WorkStudio\Services\CachedQueryService;
-use App\Services\WorkStudio\ValueObjects\UserQueryContext;
+use App\Services\WorkStudio\Shared\Cache\CachedQueryService;
+use App\Services\WorkStudio\Shared\ValueObjects\UserQueryContext;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;

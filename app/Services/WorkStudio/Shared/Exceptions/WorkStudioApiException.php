@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\WorkStudio\Exceptions;
+namespace App\Services\WorkStudio\Shared\Exceptions;
 
 use Exception;
 

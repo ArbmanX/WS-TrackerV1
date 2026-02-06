@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Domain-driven folder restructure for WorkStudio services** (2026-02-06)
+  - Reorganized `app/Services/WorkStudio/` from flat technical layers into domain namespaces:
+    - `Client/` — HTTP infrastructure: `GetQueryService`, `ApiCredentialManager`, `WorkStudioApiService`, `WorkStudioApiInterface`
+    - `Shared/` — Cross-domain: `UserQueryContext`, `CachedQueryService`, `ResourceGroupAccessService`, `UserDetailsService`, exceptions, helpers
+    - `Assessments/` — Assessment domain: `AssessmentQueries`, `SqlFieldBuilder`, `SqlFragmentHelpers`
+  - Removed old directories: `Services/`, `Managers/`, `Contracts/`, `ValueObjects/`, `Helpers/`, `Exceptions/`, `AssessmentsDx/`
+  - Updated 53 import statements across 24 files (app, tests, routes, providers)
+  - Prepares structure for future `WorkJobs/` and `Planner/` domain modules
+
 ### Added
 - **Query Explorer** (2026-02-06)
   - `QueryExplorer` Livewire component for raw SQL SELECT queries against WorkStudio API (`app/Livewire/DataManagement/QueryExplorer.php`)

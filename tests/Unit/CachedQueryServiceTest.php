@@ -1,8 +1,8 @@
 <?php
 
-use App\Services\WorkStudio\Services\CachedQueryService;
-use App\Services\WorkStudio\Services\GetQueryService;
-use App\Services\WorkStudio\ValueObjects\UserQueryContext;
+use App\Services\WorkStudio\Client\GetQueryService;
+use App\Services\WorkStudio\Shared\Cache\CachedQueryService;
+use App\Services\WorkStudio\Shared\ValueObjects\UserQueryContext;
 use Illuminate\Support\Facades\Cache;
 
 uses(Tests\TestCase::class);

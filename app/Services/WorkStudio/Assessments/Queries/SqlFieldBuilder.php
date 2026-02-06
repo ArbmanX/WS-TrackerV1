@@ -1,5 +1,5 @@
 <?php
-namespace App\Services\WorkStudio\AssessmentsDx\Queries;
+namespace App\Services\WorkStudio\Assessments\Queries;
 
 class SqlFieldBuilder
 {

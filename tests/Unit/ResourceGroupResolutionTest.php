@@ -1,6 +1,6 @@
 <?php
 
-use App\Services\WorkStudio\Services\ResourceGroupAccessService;
+use App\Services\WorkStudio\Shared\Services\ResourceGroupAccessService;
 
 uses(Tests\TestCase::class);
 

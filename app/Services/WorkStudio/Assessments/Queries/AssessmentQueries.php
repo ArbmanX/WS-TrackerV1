@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Services\WorkStudio\AssessmentsDx\Queries;
+namespace App\Services\WorkStudio\Assessments\Queries;
 
-use App\Services\WorkStudio\Helpers\WSHelpers;
-use App\Services\WorkStudio\ValueObjects\UserQueryContext;
+use App\Services\WorkStudio\Shared\Helpers\WSHelpers;
+use App\Services\WorkStudio\Shared\ValueObjects\UserQueryContext;
 
 class AssessmentQueries
 {

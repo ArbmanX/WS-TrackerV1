@@ -2,9 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Services\WorkStudio\Services;
+namespace App\Services\WorkStudio\Shared\Cache;
 
-use App\Services\WorkStudio\ValueObjects\UserQueryContext;
+use App\Services\WorkStudio\Client\GetQueryService;
+use App\Services\WorkStudio\Shared\ValueObjects\UserQueryContext;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;

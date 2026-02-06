@@ -1,8 +1,8 @@
 <?php
 
 use App\Livewire\DataManagement\CacheControls;
-use App\Services\WorkStudio\Services\CachedQueryService;
-use App\Services\WorkStudio\ValueObjects\UserQueryContext;
+use App\Services\WorkStudio\Shared\Cache\CachedQueryService;
+use App\Services\WorkStudio\Shared\ValueObjects\UserQueryContext;
 use Livewire\Livewire;
 
 beforeEach(function () {

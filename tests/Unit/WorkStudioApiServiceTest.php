@@ -1,9 +1,9 @@
 <?php
 
-use App\Services\WorkStudio\Managers\ApiCredentialManager;
-use App\Services\WorkStudio\Services\GetQueryService;
-use App\Services\WorkStudio\ValueObjects\UserQueryContext;
-use App\Services\WorkStudio\WorkStudioApiService;
+use App\Services\WorkStudio\Client\ApiCredentialManager;
+use App\Services\WorkStudio\Client\GetQueryService;
+use App\Services\WorkStudio\Client\WorkStudioApiService;
+use App\Services\WorkStudio\Shared\ValueObjects\UserQueryContext;
 use Illuminate\Support\Collection;
 
 function makeTestContext(): UserQueryContext

@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Services\WorkStudio\Services;
+namespace App\Services\WorkStudio\Client;
 
-use App\Services\WorkStudio\AssessmentsDx\Queries\AssessmentQueries;
-use App\Services\WorkStudio\Managers\ApiCredentialManager;
-use App\Services\WorkStudio\ValueObjects\UserQueryContext;
+use App\Services\WorkStudio\Assessments\Queries\AssessmentQueries;
+use App\Services\WorkStudio\Client\ApiCredentialManager;
+use App\Services\WorkStudio\Shared\ValueObjects\UserQueryContext;
 use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;

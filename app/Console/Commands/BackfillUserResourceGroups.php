@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\User;
-use App\Services\WorkStudio\Services\ResourceGroupAccessService;
+use App\Services\WorkStudio\Shared\Services\ResourceGroupAccessService;
 use Illuminate\Console\Command;
 
 class BackfillUserResourceGroups extends Command

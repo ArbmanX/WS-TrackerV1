@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Services\WorkStudio;
+namespace App\Services\WorkStudio\Client;
 
-use App\Services\WorkStudio\Contracts\WorkStudioApiInterface;
-use App\Services\WorkStudio\Managers\ApiCredentialManager;
-use App\Services\WorkStudio\Services\GetQueryService;
-use App\Services\WorkStudio\ValueObjects\UserQueryContext;
+use App\Services\WorkStudio\Client\Contracts\WorkStudioApiInterface;
+use App\Services\WorkStudio\Client\ApiCredentialManager;
+use App\Services\WorkStudio\Client\GetQueryService;
+use App\Services\WorkStudio\Shared\ValueObjects\UserQueryContext;
 use Exception;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;

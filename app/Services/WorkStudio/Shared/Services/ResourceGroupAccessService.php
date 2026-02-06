@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\WorkStudio\Services;
+namespace App\Services\WorkStudio\Shared\Services;
 
 class ResourceGroupAccessService
 {

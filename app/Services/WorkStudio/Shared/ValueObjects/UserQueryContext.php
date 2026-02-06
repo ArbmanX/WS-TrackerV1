@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Services\WorkStudio\ValueObjects;
+namespace App\Services\WorkStudio\Shared\ValueObjects;
 
 use App\Models\User;
-use App\Services\WorkStudio\Services\ResourceGroupAccessService;
+use App\Services\WorkStudio\Shared\Services\ResourceGroupAccessService;
 
 /**
  * Immutable value object encapsulating user-specific query parameters.

@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Services\WorkStudio\Services;
+namespace App\Services\WorkStudio\Shared\Services;
 
-use App\Services\WorkStudio\Contracts\UserDetailsServiceInterface;
-use App\Services\WorkStudio\Exceptions\UserNotFoundException;
-use App\Services\WorkStudio\Exceptions\WorkStudioApiException;
+use App\Services\WorkStudio\Shared\Contracts\UserDetailsServiceInterface;
+use App\Services\WorkStudio\Shared\Exceptions\UserNotFoundException;
+use App\Services\WorkStudio\Shared\Exceptions\WorkStudioApiException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 

@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Services\WorkStudio\Contracts;
+namespace App\Services\WorkStudio\Client\Contracts;
 
-use App\Services\WorkStudio\ValueObjects\UserQueryContext;
+use App\Services\WorkStudio\Shared\ValueObjects\UserQueryContext;
 use Illuminate\Support\Collection;
 
 /**

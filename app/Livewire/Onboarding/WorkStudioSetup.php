@@ -2,10 +2,10 @@
 
 namespace App\Livewire\Onboarding;
 
-use App\Services\WorkStudio\Contracts\UserDetailsServiceInterface;
-use App\Services\WorkStudio\Exceptions\UserNotFoundException;
-use App\Services\WorkStudio\Exceptions\WorkStudioApiException;
-use App\Services\WorkStudio\Services\ResourceGroupAccessService;
+use App\Services\WorkStudio\Shared\Contracts\UserDetailsServiceInterface;
+use App\Services\WorkStudio\Shared\Exceptions\UserNotFoundException;
+use App\Services\WorkStudio\Shared\Exceptions\WorkStudioApiException;
+use App\Services\WorkStudio\Shared\Services\ResourceGroupAccessService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Component;

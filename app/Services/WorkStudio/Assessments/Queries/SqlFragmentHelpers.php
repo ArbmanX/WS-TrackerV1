@@ -1,7 +1,7 @@
 <?php
-namespace App\Services\WorkStudio\AssessmentsDx\Queries;
+namespace App\Services\WorkStudio\Assessments\Queries;
 
-use App\Services\WorkStudio\AssessmentsDx\Queries\SqlFieldBuilder;
+use App\Services\WorkStudio\Assessments\Queries\SqlFieldBuilder;
 
 
 trait SqlFragmentHelpers

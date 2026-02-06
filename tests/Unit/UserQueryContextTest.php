@@ -1,7 +1,7 @@
 <?php
 
 use App\Models\User;
-use App\Services\WorkStudio\ValueObjects\UserQueryContext;
+use App\Services\WorkStudio\Shared\ValueObjects\UserQueryContext;
 
 uses(Tests\TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class);
 

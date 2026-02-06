@@ -1,7 +1,7 @@
 <?php
 
-use App\Services\WorkStudio\AssessmentsDx\Queries\AssessmentQueries;
-use App\Services\WorkStudio\ValueObjects\UserQueryContext;
+use App\Services\WorkStudio\Assessments\Queries\AssessmentQueries;
+use App\Services\WorkStudio\Shared\ValueObjects\UserQueryContext;
 
 uses(Tests\TestCase::class);
 
