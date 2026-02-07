@@ -2,6 +2,67 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+# AI Session Management Rules
+
+These rules govern AI agent behavior during development sessions on this project.
+Review the docs directory
+
+
+## Context Management
+
+- **At 60% context usage:** Ask user if they would like to create a context/handoff file summarizing current work
+- **At 65% context usage:** Create a markdown summary of current activities and offer to clear context with user confirmation
+- **Context file location:** Save to `docs/session-handoffs/` with timestamp
+
+## UI & UX
+
+- **Daisy UI exclusive** - all ui and ux design must use daisy ui, skills are available
+
+## Git Workflow Enforcement
+
+- **Before starting any new phase:**
+  1. ensure the TODO tracker is up to date.
+  2. Check if wip file is clear. If not clear prompt user to decide what to do next.
+  3. create a wip file and update it after every phase. Clear wip file once branch is commited and merged.
+  4. Confirm previous phase was merged to `main`
+  5. Confirm current branch is `main`
+  6. Create new branch for the phase
+
+- **Always get user confirmation before:**
+  - Pushing to origin (`git push`)
+  - Force operations
+  - Merging to main
+
+## Documentation
+
+- **Read the project context file** - This will provide the necessary context for this project
+- **Read PROJECT_RULES.md** — Follow all project development rules
+
+### CHANGELOG.md Maintenance
+
+- **Update CHANGELOG.md before every commit** with meaningful changes
+- Follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
+- Use these categories: `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`
+- Add entries under `## [Unreleased]` section
+- Be specific: include file names, feature names, and brief descriptions
+- Group related changes together
+
+### Update Memory 
+
+- **Update the project context file** - add any necessary details to the context file for the start of a new session
+
+## Session Handoff Template
+
+When creating context/handoff files, include:
+
+- Current task status
+- Files modified this session
+- Next steps / TODO items
+- Any blockers or decisions needed
+- Relevant code locations
+
+
+
 ## Build & Development Commands
 
 ```bash
@@ -144,6 +205,7 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - pestphp/pest (PEST) - v4
 - phpunit/phpunit (PHPUNIT) - v12
 - tailwindcss (TAILWINDCSS) - v4
+- DaisyUI (DAISYUI) - v5
 
 ## Skills Activation
 
@@ -152,11 +214,13 @@ This project has domain-specific skills available. You MUST activate the relevan
 ### WS Module (WorkStudio Database Intelligence)
 
 The WS module is available at `_bmad/ws/` and provides:
+
 - **Schema Architect** — Database structure expert (`/ws:schema-architect`)
 - **Query Specialist** — SQL queries and optimization (`/ws:query-specialist`)
 - **Laravel Generator** — TALL stack code generation (`/ws:laravel-generator`)
 
 **Workflows available:**
+
 - `table-explorer` — Interactive deep-dive into any table
 - `model-generator` — Generate Laravel models with relationships
 - `query-builder` — Guided SQL query construction
@@ -402,52 +466,3 @@ protected function isAccessible(User $user, ?string $path = null): bool
 </laravel-boost-guidelines>
 
 ---
-
-# AI Session Management Rules
-
-These rules govern AI agent behavior during development sessions on this project.
-Review the docs directory
-
-
-## Context Management
-
-- **At 60% context usage:** Ask user if they would like to create a context/handoff file summarizing current work
-- **At 65% context usage:** Create a markdown summary of current activities and offer to clear context with user confirmation
-- **Context file location:** Save to `docs/session-handoffs/` with timestamp
-
-## Git Workflow Enforcement
-
-- **Before starting any new phase:**
-  1. ensure the TODO tracker is up to date.
-  2. Check if wip file is clear. If not clear prompt user to decide what to do next.
-  3. create a wip file and update it after every phase. Clear wip file once branch is commited and merged.
-  4. Confirm previous phase was merged to `main`
-  5. Confirm current branch is `main`
-  6. Create new branch for the phase
-
-- **Always get user confirmation before:**
-  - Pushing to origin (`git push`)
-  - Force operations
-  - Merging to main
-
-## Documentation
-
-- **Read PROJECT_RULES.md** — Follow all project development rules
-
-### CHANGELOG.md Maintenance
-
-- **Update CHANGELOG.md before every commit** with meaningful changes
-- Follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
-- Use these categories: `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`
-- Add entries under `## [Unreleased]` section
-- Be specific: include file names, feature names, and brief descriptions
-- Group related changes together
-
-## Session Handoff Template
-
-When creating context/handoff files, include:
-- Current task status
-- Files modified this session
-- Next steps / TODO items
-- Any blockers or decisions needed
-- Relevant code locations
