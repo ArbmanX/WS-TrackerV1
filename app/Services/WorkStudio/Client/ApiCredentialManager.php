@@ -1,11 +1,50 @@
 <?php
+
 namespace App\Services\WorkStudio\Client;
 
 use App\Models\User;
 use App\Models\UserWsCredential;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class ApiCredentialManager
 {
+    /**
+     * Test credentials against the WorkStudio API with a lightweight query.
+     */
+    public function testCredentials(string $username, string $password): bool
+    {
+        $url = rtrim(config('workstudio.base_url'), '/').'/GETQUERY';
+
+        try {
+            $response = Http::workstudio()
+                ->withBasicAuth($username, $password)
+                ->timeout(30)
+                ->connectTimeout(10)
+                ->post($url, [
+                    'Protocol' => 'GETQUERY',
+                    'DBParameters' => "USER NAME={$username}\r\nPASSWORD={$password}\r\n",
+                    'SQL' => 'SELECT TOP 1 1 AS test',
+                ]);
+
+            $data = $response->json();
+
+            // Check for API error responses
+            if (isset($data['protocol']) && $data['protocol'] === 'ERROR') {
+                return false;
+            }
+
+            return $response->successful();
+        } catch (\Exception $e) {
+            Log::warning('WorkStudio credential test failed', [
+                'username' => $username,
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+
     /**
      * Get credentials for API calls.
      * Returns user credentials if available, otherwise falls back to service account.

@@ -38,13 +38,13 @@ class ChangePassword extends Component
             'password' => $this->password,
         ]);
 
-        // Update settings to mark password as changed
+        // Update settings to mark password as changed and advance step
         $user->settings()->updateOrCreate(
             ['user_id' => $user->id],
-            ['first_login' => false]
+            ['first_login' => false, 'onboarding_step' => 1]
         );
 
-        $this->redirect(route('onboarding.workstudio'), navigate: true);
+        $this->redirect(route('onboarding.theme'), navigate: true);
     }
 
     public function render()

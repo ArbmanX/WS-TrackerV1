@@ -3,16 +3,17 @@
     <head>
         @include('partials.head')
         <script>
-            // Theme initialization
             (function() {
-                const theme = localStorage.getItem('theme') || 'system';
-                if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                    document.documentElement.setAttribute('data-theme', 'dark');
-                    document.documentElement.classList.add('dark');
+                const stored = localStorage.getItem('ws-theme') || 'system';
+                const systemMapping = @json(config('themes.system_mapping'));
+                let theme;
+                if (stored === 'system') {
+                    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    theme = prefersDark ? (systemMapping.dark || 'dark') : (systemMapping.light || 'corporate');
                 } else {
-                    document.documentElement.setAttribute('data-theme', 'light');
-                    document.documentElement.classList.remove('dark');
+                    theme = stored;
                 }
+                document.documentElement.setAttribute('data-theme', theme);
             })();
         </script>
     </head>

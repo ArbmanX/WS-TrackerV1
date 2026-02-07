@@ -2,6 +2,8 @@
 
 namespace App\Livewire\Onboarding;
 
+use App\Services\WorkStudio\Client\ApiCredentialManager;
+use App\Services\WorkStudio\Client\HeartbeatService;
 use App\Services\WorkStudio\Shared\Contracts\UserDetailsServiceInterface;
 use App\Services\WorkStudio\Shared\Exceptions\UserNotFoundException;
 use App\Services\WorkStudio\Shared\Exceptions\WorkStudioApiException;
@@ -15,6 +17,8 @@ class WorkStudioSetup extends Component
 {
     public string $ws_username = '';
 
+    public string $ws_password = '';
+
     public bool $isValidating = false;
 
     public ?array $userDetails = null;
@@ -23,6 +27,7 @@ class WorkStudioSetup extends Component
 
     protected array $rules = [
         'ws_username' => ['required', 'string', 'regex:/^[A-Za-z0-9_]+\\\\[A-Za-z0-9_]+$/'],
+        'ws_password' => ['required', 'string'],
     ];
 
     protected array $messages = [
@@ -30,10 +35,13 @@ class WorkStudioSetup extends Component
     ];
 
     /**
-     * Validate the WorkStudio username against the API.
+     * Validate the WorkStudio credentials and username against the API.
      */
-    public function validateWorkStudio(UserDetailsServiceInterface $userDetailsService): void
-    {
+    public function validateWorkStudio(
+        UserDetailsServiceInterface $userDetailsService,
+        ApiCredentialManager $credentialManager,
+        HeartbeatService $heartbeat,
+    ): void {
         $this->validate();
 
         $this->isValidating = true;
@@ -41,6 +49,22 @@ class WorkStudioSetup extends Component
         $this->userDetails = null;
 
         try {
+            // Check if the API server is responsive before attempting credential validation
+            if (! $heartbeat->isAlive()) {
+                $this->errorMessage = 'WorkStudio server is not responding. Please try again later.';
+                $this->isValidating = false;
+
+                return;
+            }
+
+            // Test credentials against the API
+            if (! $credentialManager->testCredentials($this->ws_username, $this->ws_password)) {
+                $this->errorMessage = 'Invalid WorkStudio credentials. Please check your username and password.';
+                $this->isValidating = false;
+
+                return;
+            }
+
             $this->userDetails = $userDetailsService->getDetails($this->ws_username);
 
             // Resolve resource groups from WS groups
@@ -59,12 +83,15 @@ class WorkStudioSetup extends Component
                 'ws_validated_at' => now(),
             ]);
 
-            // Mark onboarding as complete
+            // Store encrypted credentials
+            $credentialManager->storeCredentials($user->id, $this->ws_username, $this->ws_password);
+
+            // Advance onboarding step (completion happens in confirmation step)
             $user->settings()->update([
-                'onboarding_completed_at' => now(),
+                'onboarding_step' => 3,
             ]);
 
-            $this->redirect(route('dashboard'), navigate: true);
+            $this->redirect(route('onboarding.confirmation'), navigate: true);
         } catch (UserNotFoundException $e) {
             $this->errorMessage = 'User not found in WorkStudio. Please check your username and try again.';
         } catch (WorkStudioApiException $e) {
@@ -72,6 +99,14 @@ class WorkStudioSetup extends Component
         } finally {
             $this->isValidating = false;
         }
+    }
+
+    /**
+     * Go back to the theme selection step.
+     */
+    public function goBack(): void
+    {
+        $this->redirect(route('onboarding.theme'), navigate: true);
     }
 
     public function render()

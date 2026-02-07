@@ -18,6 +18,7 @@ class UserSetting extends Model
         'notifications_enabled',
         'sidebar_collapsed',
         'first_login',
+        'onboarding_step',
         'onboarding_completed_at',
     ];
 
@@ -32,6 +33,7 @@ class UserSetting extends Model
             'notifications_enabled' => 'boolean',
             'sidebar_collapsed' => 'boolean',
             'first_login' => 'boolean',
+            'onboarding_step' => 'integer',
             'onboarding_completed_at' => 'datetime',
         ];
     }

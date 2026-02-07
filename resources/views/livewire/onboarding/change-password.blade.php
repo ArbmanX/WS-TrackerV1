@@ -10,15 +10,13 @@
             <label class="label" for="password">
                 <span class="label-text">{{ __('New Password') }}</span>
             </label>
-            <input
-                wire:model="password"
+            <x-ui.password-input
                 id="password"
-                type="password"
-                class="input input-bordered w-full @error('password') input-error @enderror"
-                required
-                autofocus
-                autocomplete="new-password"
+                wireModel="password"
                 placeholder="{{ __('Enter your new password') }}"
+                autocomplete="new-password"
+                :error="$errors->first('password')"
+                :autofocus="true"
             />
             @error('password')
                 <label class="label">
@@ -32,14 +30,11 @@
             <label class="label" for="password_confirmation">
                 <span class="label-text">{{ __('Confirm Password') }}</span>
             </label>
-            <input
-                wire:model="password_confirmation"
+            <x-ui.password-input
                 id="password_confirmation"
-                type="password"
-                class="input input-bordered w-full"
-                required
-                autocomplete="new-password"
+                wireModel="password_confirmation"
                 placeholder="{{ __('Confirm your new password') }}"
+                autocomplete="new-password"
             />
         </div>
 
@@ -58,7 +53,5 @@
         </button>
     </form>
 
-    <div class="text-center text-sm text-base-content/60">
-        <p>{{ __('Step 1 of 2') }}</p>
-    </div>
+    <x-onboarding.progress :currentStep="1" />
 </div>

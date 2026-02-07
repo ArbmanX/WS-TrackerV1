@@ -24,6 +24,7 @@ class UserSettingFactory extends Factory
             'notifications_enabled' => true,
             'sidebar_collapsed' => false,
             'first_login' => true,
+            'onboarding_step' => null,
             'onboarding_completed_at' => null,
         ];
     }
@@ -35,6 +36,7 @@ class UserSettingFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'first_login' => true,
+            'onboarding_step' => null,
             'onboarding_completed_at' => null,
         ]);
     }
@@ -46,7 +48,20 @@ class UserSettingFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'first_login' => false,
+            'onboarding_step' => 4,
             'onboarding_completed_at' => now(),
+        ]);
+    }
+
+    /**
+     * Set the user at a specific onboarding step.
+     */
+    public function atStep(int $step): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'first_login' => false,
+            'onboarding_step' => $step,
+            'onboarding_completed_at' => null,
         ]);
     }
 }

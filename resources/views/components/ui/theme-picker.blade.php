@@ -33,6 +33,7 @@
             class="radio radio-primary"
             {{ $selected === 'system' ? 'checked' : '' }}
             wire:model.live="selectedTheme"
+            x-on:change="$store.theme?.set($el.value)"
         />
         <div>
             <span class="font-medium">Follow System</span>
@@ -61,6 +62,7 @@
                         class="radio radio-primary radio-sm"
                         {{ $selected === $theme ? 'checked' : '' }}
                         wire:model.live="selectedTheme"
+                        x-on:change="$store.theme?.set($el.value)"
                     />
                     <span class="text-xs">{{ $themes[$theme]['name'] }}</span>
                 </label>
@@ -92,6 +94,7 @@
                                 class="hidden"
                                 {{ $selected === $theme ? 'checked' : '' }}
                                 wire:model.live="selectedTheme"
+                                x-on:change="$store.theme?.set($el.value)"
                             />
                             <span class="text-xs truncate w-full text-center">{{ $themes[$theme]['name'] }}</span>
                         </label>

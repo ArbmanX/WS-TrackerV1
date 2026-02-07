@@ -43,10 +43,11 @@ it('updates password and marks first_login as false', function () {
         ->set('password', 'NewSecurePassword123!')
         ->set('password_confirmation', 'NewSecurePassword123!')
         ->call('setPassword')
-        ->assertRedirect(route('onboarding.workstudio'));
+        ->assertRedirect(route('onboarding.theme'));
 
     $settings->refresh();
     expect($settings->first_login)->toBeFalse();
+    expect($settings->onboarding_step)->toBe(1);
 });
 
 it('enforces password strength requirements', function () {

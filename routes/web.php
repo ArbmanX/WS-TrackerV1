@@ -1,6 +1,8 @@
 <?php
 
 use App\Livewire\Onboarding\ChangePassword;
+use App\Livewire\Onboarding\Confirmation;
+use App\Livewire\Onboarding\ThemeSelection;
 use App\Livewire\Onboarding\WorkStudioSetup;
 use Illuminate\Support\Facades\Route;
 use Spatie\Health\Http\Controllers\HealthCheckJsonResultsController;
@@ -19,7 +21,9 @@ Route::get('/', function () {
 */
 Route::middleware(['auth'])->prefix('onboarding')->name('onboarding.')->group(function () {
     Route::get('/password', ChangePassword::class)->name('password');
+    Route::get('/theme', ThemeSelection::class)->name('theme');
     Route::get('/workstudio', WorkStudioSetup::class)->name('workstudio');
+    Route::get('/confirmation', Confirmation::class)->name('confirmation');
 });
 
 /*

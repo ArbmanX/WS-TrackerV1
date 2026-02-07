@@ -53,9 +53,24 @@ class EnsurePasswordChanged
             return redirect()->route('onboarding.password');
         }
 
-        // Check if onboarding is complete (WorkStudio validation)
-        if (! $settings->onboarding_completed_at) {
+        // Backward compatibility: if onboarding is already complete, allow access
+        if ($settings->onboarding_completed_at) {
+            return $next($request);
+        }
+
+        // Route to the correct onboarding step based on progress
+        $step = $settings->onboarding_step;
+
+        if ($step === null || $step < 2) {
+            return redirect()->route('onboarding.theme');
+        }
+
+        if ($step < 3) {
             return redirect()->route('onboarding.workstudio');
+        }
+
+        if ($step < 4) {
+            return redirect()->route('onboarding.confirmation');
         }
 
         return $next($request);

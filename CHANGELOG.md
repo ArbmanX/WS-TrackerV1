@@ -10,6 +10,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Onboarding System Rework — 4-Step Flow** (2026-02-07)
+  - Reworked onboarding from 2-step to 4-step flow: Password → Theme → WS Credentials → Confirmation
+  - `OnboardingStep` enum (`app/Enums/OnboardingStep.php`) — int-backed enum with `label()`, `route()` methods
+  - `onboarding_step` nullable tinyInteger column on `user_settings` table for step tracking
+  - `ThemeSelection` Livewire component — theme picker with live preview via Alpine.js store bridge
+  - `Confirmation` Livewire component — read-only summary of account, theme, and WS details before finalizing
+  - `HeartbeatService` (`app/Services/WorkStudio/Client/HeartbeatService.php`) — standalone server-availability check via HEARTBEAT endpoint, used as pre-flight before credential validation
+  - `password-input` Blade component (`resources/views/components/ui/password-input.blade.php`) — reusable password field with Alpine.js eye/eye-slash visibility toggle
+  - `onboarding/progress` Blade component — DaisyUI stepper driven by `OnboardingStep` enum
+  - `UserWsCredentialFactory` with `invalid()` state
+  - `atStep(int)` factory state on `UserSettingFactory` for test setup
+  - `wsCredential(): HasOne` relationship on `User` model
+  - Back navigation on all onboarding steps (addresses TODO UI-005)
+  - 40 tests across 6 files: `OnboardingStepTest` (unit), `ThemeSelectionTest`, `ConfirmationTest`, `ChangePasswordTest`, `WorkStudioSetupTest`, `EnsurePasswordChangedTest`
+
+### Changed
+- **Onboarding Flow** (2026-02-07)
+  - `ChangePassword` now sets `onboarding_step = 1` and redirects to theme selection (not WS setup)
+  - `WorkStudioSetup` now collects WS password in addition to username, tests credentials via `ApiCredentialManager::testCredentials()` and heartbeat pre-check, stores encrypted credentials via `storeCredentials()`, redirects to confirmation (not dashboard)
+  - `EnsurePasswordChanged` middleware uses `onboarding_step` for step-based routing with backward compatibility for existing `onboarding_completed_at`-based completion
+  - Auth layouts (`simple.blade.php`, `card.blade.php`, `sidebar.blade.php`) — fixed FOUC script to use `ws-theme` localStorage key, `corporate` default, `config('themes.system_mapping')` resolution; added Alpine `x-data`/`x-init` for theme store; widened simple layout to `max-w-md`
+  - Theme picker (`theme-picker.blade.php`) — added `x-on:change` to all radio inputs for instant client-side theme switching
+  - `ApiCredentialManager` — added `testCredentials()` method for lightweight credential validation via `SELECT TOP 1 1 AS test` query
+
 - **Reference Data Seeders — Regions & Circuits** (2026-02-07)
   - `regions` table migration — `name` (unique), `display_name`, `is_active`, `sort_order`
   - `circuits` table migration — `line_name` (unique), `region_id` FK (nullable, nullOnDelete), `is_active`, `last_trim`, `next_trim`, `properties` (JSON), `last_seen_at`

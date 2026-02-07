@@ -17,22 +17,64 @@ it('redirects first-login users to password change page', function () {
         ->assertRedirect(route('onboarding.password'));
 });
 
-it('redirects users with changed password but incomplete onboarding to workstudio setup', function () {
+it('redirects users at step 1 to theme selection', function () {
     $user = User::factory()->create();
-    UserSetting::factory()->create([
-        'user_id' => $user->id,
-        'first_login' => false,
-        'onboarding_completed_at' => null,
-    ]);
+    UserSetting::factory()->atStep(1)->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertRedirect(route('onboarding.theme'));
+});
+
+it('redirects users at step 2 to workstudio credentials', function () {
+    $user = User::factory()->create();
+    UserSetting::factory()->atStep(2)->create(['user_id' => $user->id]);
 
     $this->actingAs($user)
         ->get(route('dashboard'))
         ->assertRedirect(route('onboarding.workstudio'));
 });
 
+it('redirects users at step 3 to confirmation', function () {
+    $user = User::factory()->create();
+    UserSetting::factory()->atStep(3)->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertRedirect(route('onboarding.confirmation'));
+});
+
+it('redirects users with password changed but no step to theme selection', function () {
+    $user = User::factory()->create();
+    UserSetting::factory()->create([
+        'user_id' => $user->id,
+        'first_login' => false,
+        'onboarding_step' => null,
+        'onboarding_completed_at' => null,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertRedirect(route('onboarding.theme'));
+});
+
 it('allows fully onboarded users to access protected routes', function () {
     $user = User::factory()->create();
     UserSetting::factory()->onboarded()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk();
+});
+
+it('allows users with onboarding_completed_at set but no step (backward compat)', function () {
+    $user = User::factory()->create();
+    UserSetting::factory()->create([
+        'user_id' => $user->id,
+        'first_login' => false,
+        'onboarding_step' => null,
+        'onboarding_completed_at' => now(),
+    ]);
 
     $this->actingAs($user)
         ->get(route('dashboard'))

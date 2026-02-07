@@ -1,7 +1,7 @@
 <div class="flex flex-col gap-6">
     <x-auth-header
         :title="__('Connect to WorkStudio')"
-        :description="__('Enter your WorkStudio username to link your account. This is required to access assessment data and other WorkStudio features.')"
+        :description="__('Enter your WorkStudio credentials to link your account. This is required to access assessment data and other WorkStudio features.')"
     />
 
     @if ($errorMessage)
@@ -51,6 +51,25 @@
             @enderror
         </div>
 
+        <!-- WorkStudio Password -->
+        <div class="form-control w-full">
+            <label class="label" for="ws_password">
+                <span class="label-text">{{ __('WorkStudio Password') }}</span>
+            </label>
+            <x-ui.password-input
+                id="ws_password"
+                wireModel="ws_password"
+                placeholder="{{ __('Enter your WorkStudio password') }}"
+                autocomplete="off"
+                :error="$errors->first('ws_password')"
+            />
+            @error('ws_password')
+                <label class="label">
+                    <span class="label-text-alt text-error">{{ $message }}</span>
+                </label>
+            @enderror
+        </div>
+
         <!-- Info Box -->
         <div class="bg-base-200 rounded-lg p-4">
             <div class="flex gap-3">
@@ -59,22 +78,25 @@
                 </svg>
                 <div class="text-sm text-base-content/70">
                     <p class="font-medium mb-1">{{ __('Why is this needed?') }}</p>
-                    <p>{{ __('Your WorkStudio account determines which regions and assessments you can access. This validation ensures you have the correct permissions.') }}</p>
+                    <p>{{ __('Your WorkStudio credentials are used to authenticate API requests on your behalf. They are stored encrypted and never shared.') }}</p>
                 </div>
             </div>
         </div>
 
-        <button type="submit" class="btn btn-primary w-full" wire:loading.attr="disabled" @if($isValidating) disabled @endif>
-            @if($isValidating)
-                <span class="loading loading-spinner loading-sm"></span>
-                {{ __('Validating...') }}
-            @else
-                {{ __('Validate & Complete Setup') }}
-            @endif
-        </button>
+        <div class="flex gap-3">
+            <button type="button" wire:click="goBack" class="btn btn-ghost flex-1">
+                {{ __('Back') }}
+            </button>
+            <button type="submit" class="btn btn-primary flex-1" wire:loading.attr="disabled" @if($isValidating) disabled @endif>
+                @if($isValidating)
+                    <span class="loading loading-spinner loading-sm"></span>
+                    {{ __('Validating...') }}
+                @else
+                    {{ __('Validate & Continue') }}
+                @endif
+            </button>
+        </div>
     </form>
 
-    <div class="text-center text-sm text-base-content/60">
-        <p>{{ __('Step 2 of 2') }}</p>
-    </div>
+    <x-onboarding.progress :currentStep="3" />
 </div>

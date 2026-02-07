@@ -73,6 +73,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the user's WorkStudio credentials.
+     */
+    public function wsCredential(): HasOne
+    {
+        return $this->hasOne(UserWsCredential::class);
+    }
+
+    /**
      * Check if the user has completed onboarding.
      */
     public function isOnboardingComplete(): bool
