@@ -46,7 +46,7 @@ class CachedQueryService
     /**
      * Get active assessments ordered by oldest (cached).
      */
-    public function getActiveAssessmentsOrderedByOldest(UserQueryContext $context, int $limit = 20, bool $forceRefresh = false): Collection
+    public function getActiveAssessmentsOrderedByOldest(UserQueryContext $context, int $limit = 5, bool $forceRefresh = false): Collection
     {
         return $this->cached('active_assessments', $context, $forceRefresh,
             fn () => $this->queryService->getActiveAssessmentsOrderedByOldest($context, $limit));
