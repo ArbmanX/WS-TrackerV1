@@ -10,6 +10,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Reference Data Seeders — Regions & Circuits** (2026-02-07)
+  - `regions` table migration — `name` (unique), `display_name`, `is_active`, `sort_order`
+  - `circuits` table migration — `line_name` (unique), `region_id` FK (nullable, nullOnDelete), `is_active`, `last_trim`, `next_trim`, `properties` (JSON), `last_seen_at`
+  - `Region` model with `active()` scope, `HasMany` circuits relationship
+  - `Circuit` model with `active()` scope, `BelongsTo` region, `properties` cast to array, `last_trim`/`next_trim` cast to date
+  - `RegionFactory` with `inactive()` state; `CircuitFactory` with `withRegion()` and `inactive()` states
+  - `RegionSeeder` — 6 geographic regions (Harrisburg, Lancaster, Lehigh, Central, Susquehanna, Northeast) via idempotent `updateOrCreate`
+  - `CircuitSeeder` — reads `database/data/circuits.php`, maps region names to IDs, skips gracefully if file missing
+  - `ReferenceDataSeeder` — orchestrator calling RegionSeeder then CircuitSeeder
+  - `ws:fetch-circuits` artisan command — fetches distinct circuits from WorkStudio API with `--save`, `--seed`, `--dry-run`, `--year` options; tracks scope years in `properties` JSON
+  - `database/data/` directory with `.gitkeep` for generated circuit data files
+  - 25 Pest tests across 4 files: `RegionTest` (unit), `CircuitTest` (unit), `ReferenceDataSeederTest` (feature), `FetchCircuitsCommandTest` (feature)
+
 - **User Management — Create User** (2026-02-06)
   - `CreateUser` Livewire component (`app/Livewire/UserManagement/CreateUser.php`) for admin user creation
   - Form with name, email, and role selection; auto-generates 16-char temporary password
