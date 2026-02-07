@@ -38,7 +38,7 @@ class FetchCircuits extends Command
         }
 
         if ($this->option('dry-run')) {
-            $this->table(['line_name', 'region'], $rows->toArray());
+            $this->table(['line_name', 'region', 'total_mile', 'raw_line_name'], $rows->toArray());
             $this->warn('Dry run — no changes made.');
 
             return self::SUCCESS;
@@ -53,14 +53,14 @@ class FetchCircuits extends Command
         }
 
         if (! $this->option('save') && ! $this->option('seed')) {
-            $this->table(['line_name', 'region'], $rows->toArray());
+            $this->table(['line_name', 'region', 'total_mile', 'raw_line_name'], $rows->toArray());
         }
 
         return self::SUCCESS;
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, array{line_name: string, region: string}>|null
+     * @return \Illuminate\Support\Collection<int, array{line_name: string, raw_line_name: string, region: string}>|null
      */
     private function fetchFromApi(string $year): ?\Illuminate\Support\Collection
     {
@@ -68,13 +68,13 @@ class FetchCircuits extends Command
         $password = config('workstudio.service_account.password');
         $baseUrl = rtrim((string) config('workstudio.base_url'), '/');
 
-        $sql = 'SELECT DISTINCT VEGJOB.LINENAME AS line_name, VEGJOB.REGION AS region '
-            .'FROM SS '
-            .'INNER JOIN VEGJOB ON SS.JOBGUID = VEGJOB.JOBGUID '
-            .'LEFT JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID '
-            ."WHERE WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$year}%' "
-            ."AND VEGJOB.LINENAME IS NOT NULL AND VEGJOB.LINENAME != '' "
-            .'ORDER BY VEGJOB.LINENAME ASC';
+        $sql = 'SELECT DISTINCT VEGJOB.LINENAME AS line_name, VEGJOB.REGION AS region, VEGJOB.LENGTH as total_miles '
+            . 'FROM SS '
+            . 'INNER JOIN VEGJOB ON SS.JOBGUID = VEGJOB.JOBGUID '
+            . 'LEFT JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID '
+            . "WHERE WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$year}%' "
+            . "AND VEGJOB.LINENAME IS NOT NULL AND VEGJOB.LINENAME != '' AND SS.JOBTYPE LIKE 'Assessment%'"
+            . 'ORDER BY VEGJOB.LINENAME ASC';
 
         $payload = [
             'Protocol' => 'GETQUERY',
@@ -83,6 +83,7 @@ class FetchCircuits extends Command
         ];
 
         try {
+            /** @var \Illuminate\Http\Client\Response $response */
             $response = Http::withBasicAuth($username, $password)
                 ->timeout(120)
                 ->connectTimeout(30)
@@ -108,9 +109,13 @@ class FetchCircuits extends Command
                 return null;
             }
 
-            return collect($data['Data'])->map(
-                fn (array $row): array => array_combine($data['Heading'], $row)
-            );
+            return collect($data['Data'])->map(function (array $row) use ($data): array {
+                $mapped = array_combine($data['Heading'], $row);
+                $mapped['raw_line_name'] = $mapped['line_name'];
+                $mapped['line_name'] = trim(str_replace(['69/12 KV ', ' LINE', '69/12KV ', '69/12 ', '138/12 KV ', '138/12KV '], '', $mapped['line_name']));
+
+                return $mapped;
+            });
         } catch (\Throwable $e) {
             $this->error("API request failed: {$e->getMessage()}");
 
@@ -131,7 +136,7 @@ class FetchCircuits extends Command
         $content = "<?php\n\nreturn {$export};\n";
 
         file_put_contents($path, $content);
-        $this->info('Saved '.count($circuits).' circuits to database/data/circuits.php');
+        $this->info('Saved ' . count($circuits) . ' circuits to database/data/circuits.php');
     }
 
     /**
@@ -144,10 +149,11 @@ class FetchCircuits extends Command
      */
     private function seedCircuits(array $circuits, string $year): void
     {
-        $regionMap = Region::pluck('id', 'name')->all();
+        $regionMap = Region::pluck('id', 'display_name')->all();
 
         $created = 0;
         $updated = 0;
+        $skipped = 0;
 
         foreach ($circuits as $circuit) {
             $regionId = $regionMap[$circuit['region'] ?? ''] ?? null;
@@ -156,25 +162,33 @@ class FetchCircuits extends Command
 
             if ($existing) {
                 $properties = $existing->properties ?? [];
-                $properties[$year] ??= [];
+                $properties[$year] = ['total_miles' => $circuit['total_miles']];
+                $properties['raw_line_name'] = $circuit['raw_line_name'] ?? null;
 
-                $existing->update([
-                    'region_id' => $regionId,
-                    'properties' => $properties,
-                    'last_seen_at' => now(),
-                ]);
-                $updated++;
+                $existing->region_id = $regionId;
+                $existing->properties = $properties;
+
+                if ($existing->isDirty()) {
+                    $existing->last_seen_at = now();
+                    $existing->save();
+                    $updated++;
+                } else {
+                    $skipped++;
+                }
             } else {
                 Circuit::create([
                     'line_name' => $circuit['line_name'],
                     'region_id' => $regionId,
-                    'properties' => [$year => []],
+                    'properties' => [
+                        'raw_line_name' => $circuit['raw_line_name'] ?? null,
+                        $year => ['total_miles' => $circuit['total_miles']]
+                    ],
                     'last_seen_at' => now(),
                 ]);
                 $created++;
             }
         }
 
-        $this->info("Seeded circuits: {$created} created, {$updated} updated.");
+        $this->info("Seeded circuits: {$created} created, {$updated} updated, {$skipped} unchanged.");
     }
 }
