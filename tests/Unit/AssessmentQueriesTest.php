@@ -50,7 +50,7 @@ test('systemWideDataQuery still uses config for job types', function () {
     $queries = new AssessmentQueries($context);
     $sql = $queries->systemWideDataQuery();
 
-    $jobTypes = config('ws_assessment_query.job_types');
+    $jobTypes = config('ws_assessment_query.job_types.assessments');
     foreach ($jobTypes as $type) {
         expect($sql)->toContain($type);
     }
@@ -107,4 +107,24 @@ test('scope year comes from config not context', function () {
 
     $scopeYear = config('ws_assessment_query.scope_year');
     expect($sql)->toContain($scopeYear);
+});
+
+test('active_planners filters by domain in systemWideDataQuery', function () {
+    $context = makeContext(['domain' => 'TESTCORP']);
+    $queries = new AssessmentQueries($context);
+    $sql = $queries->systemWideDataQuery();
+
+    expect($sql)->toContain("'TESTCORP'")
+        ->and($sql)->toContain('active_planners')
+        ->and($sql)->toContain('CHARINDEX');
+});
+
+test('Active_Planners filters by domain in groupedByRegionDataQuery', function () {
+    $context = makeContext(['domain' => 'OTHERDOMAIN']);
+    $queries = new AssessmentQueries($context);
+    $sql = $queries->groupedByRegionDataQuery();
+
+    expect($sql)->toContain("'OTHERDOMAIN'")
+        ->and($sql)->toContain('Active_Planners')
+        ->and($sql)->toContain('CHARINDEX');
 });
