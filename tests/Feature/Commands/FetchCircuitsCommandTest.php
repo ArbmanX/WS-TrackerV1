@@ -11,11 +11,11 @@ use Illuminate\Support\Facades\Http;
 function fakeSampleResponse(): array
 {
     return [
-        'Heading' => ['line_name', 'region'],
+        'Heading' => ['line_name', 'region', 'total_miles'],
         'Data' => [
-            ['CIRCUIT-001', 'HARRISBURG'],
-            ['CIRCUIT-002', 'LANCASTER'],
-            ['CIRCUIT-003', 'UNKNOWN_REGION'],
+            ['CIRCUIT-001', 'Harrisburg', 5.12],
+            ['CIRCUIT-002', 'Lancaster', 8.75],
+            ['CIRCUIT-003', 'Unknown Region', null],
         ],
     ];
 }
@@ -45,7 +45,7 @@ test('seed creates circuit records with region mapping', function () {
     expect(Circuit::count())->toBe(3);
 
     $circuit1 = Circuit::where('line_name', 'CIRCUIT-001')->first();
-    expect($circuit1->region->name)->toBe('HARRISBURG');
+    expect($circuit1->region->display_name)->toBe('Harrisburg');
 
     // Unknown region maps to null
     $circuit3 = Circuit::where('line_name', 'CIRCUIT-003')->first();
@@ -63,7 +63,7 @@ test('seed initializes properties with scope year key', function () {
     $circuit = Circuit::first();
     expect($circuit->properties)->toBeArray()
         ->and($circuit->properties)->toHaveKey('2026')
-        ->and($circuit->properties['2026'])->toBe([]);
+        ->and($circuit->properties['2026'])->toHaveKey('total_miles');
 });
 
 test('seed preserves existing year keys on re-run', function () {

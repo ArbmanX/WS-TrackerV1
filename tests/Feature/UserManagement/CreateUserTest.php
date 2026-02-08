@@ -45,12 +45,12 @@ test('user role gets 403', function () {
         ->assertForbidden();
 });
 
-test('manager role gets 403', function () {
+test('manager role can access create user', function () {
     $user = createOnboardedUser('manager');
 
     $this->actingAs($user)
         ->get(route('user-management.create'))
-        ->assertForbidden();
+        ->assertOk();
 });
 
 test('sudo-admin can access create user page', function () {

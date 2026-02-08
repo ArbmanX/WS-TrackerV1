@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Circuit;
 use App\Models\Region;
+use App\Services\WorkStudio\Shared\Helpers\WSHelpers;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 
@@ -66,15 +67,16 @@ class FetchCircuits extends Command
     {
         $username = config('workstudio.service_account.username');
         $password = config('workstudio.service_account.password');
+        $jobTypes = WSHelpers::toSqlInClause(config('ws_assessment_query.job_types.assessments'));
         $baseUrl = rtrim((string) config('workstudio.base_url'), '/');
 
         $sql = 'SELECT DISTINCT VEGJOB.LINENAME AS line_name, VEGJOB.REGION AS region, VEGJOB.LENGTH as total_miles '
-            . 'FROM SS '
-            . 'INNER JOIN VEGJOB ON SS.JOBGUID = VEGJOB.JOBGUID '
-            . 'LEFT JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID '
-            . "WHERE WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$year}%' "
-            . "AND VEGJOB.LINENAME IS NOT NULL AND VEGJOB.LINENAME != '' AND SS.JOBTYPE LIKE 'Assessment%'"
-            . 'ORDER BY VEGJOB.LINENAME ASC';
+            .'FROM SS '
+            .'INNER JOIN VEGJOB ON SS.JOBGUID = VEGJOB.JOBGUID '
+            .'LEFT JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID '
+            ."WHERE WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$year}%' "
+            ."AND VEGJOB.LINENAME IS NOT NULL AND VEGJOB.LINENAME != '' AND SS.JOBTYPE IN ({$jobTypes}) "
+            .'ORDER BY VEGJOB.LINENAME ASC';
 
         $payload = [
             'Protocol' => 'GETQUERY',
@@ -136,7 +138,7 @@ class FetchCircuits extends Command
         $content = "<?php\n\nreturn {$export};\n";
 
         file_put_contents($path, $content);
-        $this->info('Saved ' . count($circuits) . ' circuits to database/data/circuits.php');
+        $this->info('Saved '.count($circuits).' circuits to database/data/circuits.php');
     }
 
     /**
@@ -181,7 +183,7 @@ class FetchCircuits extends Command
                     'region_id' => $regionId,
                     'properties' => [
                         'raw_line_name' => $circuit['raw_line_name'] ?? null,
-                        $year => ['total_miles' => $circuit['total_miles']]
+                        $year => ['total_miles' => $circuit['total_miles']],
                     ],
                     'last_seen_at' => now(),
                 ]);

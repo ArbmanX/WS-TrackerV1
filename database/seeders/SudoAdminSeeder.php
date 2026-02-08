@@ -45,6 +45,8 @@ class SudoAdminSeeder extends Seeder
             ]
         );
 
-        $this->command->info("Sudo admin created/verified: {$email}");
+        $admin->assignRole('sudo-admin');
+
+        $this->command->info("Sudo admin created/verified: {$email} and assigned role of sudo-admin");
     }
 }

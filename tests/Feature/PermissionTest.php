@@ -136,12 +136,12 @@ test('users without manage-users get 403 on create user', function () {
         ->assertForbidden();
 });
 
-test('manager cannot access create user', function () {
+test('manager can access create user', function () {
     $user = createUserWithRole('manager');
 
     $this->actingAs($user)
         ->get(route('user-management.create'))
-        ->assertForbidden();
+        ->assertOk();
 });
 
 test('sudo-admin can access create user', function () {

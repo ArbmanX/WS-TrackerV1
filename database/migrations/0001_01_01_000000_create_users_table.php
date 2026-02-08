@@ -15,6 +15,12 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('email')->unique();
+            $table->string('ws_username')->nullable();
+            $table->string('ws_full_name')->nullable();
+            $table->string('ws_domain', 100)->nullable();
+            $table->json('ws_groups')->nullable();
+            $table->json('ws_resource_groups')->nullable();
+            $table->timestamp('ws_validated_at')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();

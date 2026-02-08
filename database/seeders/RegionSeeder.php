@@ -13,12 +13,12 @@ class RegionSeeder extends Seeder
      * @var array<int, array{name: string, display_name: string, sort_order: int}>
      */
     private const REGIONS = [
-        ['name' => 'HARRISBURG', 'display_name' => 'Harrisburg', 'sort_order' => 1],
-        ['name' => 'LANCASTER', 'display_name' => 'Lancaster', 'sort_order' => 2],
-        ['name' => 'LEHIGH', 'display_name' => 'Lehigh', 'sort_order' => 3],
-        ['name' => 'CENTRAL', 'display_name' => 'Central', 'sort_order' => 4],
-        ['name' => 'SUSQUEHANNA', 'display_name' => 'Susquehanna', 'sort_order' => 5],
-        ['name' => 'NORTHEAST', 'display_name' => 'Northeast', 'sort_order' => 6],
+        ['name' => 'CENTRAL', 'display_name' => 'Central', 'sort_order' => 1],
+        ['name' => 'HARRISBURG', 'display_name' => 'Harrisburg', 'sort_order' => 2],
+        ['name' => 'LANCASTER', 'display_name' => 'Lancaster', 'sort_order' => 3],
+        ['name' => 'LEHIGH', 'display_name' => 'Lehigh', 'sort_order' => 4],
+        ['name' => 'NORTHEAST', 'display_name' => 'Northeast', 'sort_order' => 5],
+        ['name' => 'SUSQUEHANNA', 'display_name' => 'Susquehanna', 'sort_order' => 6],
     ];
 
     /**

@@ -19,6 +19,7 @@ return new class extends Migration
             $table->boolean('notifications_enabled')->default(true);
             $table->boolean('sidebar_collapsed')->default(false);
             $table->boolean('first_login')->default(true);
+            $table->tinyInteger('onboarding_step')->nullable();
             $table->timestamp('onboarding_completed_at')->nullable();
             $table->timestamps();
         });

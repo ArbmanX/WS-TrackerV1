@@ -8,8 +8,10 @@ function fakeUserListResponse(): array
     return [
         'Heading' => ['username'],
         'Data' => [
+            // SS TAKENBY / MODIFIEDBY
             ['ASPLUNDH\\jsmith'],
             ['ASPLUNDH\\jdoe'],
+            // VEGJOB AUDIT_USER / FRSTR_USER / GF_USER
             ['OTHERDOMAIN\\bwilson'],
         ],
     ];
@@ -93,6 +95,35 @@ test('handles empty API response gracefully', function () {
 
     $this->artisan('ws:fetch-users')
         ->assertFailed();
+});
+
+test('vegjob-sourced users are created and enriched', function () {
+    $response = [
+        'Heading' => ['username'],
+        'Data' => [
+            ['ASPLUNDH\\auditor'],
+            ['ASPLUNDH\\forester'],
+            ['PPL\\gf_lead'],
+        ],
+    ];
+
+    Http::fake([
+        '*/GETQUERY' => Http::response($response),
+        '*/GETUSERDETAILS' => Http::response(fakeUserDetailsResponse('Auditor User', 'auditor@test.com')),
+    ]);
+
+    $this->artisan('ws:fetch-users --enrich')
+        ->assertSuccessful();
+
+    expect(WsUser::count())->toBe(3);
+
+    $auditor = WsUser::where('username', 'ASPLUNDH\\auditor')->first();
+    expect($auditor)->not->toBeNull()
+        ->and($auditor->last_synced_at)->not->toBeNull();
+
+    $gf = WsUser::where('username', 'PPL\\gf_lead')->first();
+    expect($gf)->not->toBeNull()
+        ->and($gf->last_synced_at)->not->toBeNull();
 });
 
 test('handles empty data set gracefully', function () {

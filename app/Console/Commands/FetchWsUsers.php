@@ -16,13 +16,13 @@ class FetchWsUsers extends Command
         {--enrich : Enrich users with details from GETUSERDETAILS}
         {--year= : Override scope year (default from config)}';
 
-    protected $description = 'Fetch distinct WS usernames from SS table and optionally enrich via GETUSERDETAILS';
+    protected $description = 'Fetch distinct WS usernames from SS and VEGJOB tables and optionally enrich via GETUSERDETAILS';
 
     public function handle(UserDetailsServiceInterface $userDetailsService): int
     {
         $year = $this->option('year') ?? config('ws_assessment_query.scope_year');
 
-        $this->info("Fetching distinct users from SS table for year: {$year}");
+        $this->info("Fetching distinct users from SS and VEGJOB tables for year: {$year}");
 
         $usernames = $this->fetchDistinctUsernames($year);
 
@@ -68,15 +68,32 @@ class FetchWsUsers extends Command
         $password = config('workstudio.service_account.password');
         $baseUrl = rtrim((string) config('workstudio.base_url'), '/');
 
-        $sql = 'SELECT DISTINCT TAKENBY AS username FROM SS '
+        $yearJoin = 'INNER JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID '
+            ."WHERE WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$year}%' ";
+
+        $vegJoin = 'INNER JOIN SS ON VEGJOB.JOBGUID = SS.JOBGUID '
             .'INNER JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID '
-            ."WHERE WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$year}%' "
+            ."WHERE WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$year}%' ";
+
+        $sql = 'SELECT DISTINCT TAKENBY AS username FROM SS '
+            .$yearJoin
             ."AND TAKENBY IS NOT NULL AND TAKENBY != '' "
             .'UNION '
             .'SELECT DISTINCT MODIFIEDBY AS username FROM SS '
-            .'INNER JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID '
-            ."WHERE WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$year}%' "
+            .$yearJoin
             ."AND MODIFIEDBY IS NOT NULL AND MODIFIEDBY != '' "
+            .'UNION '
+            .'SELECT DISTINCT VEGJOB.AUDIT_USER AS username FROM VEGJOB '
+            .$vegJoin
+            ."AND VEGJOB.AUDIT_USER IS NOT NULL AND VEGJOB.AUDIT_USER != '' "
+            .'UNION '
+            .'SELECT DISTINCT VEGJOB.FRSTR_USER AS username FROM VEGJOB '
+            .$vegJoin
+            ."AND VEGJOB.FRSTR_USER IS NOT NULL AND VEGJOB.FRSTR_USER != '' "
+            .'UNION '
+            .'SELECT DISTINCT VEGJOB.GF_USER AS username FROM VEGJOB '
+            .$vegJoin
+            ."AND VEGJOB.GF_USER IS NOT NULL AND VEGJOB.GF_USER != '' "
             .'ORDER BY username ASC';
 
         $payload = [
