@@ -17,7 +17,11 @@ class AssessmentQueries
 
     private string $jobTypesSql;
 
+    private string $cycleTypesSql;
+
     private string $scopeYear;
+
+    private string $domainFilter;
 
     /**
      * @param  UserQueryContext  $context  User-specific query parameters
@@ -26,10 +30,12 @@ class AssessmentQueries
     {
         $this->resourceGroupsSql = WSHelpers::toSqlInClause($context->resourceGroups);
         $this->contractorsSql = WSHelpers::toSqlInClause($context->contractors);
+        $this->domainFilter = $context->domain;
 
         // System-level values stay in config
         $this->excludedUsersSql = WSHelpers::toSqlInClause(config('ws_assessment_query.excludedUsers'));
-        $this->jobTypesSql = WSHelpers::toSqlInClause(config('ws_assessment_query.job_types'));
+        $this->jobTypesSql = WSHelpers::toSqlInClause(config('ws_assessment_query.job_types.assessments'));
+        $this->cycleTypesSql = WSHelpers::toSqlInClause(config('ws_assessment_query.cycle_types.maintenance'));
         $this->scopeYear = config('ws_assessment_query.scope_year');
     }
 
@@ -53,8 +59,10 @@ class AssessmentQueries
                         CAST(SUM(VEGJOB.LENGTHCOMP) AS DECIMAL(10,2)) AS completed_miles,
 
 
-                        -- Active Planners (unique TAKENBY usernames from assessments with status 'ACTIV' only)
-                        COUNT(DISTINCT CASE WHEN SS.STATUS = 'ACTIV' THEN SS.TAKENBY END) AS active_planners
+                        -- Active Planners (unique TAKENBY matching domain, ACTIV only)
+                        COUNT(DISTINCT CASE WHEN SS.STATUS = 'ACTIV'
+                            AND UPPER(LEFT(SS.TAKENBY, CHARINDEX('\\', SS.TAKENBY + '\\') - 1)) = '{$this->domainFilter}'
+                            THEN SS.TAKENBY END) AS active_planners
 
                     FROM SS
                     INNER JOIN VEGJOB ON SS.JOBGUID = VEGJOB.JOBGUID
@@ -67,7 +75,7 @@ class AssessmentQueries
                     AND SS.STATUS IN ('ACTIV', 'QC', 'REWRK', 'CLOSE')
                     AND SS.TAKENBY NOT IN ({$this->excludedUsersSql})
                     AND SS.JOBTYPE IN ({$this->jobTypesSql})
-                    AND VEGJOB.CYCLETYPE NOT IN ('Reactive', 'Storm Follow Up', 'Misc. Project Work', 'PUC-STORM FOLLOW UP')";
+                    AND VEGJOB.CYCLETYPE IN ({$this->cycleTypesSql})";
     }
     /* =========================================================================
     * END
@@ -110,8 +118,10 @@ class AssessmentQueries
                     CAST(SUM(VEGJOB.LENGTH) AS DECIMAL(10,2)) AS Total_Miles,
                     CAST(SUM(VEGJOB.LENGTHCOMP) AS DECIMAL(10,2)) AS Completed_Miles,
 
-                    -- Active Planners (unique TAKENBY with ACTIV status)
-                    COUNT(DISTINCT CASE WHEN SS.STATUS = 'ACTIV' THEN SS.TAKENBY END) AS Active_Planners,
+                    -- Active Planners (unique TAKENBY matching domain, ACTIV only)
+                    COUNT(DISTINCT CASE WHEN SS.STATUS = 'ACTIV'
+                        AND UPPER(LEFT(SS.TAKENBY, CHARINDEX('\\', SS.TAKENBY + '\\') - 1)) = '{$this->domainFilter}'
+                        THEN SS.TAKENBY END) AS Active_Planners,
 
                     -- Permission Counts (aggregated from CROSS APPLY)
                     SUM(UnitData.Total_Units) AS Total_Units,
@@ -174,7 +184,7 @@ class AssessmentQueries
                 AND VEGJOB.CONTRACTOR IN ({$this->contractorsSql})
                 AND SS.TAKENBY NOT IN ({$this->excludedUsersSql})
                 AND SS.JOBTYPE IN ({$this->jobTypesSql})
-                AND VEGJOB.CYCLETYPE NOT IN ('Reactive', 'Storm Follow Up', 'Misc. Project Work', 'PUC-STORM FOLLOW UP')
+                AND VEGJOB.CYCLETYPE IN ({$this->cycleTypesSql})
 
                 GROUP BY VEGJOB.REGION
                 ORDER BY VEGJOB.REGION";
@@ -309,7 +319,7 @@ class AssessmentQueries
                 AND VEGJOB.CONTRACTOR IN ({$this->contractorsSql})
                 AND SS.TAKENBY NOT IN ({$this->excludedUsersSql})
                 AND SS.JOBTYPE IN ({$this->jobTypesSql})
-                AND VEGJOB.CYCLETYPE NOT IN ('Reactive', 'Storm Follow Up', 'Misc. Project Work', 'PUC-STORM FOLLOW UP', 'FFP CPM Maintenance')
+                AND VEGJOB.CYCLETYPE IN ({$this->cycleTypesSql})
 
                 ORDER BY VEGJOB.REGION, SS.STATUS, SS.WO";
     }
@@ -327,7 +337,7 @@ class AssessmentQueries
     {
         $scopeYear = self::extractYearFromMsDate('WPStartDate_Assessment_Xrefs.WP_STARTDATE');
 
-        $cycleTypes = WSHelpers::toSqlInClause(config('ws_assessment_query.cycle_types'));
+        $cycleTypes = WSHelpers::toSqlInClause(config('ws_assessment_query.cycle_types.maintenance'));
         $statues = WSHelpers::toSqlInClause(config('ws_assessment_query.statuses.planner_concern'));
 
         $lastSync = self::formatToEasternTime('SS.EDITDATE');
@@ -359,7 +369,7 @@ class AssessmentQueries
                     AND WSREQSS.STATUS IN ({$statues})
                     AND VEGJOB.CONTRACTOR IN ({$this->contractorsSql})
                     AND WSREQSS.JOBTYPE IN ({$this->jobTypesSql})
-                    AND VEGJOB.CYCLETYPE NOT IN ({$cycleTypes})
+                    AND VEGJOB.CYCLETYPE IN ({$this->cycleTypesSql})
 
                     ORDER BY SS.EDITDATE DESC, SS.WO DESC, SS.EXT DESC
                     FOR JSON PATH";
@@ -461,8 +471,6 @@ class AssessmentQueries
      */
     public function getActiveAssessmentsOrderedByOldest(int $limit = 5): string
     {
-        $domainFilter = $this->context->domain;
-
         $lastSync = self::formatToEasternTime('SS.EDITDATE');
         $firstEditDate = self::parseMsDateToDate('MIN(V.ASSDDATE)');
         $lastEditDate = self::parseMsDateToDate('MAX(V.ASSDDATE)');
@@ -534,7 +542,7 @@ class AssessmentQueries
                     AND VEGJOB.CYCLETYPE NOT IN ('Reactive', 'Storm Follow Up', 'Misc. Project Work', 'PUC-STORM FOLLOW UP')
 
                     -- Domain must match (extract part before backslash)
-                    AND UPPER(LEFT(SS.TAKENBY, CHARINDEX('\\', SS.TAKENBY + '\\') - 1)) = '{$domainFilter}'
+                    AND UPPER(LEFT(SS.TAKENBY, CHARINDEX('\\', SS.TAKENBY + '\\') - 1)) = '{$this->domainFilter}'
 
                     -- Assessment must be started (completed miles > 0)
                     AND VEGJOB.LENGTHCOMP > 0
@@ -555,7 +563,7 @@ class AssessmentQueries
     {
         $lastSync = self::formatToEasternTime('SS.EDITDATE');
         $scopeYear = self::extractYearFromMsDate('WPStartDate_Assessment_Xrefs.WP_STARTDATE');
-
+        $cycleTypes = WSHelpers::toSqlInClause(config('ws_assessment_query.cycle_types.maintenance'));
         $statues = WSHelpers::toSqlInClause(config('ws_assessment_query.statuses.planner_concern'));
 
         return "SELECT
@@ -588,7 +596,7 @@ class AssessmentQueries
                             AND SS.STATUS IN ({$statues})
                             AND VEGJOB.CONTRACTOR IN ({$this->contractorsSql})
                             AND WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$this->scopeYear}%'
-                            AND VEGJOB.CYCLETYPE NOT IN ('Reactive', 'Storm Follow Up', 'Misc. Project Work', 'PUC-STORM FOLLOW UP')
+                            AND VEGJOB.CYCLETYPE IN ({$cycleTypes})
                             AND SS.JOBTYPE IN ({$this->jobTypesSql})
                         ORDER BY SS.EDITDATE DESC, SS.WO DESC, SS.EXT DESC";
     }

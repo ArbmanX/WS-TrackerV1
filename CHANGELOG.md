@@ -10,6 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **WSSQLCaster — Data-Driven SQL Field Casting** (2026-02-08)
+  - `WSSQLCaster` class (`app/Services/WorkStudio/Shared/Helpers/WSSQLCaster.php`) — field registry mapping WS field names to cast types (`ole_datetime`, `date`)
+  - `cast()` method generates SQL fragments for OLE Automation datetime conversion to Eastern time, supports `TABLE.FIELD` format
+  - `oleDateToCarbon()` method for PHP-side OLE date conversion to `CarbonImmutable`
+  - 16 unit tests in `tests/Unit/WSSQLCasterTest.php`
+
+### Fixed
+- **Incorrect -2 day offset in OLE date conversion** (2026-02-08)
+  - Removed erroneous `DATEADD(DAY, -2, ...)` from `SqlFragmentHelpers::formatToEasternTime()` — SQL Server's `CAST(float AS DATETIME)` already handles the OLE epoch correctly
+  - Updated `FetchSsJobs` command to use `WSSQLCaster::cast()` instead of inline SQL with the same -2 day bug
+
+### Added
 - **SS Jobs & WS Users Data Sync** (2026-02-08)
   - `ws_users` table migration — stores WorkStudio user identities (username, domain, display_name, email, is_enabled, groups JSON)
   - `ss_jobs` table migration — stores SS job records with string PK (`job_guid`), FKs to circuits, ws_users, self-referential parent/child hierarchy

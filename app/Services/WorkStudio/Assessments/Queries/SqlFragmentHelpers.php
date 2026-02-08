@@ -1,12 +1,11 @@
 <?php
+
 namespace App\Services\WorkStudio\Assessments\Queries;
 
-use App\Services\WorkStudio\Assessments\Queries\SqlFieldBuilder;
-
+use App\Services\WorkStudio\Shared\Helpers\WSSQLCaster;
 
 trait SqlFragmentHelpers
 {
-       
     // =========================================================================
     // SQL Fragment Helpers
     // =========================================================================
@@ -69,16 +68,11 @@ trait SqlFragmentHelpers
     }
 
     /**
-     * Format datetime to Eastern time with readable format.
-     * Subtracts 2 days to correct for epoch mismatch (source uses Jan 1, 1900 vs OLE's Dec 30, 1899).
-     * Converts from UTC to Eastern time.
+     * Format OLE Automation datetime to Eastern time with readable format.
      */
     private static function formatToEasternTime(string $column): string
     {
-        return "FORMAT(
-            CAST(DATEADD(DAY, -2, CAST({$column} AS DATETIME)) AT TIME ZONE 'UTC' AT TIME ZONE 'Eastern Standard Time' AS DATETIME),
-            'MM/dd/yyyy h:mm tt'
-        )";
+        return WSSQLCaster::cast($column, 'MM/dd/yyyy h:mm tt');
     }
 
     /**
@@ -167,7 +161,7 @@ trait SqlFragmentHelpers
                         WHERE V3.JOBGUID = {$jobGuidRef}
                             AND V3.UNIT IS NOT NULL AND V3.UNIT != '' AND V3.UNIT != 'NW'
                             AND V3.ASSDDATE IS NOT NULL AND V3.ASSDDATE != ''
-                            AND " . self::parseMsDateToDate('V3.ASSDDATE') . " = StationFirstDate.Assessed_Date
+                            AND ".self::parseMsDateToDate('V3.ASSDDATE')." = StationFirstDate.Assessed_Date
                     ) AS Total_Unit_Count,
                     (
                         SELECT STRING_AGG(UNIT, ', ')
