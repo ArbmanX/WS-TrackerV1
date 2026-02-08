@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **SS Jobs & WS Users Data Sync** (2026-02-08)
+  - `ws_users` table migration — stores WorkStudio user identities (username, domain, display_name, email, is_enabled, groups JSON)
+  - `ss_jobs` table migration — stores SS job records with string PK (`job_guid`), FKs to circuits, ws_users, self-referential parent/child hierarchy
+  - `WsUser` model with `takenJobs()`, `modifiedJobs()` HasMany relationships; `WsUserFactory` with `unenriched()`, `disabled()` states
+  - `SsJob` model with `circuit()`, `parentJob()`, `childJobs()`, `takenBy()`, `modifiedBy()` relationships; `SsJobFactory` with `withCircuit()`, `withTakenBy()`, `withStatus()` states
+  - `ssJobs()` HasMany relationship on `Circuit` model
+  - `ws:fetch-users` artisan command — queries SS table for distinct TAKENBY/MODIFIEDBY usernames, upserts to ws_users, optional `--enrich` flag enriches via GETUSERDETAILS endpoint with rate limiting
+  - `ws:fetch-jobs` artisan command — queries SS table for jobs scoped by year, groups extensions by JOBGUID, resolves circuit IDs via raw_line_name, resolves user FKs, upserts to ss_jobs, updates circuit properties with jobguids array
+  - 41 tests across 4 files: `WsUserTest` (7), `SsJobTest` (15), `FetchWsUsersCommandTest` (7), `FetchSsJobsCommandTest` (12)
+  - Migration to drop self-referential FK on `ss_jobs.parent_job_guid` — parent jobs may not exist in filtered dataset
+
 - **Onboarding System Rework — 4-Step Flow** (2026-02-07)
   - Reworked onboarding from 2-step to 4-step flow: Password → Theme → WS Credentials → Confirmation
   - `OnboardingStep` enum (`app/Enums/OnboardingStep.php`) — int-backed enum with `label()`, `route()` methods
