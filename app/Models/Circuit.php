@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Circuit extends Model
 {
@@ -37,6 +38,11 @@ class Circuit extends Model
     public function region(): BelongsTo
     {
         return $this->belongsTo(Region::class);
+    }
+
+    public function ssJobs(): HasMany
+    {
+        return $this->hasMany(SsJob::class);
     }
 
     /** @param Builder<Circuit> $query */

@@ -132,7 +132,18 @@ Livewire Component
 
 ### Circuit
 - **Fields:** line_name (unique), region_id (FK→regions, SET NULL), is_active, last_trim, next_trim, properties (JSON), last_seen_at
-- **Relations:** `region` (BelongsTo→Region)
+- **Relations:** `region` (BelongsTo→Region), `ssJobs` (HasMany→SsJob)
+
+### WsUser
+- **Fields:** username (unique), domain, display_name, email, is_enabled, groups (JSON), last_synced_at
+- **Relations:** `takenJobs` (HasMany→SsJob, FK: taken_by_id), `modifiedJobs` (HasMany→SsJob, FK: modified_by_id)
+- **Casts:** is_enabled→bool, groups→array, last_synced_at→datetime
+
+### SsJob
+- **PK:** job_guid (string, non-incrementing)
+- **Fields:** circuit_id (FK→circuits), parent_job_guid (string, no FK constraint), taken_by_id (FK→ws_users), modified_by_id (FK→ws_users), work_order, extensions (JSON), job_type, status, scope_year, edit_date, taken, version, sync_version, assigned_to, raw_title, last_synced_at
+- **Relations:** `circuit` (BelongsTo→Circuit), `parentJob` (BelongsTo→self), `childJobs` (HasMany→self), `takenBy` (BelongsTo→WsUser), `modifiedBy` (BelongsTo→WsUser)
+- **Casts:** extensions→array, edit_date→datetime, taken→bool, last_synced_at→datetime
 
 ---
 
@@ -197,6 +208,15 @@ UserWsCredential::factory()->invalid()->create();   // is_valid=false
 Region::factory()->inactive()->create();
 Circuit::factory()->withRegion()->create();
 Circuit::factory()->inactive()->create();
+
+// WsUser states
+WsUser::factory()->unenriched()->create();       // null display_name/email
+WsUser::factory()->disabled()->create();          // is_enabled=false
+
+// SsJob states
+SsJob::factory()->withCircuit()->create();        // creates + links Circuit
+SsJob::factory()->withTakenBy()->create();        // creates + links WsUser
+SsJob::factory()->withStatus('QC')->create();     // specific status
 ```
 
 ### Permission Test Pattern
@@ -249,7 +269,7 @@ Sidebar is responsive: mobile drawer, tablet icons-only, desktop expanded.
 
 ## 8. Current State & Priorities
 
-### What's Built (as of 2026-02-07)
+### What's Built (as of 2026-02-08)
 - 4-step onboarding flow (password → theme → WS creds → confirmation)
 - Dashboard with system-wide & regional metrics, active assessments
 - Cache management admin tool
@@ -257,8 +277,9 @@ Sidebar is responsive: mobile drawer, tablet icons-only, desktop expanded.
 - User creation with role assignment
 - Spatie Permission (5 roles, 7 permissions)
 - Reference data (6 regions, circuits from API)
+- SS Jobs & WS Users data sync (`ws:fetch-users`, `ws:fetch-jobs` artisan commands)
 - Domain-driven service architecture
-- ~37 test files, good coverage of recent features
+- ~41+ test files, good coverage of recent features
 
 ### P0 — Must Fix Before Production
 | ID | Issue | File |
@@ -330,4 +351,4 @@ npm run build                 # Production frontend build
 **Excluded Cycle Types:** 'Reactive', 'Storm Follow Up', 'Misc. Project Work', 'PUC-STORM FOLLOW UP'
 **Valid Unit Filter:** `UNIT IS NOT NULL AND UNIT != '' AND UNIT != 'NW'`
 **Status Codes:** SA (Saved), ACTIV (Active), QC (Quality Check), REWRK (Rework), DEF (Deferred), CLOSE (Closed)
-**WS API Tables:** VEGJOB (jobs), VEGUNIT (units), STATIONS, WSREQUEST (work requests)
+**WS API Tables:** VEGJOB (jobs), VEGUNIT (units), STATIONS, WSREQUEST (work requests), SS (assessment jobs — synced to local ss_jobs table)
