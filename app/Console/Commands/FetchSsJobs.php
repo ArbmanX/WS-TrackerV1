@@ -5,6 +5,8 @@ namespace App\Console\Commands;
 use App\Models\Circuit;
 use App\Models\SsJob;
 use App\Models\WsUser;
+use App\Services\WorkStudio\Shared\Helpers\WSHelpers;
+use App\Services\WorkStudio\Shared\Helpers\WSSQLCaster;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -68,9 +70,10 @@ class FetchSsJobs extends Command
     {
         $username = config('workstudio.service_account.username');
         $password = config('workstudio.service_account.password');
+        $jobTypes = WSHelpers::toSqlInClause(config('ws_assessment_query.job_types.assessments'));
         $baseUrl = rtrim((string) config('workstudio.base_url'), '/');
 
-        $editDateSql = "FORMAT(CAST(DATEADD(DAY, -2, CAST(SS.EDITDATE AS DATETIME)) AT TIME ZONE 'UTC' AT TIME ZONE 'Eastern Standard Time' AS DATETIME), 'yyyy-MM-dd HH:mm:ss')";
+        $editDateSql = WSSQLCaster::cast('SS.EDITDATE');
 
         $sql = 'SELECT SS.JOBGUID, SS.WO, SS.EXT, SS.JOBTYPE, SS.STATUS, '
             .'SS.TAKEN, SS.TAKENBY, SS.MODIFIEDBY, SS.VERSION, SS.SYNCHVERSN, '
@@ -79,7 +82,7 @@ class FetchSsJobs extends Command
             .'FROM SS '
             .'INNER JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID '
             ."WHERE WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$year}%' "
-            ."AND SS.JOBTYPE LIKE 'Assessment%' "
+            ."AND SS.JOBTYPE IN ({$jobTypes}) "
             .'ORDER BY SS.JOBGUID, SS.EXT';
 
         $payload = [
