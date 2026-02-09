@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Storage;
 class FetchDailyFootage extends Command
 {
     protected $signature = 'ws:fetch-daily-footage
-        {date? : Target date (MM-DD-YYYY or MM-DD for current year). Default: previous Saturday}
+        {date? : Target date (MM-DD-YYYY, MM-DD, or YYYY). Default: previous complete week (Sun-Sat)}
         {--jobguid= : Query a single JOBGUID directly (skips ss_jobs lookup)}
         {--status=ACTIV : Job status filter (single value)}
         {--all-statuses : Use all planner_concern statuses (ACTIV, QC, REWRK, CLOSE)}
@@ -38,7 +38,11 @@ class FetchDailyFootage extends Command
 
         $this->resolveDate();
 
-        $mode = $this->filenamePrefix === 'we' ? 'Week-Ending' : 'Daily';
+        $mode = match ($this->filenamePrefix) {
+            'we' => 'Week-Ending',
+            'year' => 'Year',
+            default => 'Daily',
+        };
         $this->info("{$mode} mode — target: {$this->targetDate->format('m-d-Y')}, range: {$this->editDateStart->format('Y-m-d')} to {$this->editDateEnd->format('Y-m-d')}");
 
         // Stage 1: Get JOBGUIDs
@@ -83,9 +87,10 @@ class FetchDailyFootage extends Command
     }
 
     /**
-     * Parse the date argument and determine WE vs Daily mode.
+     * Parse the date argument and determine WE vs Daily vs Year mode.
      *
-     * - No argument → previous Saturday → WE mode
+     * - No argument → previous complete week (Sun-Sat), or current week if today is Saturday
+     * - YYYY → Year mode (Jan 1 – Dec 31)
      * - Saturday date → WE mode (Sun-Sat week range)
      * - Non-Saturday date → Daily mode (single day)
      */
@@ -94,11 +99,19 @@ class FetchDailyFootage extends Command
         $dateArg = $this->argument('date');
 
         if ($dateArg === null) {
-            // Default: previous Saturday
-            $this->targetDate = Carbon::now()->previous(Carbon::SATURDAY);
-        } else {
-            $this->targetDate = $this->parseDate($dateArg);
+            $this->resolveDefaultWeek();
+
+            return;
         }
+
+        // Year mode: 4-digit year → full year range
+        if (preg_match('/^\d{4}$/', $dateArg)) {
+            $this->resolveYearMode((int) $dateArg);
+
+            return;
+        }
+
+        $this->targetDate = $this->parseDate($dateArg);
 
         if ($this->targetDate->isSaturday()) {
             // WE mode: Sunday 00:00 through Saturday 23:59:59
@@ -114,6 +127,37 @@ class FetchDailyFootage extends Command
     }
 
     /**
+     * Default: previous complete Sun-Sat week, or current week if today is Saturday.
+     */
+    private function resolveDefaultWeek(): void
+    {
+        $today = Carbon::now();
+
+        if ($today->isSaturday()) {
+            // Saturday → use this week (Sun through today)
+            $this->targetDate = $today->copy()->startOfDay();
+        } else {
+            // Any other day → previous complete week's Saturday
+            $this->targetDate = $today->copy()->previous(Carbon::SATURDAY);
+        }
+
+        $this->filenamePrefix = 'we';
+        $this->editDateStart = $this->targetDate->copy()->subDays(6)->startOfDay();
+        $this->editDateEnd = $this->targetDate->copy()->endOfDay();
+    }
+
+    /**
+     * Year mode: query the entire year (Jan 1 – Dec 31).
+     */
+    private function resolveYearMode(int $year): void
+    {
+        $this->filenamePrefix = 'year';
+        $this->targetDate = Carbon::createFromDate($year, 1, 1)->startOfDay();
+        $this->editDateStart = Carbon::createFromDate($year, 1, 1)->startOfDay();
+        $this->editDateEnd = Carbon::createFromDate($year, 12, 31)->endOfDay();
+    }
+
+    /**
      * Parse a date string in MM-DD-YYYY or MM-DD format.
      */
     private function parseDate(string $dateArg): Carbon
@@ -126,9 +170,25 @@ class FetchDailyFootage extends Command
             return Carbon::createFromFormat('m-d-Y', $dateArg.'-'.now()->year)->startOfDay();
         }
 
-        $this->error("Invalid date format: {$dateArg}. Use MM-DD-YYYY or MM-DD.");
+        $this->error("Invalid date format: {$dateArg}. Use MM-DD-YYYY, MM-DD, or YYYY.");
 
         exit(self::FAILURE);
+    }
+
+    /**
+     * Parse a /Date(2020-04-14T17:53:34.413Z)/ wrapper from DDOProtocol API.
+     */
+    private function parseDateWrapper(string $raw): ?Carbon
+    {
+        // Strip /Date(...)/  wrapper → extract ISO datetime string
+        $cleaned = str_replace(['/Date(', ')/'], '', $raw);
+
+        if ($cleaned === '' || $cleaned === $raw) {
+            // Not in wrapper format — try direct parse as MM-DD-YYYY fallback
+            return rescue(fn () => Carbon::createFromFormat('m-d-Y', $raw), null, false);
+        }
+
+        return Carbon::parse($cleaned)->startOfDay();
     }
 
     /**
@@ -231,7 +291,11 @@ class FetchDailyFootage extends Command
         $password = config('workstudio.service_account.password');
         $baseUrl = rtrim((string) config('workstudio.base_url'), '/');
 
-        $sql = DailyFootageQuery::build($jobGuids);
+        $sql = DailyFootageQuery::build(
+            $jobGuids,
+            $this->editDateStart->format('Y-m-d'),
+            $this->editDateEnd->format('Y-m-d'),
+        );
 
         $payload = [
             'Protocol' => 'GETQUERY',
@@ -289,8 +353,11 @@ class FetchDailyFootage extends Command
             // Extract domain from DOMAIN\username format (for folder grouping only)
             $domain = $username ? explode('\\', $username, 2)[0] : 'UNKNOWN';
 
-            // Parse completion_date (MM-DD-YYYY from API) → datepop (YYYY-MM-DD)
-            $completionDate = Carbon::createFromFormat('m-d-Y', $row['completion_date']);
+            // Parse completion_date — API returns /Date(2020-04-14T17:53:34.413Z)/ wrapper
+            $rawDate = $row['completion_date'] ?? null;
+            $completionDate = $rawDate
+                ? $this->parseDateWrapper($rawDate)
+                : null;
 
             // Split station_list string into array
             $stationList = $row['station_list'] ?? '';
@@ -300,8 +367,8 @@ class FetchDailyFootage extends Command
                 '_domain' => $domain,
                 'job_guid' => $row['JOBGUID'],
                 'frstr_user' => $username,
-                'datepop' => $completionDate->format('Y-m-d'),
-                'distance_planned' => (float) $row['daily_footage_meters'],
+                'datepop' => $completionDate?->format('Y-m-d'),
+                'distance_planned' => (float) ($row['daily_footage_meters'] ?? 0),
                 'stations' => $stations,
             ];
         });

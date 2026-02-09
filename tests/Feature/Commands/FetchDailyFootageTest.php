@@ -39,9 +39,10 @@ function createMatchingJob(array $overrides = []): SsJob
 // Date Resolution
 // ──────────────────────────────────────────────────
 
-test('default date resolves to previous Saturday (WE mode)', function () {
-    // Freeze to Wednesday Feb 4, 2026 — previous Saturday is Jan 31, 2026
-    Carbon::setTestNow(Carbon::parse('2026-02-04'));
+test('default date resolves to previous complete week when not Saturday', function () {
+    // Freeze to Friday Feb 6, 2026 — previous Saturday is Jan 31, 2026
+    // Week range: Sun Jan 25 - Sat Jan 31
+    Carbon::setTestNow(Carbon::parse('2026-02-06'));
     Storage::fake();
 
     createMatchingJob(['edit_date' => Carbon::parse('2026-01-26')]); // Sunday of Jan 31 week
@@ -56,6 +57,43 @@ test('default date resolves to previous Saturday (WE mode)', function () {
     expect(Storage::allFiles())->toContain('daily-footage/ASPLUNDH/we01_31_2026_planning_activities.json');
 
     Carbon::setTestNow();
+});
+
+test('default date uses current week when today is Saturday', function () {
+    // Freeze to Saturday Feb 7, 2026 — should use THIS week (Sun Feb 1 - Sat Feb 7)
+    Carbon::setTestNow(Carbon::parse('2026-02-07'));
+    Storage::fake();
+
+    createMatchingJob(['edit_date' => Carbon::parse('2026-02-03')]); // Tuesday — within this week
+
+    Http::fake(['*/GETQUERY' => Http::response(fakeDailyFootageResponse())]);
+
+    $this->artisan('ws:fetch-daily-footage')
+        ->expectsOutputToContain('Week-Ending mode')
+        ->expectsOutputToContain('Found 1 jobs')
+        ->assertSuccessful();
+
+    // Verify filename uses TODAY's Saturday (Feb 7), not last week
+    expect(Storage::allFiles())->toContain('daily-footage/ASPLUNDH/we02_07_2026_planning_activities.json');
+
+    Carbon::setTestNow();
+});
+
+test('year argument triggers Year mode with full year range', function () {
+    Storage::fake();
+
+    createMatchingJob(['edit_date' => Carbon::parse('2026-06-15')]); // Mid-year — within range
+    createMatchingJob(['edit_date' => Carbon::parse('2025-12-31')]); // Previous year — excluded
+
+    Http::fake(['*/GETQUERY' => Http::response(fakeDailyFootageResponse())]);
+
+    $this->artisan('ws:fetch-daily-footage 2026')
+        ->expectsOutputToContain('Year mode')
+        ->expectsOutputToContain('Found 1 jobs')
+        ->assertSuccessful();
+
+    // Filename uses 'year' prefix
+    expect(Storage::allFiles())->toContain('daily-footage/ASPLUNDH/year01_01_2026_planning_activities.json');
 });
 
 test('Saturday date triggers WE mode with Sun-Sat edit_date range', function () {
@@ -301,24 +339,46 @@ test('no .manifest file is written', function () {
 // SQL Query Assertions
 // ──────────────────────────────────────────────────
 
-test('DailyFootageQuery uses DATEPOP not ASSDDATE', function () {
+test('DailyFootageQuery prefers DATEPOP with ASSDDATE fallback', function () {
     $sql = DailyFootageQuery::build(['{guid-1}', '{guid-2}']);
 
     expect($sql)
         ->toContain('VU.DATEPOP')
         ->toContain("REPLACE(VU.DATEPOP, '/Date('")
-        ->toContain('ORDER BY VU.DATEPOP ASC')
-        ->not->toContain('ASSDDATE');
+        ->toContain("REPLACE(VU.ASSDDATE, '/Date('")
+        ->toContain('COALESCE(VU.DATEPOP, VU.ASSDDATE) ASC');
 });
 
 test('DailyFootageQuery includes STRING_AGG for station_list', function () {
     $sql = DailyFootageQuery::build(['{guid-1}']);
 
     expect($sql)
-        ->toContain("STRING_AGG(FU.STATNAME, ',') WITHIN GROUP (ORDER BY FU.STATNAME) AS station_list")
+        ->toContain("STRING_AGG(CAST(FU.STATNAME AS VARCHAR(MAX)), ',') WITHIN GROUP (ORDER BY FU.STATNAME) AS station_list")
         ->toContain('SUM(ISNULL(ST.SPANLGTH, 0)) AS daily_footage_meters')
         ->toContain('FU.FRSTR_USER')
-        ->toContain('CONVERT(VARCHAR(10), FU.datepop, 110) AS completion_date');
+        ->toContain('FU.completion_date');
+});
+
+test('DailyFootageQuery falls back to ASSDDATE when DATEPOP is null', function () {
+    $sql = DailyFootageQuery::build(['{guid-1}']);
+
+    expect($sql)
+        ->toContain('COALESCE(')
+        ->toContain('ASSDDATE')
+        ->toContain('VU.DATEPOP IS NOT NULL OR VU.ASSDDATE IS NOT NULL');
+});
+
+test('DailyFootageQuery filters completion_date by date range when provided', function () {
+    $sql = DailyFootageQuery::build(['{guid-1}'], '2026-02-01', '2026-02-07');
+
+    expect($sql)
+        ->toContain("FU.completion_date BETWEEN '2026-02-01' AND '2026-02-07'");
+});
+
+test('DailyFootageQuery omits date filter when no range provided', function () {
+    $sql = DailyFootageQuery::build(['{guid-1}']);
+
+    expect($sql)->not->toContain('BETWEEN');
 });
 
 test('DailyFootageQuery uses derived table not CTE', function () {
