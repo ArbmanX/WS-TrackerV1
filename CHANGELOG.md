@@ -10,6 +10,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Daily Footage by Station Completion — Artisan Command** (2026-02-08)
+  - `ws:fetch-daily-footage` artisan command — fetches daily footage metrics from WorkStudio API using first-unit-wins station completion logic
+  - `DailyFootageQuery` class — T-SQL derived table with `ROW_NUMBER() OVER PARTITION BY`, `STRING_AGG` for station lists, uses DATEPOP for completion dates
+  - Two date modes: **WE** (week-ending, Saturday targets → Sun-Sat range) and **Daily** (non-Saturday → single day filter)
+  - Signature: `{date?}`, `{--jobguid=}`, `{--status=ACTIV}`, `{--all-statuses}`, `{--chunk-size=200}`, `{--dry-run}`
+  - Pipeline: ss_jobs query (filtered by edit_date, job_type, status) → chunked API calls → enrichment (date parsing, station splitting, domain extraction) → per-domain JSON output
+  - JSON record shape: `{job_guid, frstr_user, datepop, distance_planned, stations[]}`
+  - Filenames: `storage/app/daily-footage/{DOMAIN}/{we|day}{MM_DD_YYYY}_planning_activities.json`
+  - `SsJobFactory`: `withJobType(string)` state, default `job_type` values from config
+  - 23 Pest tests covering date modes, job filtering, status flags, enrichment, SQL assertions, edge cases
+  - Business rules spec: `docs/specs/assessment-completion-rules.md`
+
+### Removed
+- **Sushi model and aggregator** (2026-02-08) — removed before first commit; no UI consumers
+  - Deleted: `DailyFootage` model, `DailyFootageAggregator` service, `DailyFootageFactory`, model/aggregator tests
+  - Removed `calebporzio/sushi` dependency from `composer.json`
+  - Removed `weekly_quota_miles` and `meters_per_mile` config values from `ws_assessment_query.php`
+  - Removed `.manifest` file generation from command output
+
 - **WSSQLCaster — Data-Driven SQL Field Casting** (2026-02-08)
   - `WSSQLCaster` class (`app/Services/WorkStudio/Shared/Helpers/WSSQLCaster.php`) — field registry mapping WS field names to cast types (`ole_datetime`, `date`)
   - `cast()` method generates SQL fragments for OLE Automation datetime conversion to Eastern time, supports `TABLE.FIELD` format

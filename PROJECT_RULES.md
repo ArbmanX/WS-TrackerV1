@@ -65,6 +65,17 @@
 
 ---
 
+## Domain Rules Documents
+
+Business rules for data queries and attribution logic are maintained in `docs/specs/`. These are the source of truth for query construction.
+
+| Document | Purpose |
+|----------|---------|
+| [`assessment-completion-rules.md`](docs/specs/assessment-completion-rules.md) | Daily footage calculation by station completion |
+| [`planner-activity-rules.md`](docs/specs/planner-activity-rules.md) | First Unit Wins attribution, unit classification, chunking |
+
+---
+
 ## Architecture
 
 - **Services must implement interfaces** — enables testing and flexibility

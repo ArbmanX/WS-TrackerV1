@@ -7,7 +7,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 These rules govern AI agent behavior during development sessions on this project.
 Review the docs directory
 
-
 ## Context Management
 
 - **At 60% context usage:** Ask user if they would like to create a context/handoff file summarizing current work
@@ -60,8 +59,6 @@ When creating context/handoff files, include:
 - Next steps / TODO items
 - Any blockers or decisions needed
 - Relevant code locations
-
-
 
 ## Build & Development Commands
 
@@ -205,28 +202,10 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - pestphp/pest (PEST) - v4
 - phpunit/phpunit (PHPUNIT) - v12
 - tailwindcss (TAILWINDCSS) - v4
-- DaisyUI (DAISYUI) - v5
 
 ## Skills Activation
 
 This project has domain-specific skills available. You MUST activate the relevant skill whenever you work in that domain—don't wait until you're stuck.
-
-### WS Module (WorkStudio Database Intelligence)
-
-The WS module is available at `_bmad/ws/` and provides:
-
-- **Schema Architect** — Database structure expert (`/ws:schema-architect`)
-- **Query Specialist** — SQL queries and optimization (`/ws:query-specialist`)
-- **Laravel Generator** — TALL stack code generation (`/ws:laravel-generator`)
-
-**Workflows available:**
-
-- `table-explorer` — Interactive deep-dive into any table
-- `model-generator` — Generate Laravel models with relationships
-- `query-builder` — Guided SQL query construction
-- `livewire-scaffold` — Generate Livewire CRUD components
-
-Use WS module when working with WorkStudio API queries, database schemas, or generating Laravel code for WorkStudio data.
 
 - `livewire-development` — Develops reactive Livewire 4 components. Activates when creating, updating, or modifying Livewire components; working with wire:model, wire:click, wire:loading, or any wire: directives; adding real-time updates, loading states, or reactivity; debugging component behavior; writing Livewire tests; or when the user mentions Livewire, component, counter, or reactive UI.
 - `pest-testing` — Tests applications using the Pest 4 PHP framework. Activates when writing tests, creating unit or feature tests, adding assertions, testing Livewire components, browser testing, debugging test failures, working with datasets or mocking; or when the user mentions test, spec, TDD, expects, assertion, coverage, or needs to verify functionality works.
