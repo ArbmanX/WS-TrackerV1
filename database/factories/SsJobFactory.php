@@ -26,7 +26,7 @@ class SsJobFactory extends Factory
             'modified_by_id' => null,
             'work_order' => fake()->numerify('WO-######'),
             'extensions' => [fake()->numerify('EXT-###')],
-            'job_type' => fake()->randomElement(['Assessment', 'Assessment Rework']),
+            'job_type' => fake()->randomElement(config('ws_assessment_query.job_types.assessments', ['Assessment Dx', 'Split_Assessment'])),
             'status' => fake()->randomElement(['SA', 'ACTIV', 'QC', 'REWRK', 'CLOSE']),
             'scope_year' => (string) now()->year,
             'edit_date' => fake()->dateTimeBetween('-30 days'),
@@ -67,6 +67,16 @@ class SsJobFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'status' => $status,
+        ]);
+    }
+
+    /**
+     * Job with a specific job type.
+     */
+    public function withJobType(string $jobType): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'job_type' => $jobType,
         ]);
     }
 }

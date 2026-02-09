@@ -11,7 +11,7 @@ test('can create an ss job with factory', function () {
         ->and($job->job_guid)->toEndWith('}')
         ->and($job->work_order)->toStartWith('WO-')
         ->and($job->extensions)->toBeArray()
-        ->and($job->job_type)->toBeIn(['Assessment', 'Assessment Rework'])
+        ->and($job->job_type)->toBeIn(config('ws_assessment_query.job_types.assessments'))
         ->and($job->status)->toBeIn(['SA', 'ACTIV', 'QC', 'REWRK', 'CLOSE']);
 });
 
