@@ -10,6 +10,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Unit Count in Daily Footage** (2026-02-10)
+  - `DailyFootageQuery`: Added `JOIN UNITS` and `SUM(CASE WHEN ...)` to count working units per row (excludes `Summary-NonWork` and empty/null `SUMMARYGRP`)
+  - `FetchDailyFootage`: Added `unit_count` (int) to enriched JSON output shape
+  - JSON record shape now: `{job_guid, frstr_user, datepop, distance_planned, unit_count, stations[]}`
+  - 2 new tests: SQL assertion for `JOIN UNITS` + `CASE WHEN`, enriched output `unit_count` integer cast
+
+- **Unit Types Reference Table** (2026-02-10)
+  - `unit_types` migration — local reference table synced from WorkStudio UNITS table
+  - `UnitType` model with `work_unit` boolean derived from `SUMMARYGRP` at sync time
+  - `UnitTypeFactory` with `nonWorking()` state for test data
+  - `ws:fetch-unit-types` artisan command — fetches all unit types from WS API, upserts by `unit` key, derives `work_unit` from `SUMMARYGRP`
+  - 9 Pest tests: sync, upsert, dry-run, error handling, `work_unit` derivation (Summary-NonWork, empty, null)
+
 - **Daily Footage by Station Completion — Artisan Command** (2026-02-08)
   - `ws:fetch-daily-footage` artisan command — fetches daily footage metrics from WorkStudio API using first-unit-wins station completion logic
   - `DailyFootageQuery` class — T-SQL derived table with `ROW_NUMBER() OVER PARTITION BY`, `STRING_AGG` for station lists, uses DATEPOP for completion dates
