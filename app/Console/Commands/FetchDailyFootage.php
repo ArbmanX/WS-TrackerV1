@@ -369,6 +369,7 @@ class FetchDailyFootage extends Command
                 'frstr_user' => $username,
                 'datepop' => $completionDate?->format('Y-m-d'),
                 'distance_planned' => (float) ($row['daily_footage_meters'] ?? 0),
+                'unit_count' => (int) ($row['unit_count'] ?? 0),
                 'stations' => $stations,
             ];
         });

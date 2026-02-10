@@ -12,12 +12,12 @@ use Illuminate\Support\Facades\Storage;
 function fakeDailyFootageResponse(?array $overrideData = null): array
 {
     return [
-        'Heading' => ['JOBGUID', 'completion_date', 'FRSTR_USER', 'daily_footage_meters', 'station_list'],
+        'Heading' => ['JOBGUID', 'completion_date', 'FRSTR_USER', 'daily_footage_meters', 'station_list', 'unit_count'],
         'Data' => $overrideData ?? [
-            ['{abc-111}', '01-15-2026', 'ASPLUNDH\\tgibson', '1523.7', '0,1,5'],
-            ['{abc-111}', '01-16-2026', 'ASPLUNDH\\tgibson', '987.3', '2,3'],
-            ['{abc-111}', '01-16-2026', 'ASPLUNDH\\jdoe', '412.5', '10'],
-            ['{abc-222}', '01-20-2026', 'PPL\\msmith', '2100.0', '0,4,7,12'],
+            ['{abc-111}', '01-15-2026', 'ASPLUNDH\\tgibson', '1523.7', '0,1,5', '3'],
+            ['{abc-111}', '01-16-2026', 'ASPLUNDH\\tgibson', '987.3', '2,3', '2'],
+            ['{abc-111}', '01-16-2026', 'ASPLUNDH\\jdoe', '412.5', '10', '0'],
+            ['{abc-222}', '01-20-2026', 'PPL\\msmith', '2100.0', '0,4,7,12', '4'],
         ],
     ];
 }
@@ -238,7 +238,7 @@ test('enriched JSON records have correct shape', function () {
     createMatchingJob(['edit_date' => Carbon::parse('2026-02-03')]);
 
     Http::fake(['*/GETQUERY' => Http::response(fakeDailyFootageResponse([
-        ['{abc-111}', '01-15-2026', 'ASPLUNDH\\tgibson', '1523.7', '0,1,5'],
+        ['{abc-111}', '01-15-2026', 'ASPLUNDH\\tgibson', '1523.7', '0,1,5', '3'],
     ]))]);
 
     $this->artisan('ws:fetch-daily-footage 02-07-2026')->assertSuccessful();
@@ -247,7 +247,7 @@ test('enriched JSON records have correct shape', function () {
 
     expect($json)->toBeArray()
         ->and($json)->toHaveCount(1)
-        ->and($json[0])->toHaveKeys(['job_guid', 'frstr_user', 'datepop', 'distance_planned', 'stations'])
+        ->and($json[0])->toHaveKeys(['job_guid', 'frstr_user', 'datepop', 'distance_planned', 'unit_count', 'stations'])
         ->and($json[0])->not->toHaveKey('_domain')
         ->and($json[0])->not->toHaveKey('domain')
         ->and($json[0])->not->toHaveKey('footage_miles')
@@ -261,7 +261,7 @@ test('station_list is split into array', function () {
     createMatchingJob(['edit_date' => Carbon::parse('2026-02-03')]);
 
     Http::fake(['*/GETQUERY' => Http::response(fakeDailyFootageResponse([
-        ['{abc-111}', '01-15-2026', 'ASPLUNDH\\tgibson', '500.0', '0,1,5,10'],
+        ['{abc-111}', '01-15-2026', 'ASPLUNDH\\tgibson', '500.0', '0,1,5,10', '4'],
     ]))]);
 
     $this->artisan('ws:fetch-daily-footage 02-07-2026')->assertSuccessful();
@@ -277,7 +277,7 @@ test('empty station_list produces empty array', function () {
     createMatchingJob(['edit_date' => Carbon::parse('2026-02-03')]);
 
     Http::fake(['*/GETQUERY' => Http::response(fakeDailyFootageResponse([
-        ['{abc-111}', '01-15-2026', 'ASPLUNDH\\tgibson', '500.0', ''],
+        ['{abc-111}', '01-15-2026', 'ASPLUNDH\\tgibson', '500.0', '', '0'],
     ]))]);
 
     $this->artisan('ws:fetch-daily-footage 02-07-2026')->assertSuccessful();
@@ -293,7 +293,7 @@ test('completion_date MM-DD-YYYY is converted to datepop YYYY-MM-DD', function (
     createMatchingJob(['edit_date' => Carbon::parse('2026-02-03')]);
 
     Http::fake(['*/GETQUERY' => Http::response(fakeDailyFootageResponse([
-        ['{abc-111}', '01-15-2026', 'ASPLUNDH\\tgibson', '1523.7', '0'],
+        ['{abc-111}', '01-15-2026', 'ASPLUNDH\\tgibson', '1523.7', '0', '1'],
     ]))]);
 
     $this->artisan('ws:fetch-daily-footage 02-07-2026')->assertSuccessful();
@@ -391,6 +391,33 @@ test('DailyFootageQuery uses derived table not CTE', function () {
         ->toContain('JOIN STATIONS ST')
         ->toContain('GROUP BY FU.JOBGUID')
         ->not->toMatch('/\bWITH\b(?!IN)/'); // "WITH" keyword but not "WITHIN"
+});
+
+test('DailyFootageQuery joins UNITS table and counts working units', function () {
+    $sql = DailyFootageQuery::build(['{guid-1}']);
+
+    expect($sql)
+        ->toContain('JOIN UNITS U')
+        ->toContain('ON U.UNIT = FU.UNIT')
+        ->toContain("WHEN U.SUMMARYGRP IS NOT NULL AND U.SUMMARYGRP != '' AND U.SUMMARYGRP != 'Summary-NonWork' THEN 1 ELSE 0 END")
+        ->toContain('AS unit_count');
+});
+
+test('unit_count is cast to integer in enriched output', function () {
+    Storage::fake();
+
+    createMatchingJob(['edit_date' => Carbon::parse('2026-02-03')]);
+
+    Http::fake(['*/GETQUERY' => Http::response(fakeDailyFootageResponse([
+        ['{abc-111}', '01-15-2026', 'ASPLUNDH\\tgibson', '1523.7', '0,1,5', '3'],
+    ]))]);
+
+    $this->artisan('ws:fetch-daily-footage 02-07-2026')->assertSuccessful();
+
+    $json = json_decode(Storage::get('daily-footage/ASPLUNDH/we02_07_2026_planning_activities.json'), true);
+
+    expect($json[0]['unit_count'])->toBe(3)
+        ->and($json[0]['unit_count'])->toBeInt();
 });
 
 // ──────────────────────────────────────────────────

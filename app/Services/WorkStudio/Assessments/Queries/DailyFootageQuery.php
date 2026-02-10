@@ -15,7 +15,8 @@ class DailyFootageQuery
      * determines who gets credit.
      *
      * Output columns: JOBGUID, completion_date (/Date(...)/ wrapper — parsed in PHP),
-     * FRSTR_USER, daily_footage_meters, station_list (comma-separated station names).
+     * FRSTR_USER, daily_footage_meters, station_list (comma-separated station names),
+     * unit_count (count of working units — excludes non-work SUMMARYGRP types).
      *
      * NOTE: The DDOProtocol API does not support CTEs (WITH...AS).
      * All queries must use derived tables (subqueries) instead.
@@ -44,7 +45,8 @@ class DailyFootageQuery
     FU.completion_date,
     FU.FRSTR_USER,
     SUM(ISNULL(ST.SPANLGTH, 0)) AS daily_footage_meters,
-    STRING_AGG(CAST(FU.STATNAME AS VARCHAR(MAX)), ',') WITHIN GROUP (ORDER BY FU.STATNAME) AS station_list
+    STRING_AGG(CAST(FU.STATNAME AS VARCHAR(MAX)), ',') WITHIN GROUP (ORDER BY FU.STATNAME) AS station_list,
+    SUM(CASE WHEN U.SUMMARYGRP IS NOT NULL AND U.SUMMARYGRP != '' AND U.SUMMARYGRP != 'Summary-NonWork' THEN 1 ELSE 0 END) AS unit_count
 FROM (
     SELECT
         VU.JOBGUID,
@@ -65,6 +67,8 @@ FROM (
 JOIN STATIONS ST
     ON ST.JOBGUID = FU.JOBGUID
     AND ST.STATNAME = FU.STATNAME
+JOIN UNITS U
+    ON U.UNIT = FU.UNIT
 WHERE FU.unit_rank = 1
     {$dateFilter}
 GROUP BY FU.JOBGUID, FU.completion_date, FU.FRSTR_USER
