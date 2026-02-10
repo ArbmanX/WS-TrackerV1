@@ -1,7 +1,7 @@
 # WS-TrackerV1 — Project Context (Session Quick-Load)
 
 > **Purpose:** Load this file at the start of each new AI session to avoid re-exploring the codebase.
-> **Last Updated:** 2026-02-07
+> **Last Updated:** 2026-02-10
 > **Complements:** CLAUDE.md (auto-loaded) — this file adds architecture detail, current state, and patterns NOT covered there.
 
 ---
@@ -145,6 +145,12 @@ Livewire Component
 - **Relations:** `circuit` (BelongsTo→Circuit), `parentJob` (BelongsTo→self), `childJobs` (HasMany→self), `takenBy` (BelongsTo→WsUser), `modifiedBy` (BelongsTo→WsUser)
 - **Casts:** extensions→array, edit_date→datetime, taken→bool, last_synced_at→datetime
 
+### UnitType
+- **Fields:** unit (unique), unitssname, unitsetid, summarygrp, entityname, work_unit (bool), last_synced_at
+- **Casts:** work_unit→boolean, last_synced_at→datetime
+- **Synced by:** `ws:fetch-unit-types` artisan command (upserts from WorkStudio UNITS table)
+- **`work_unit` derivation:** true when `SUMMARYGRP` is not null, not empty, and not `Summary-NonWork`
+
 ---
 
 ## 5. Routes & Permissions
@@ -278,6 +284,8 @@ Sidebar is responsive: mobile drawer, tablet icons-only, desktop expanded.
 - Spatie Permission (5 roles, 7 permissions)
 - Reference data (6 regions, circuits from API)
 - SS Jobs & WS Users data sync (`ws:fetch-users`, `ws:fetch-jobs` artisan commands)
+- Unit types reference table with `ws:fetch-unit-types` sync command
+- Daily footage query with working unit count (`unit_count`)
 - Domain-driven service architecture
 - ~41+ test files, good coverage of recent features
 
