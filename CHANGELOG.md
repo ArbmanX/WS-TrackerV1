@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Planner Analytics Design Prototypes** (2026-02-10)
+  - `MockPreview` Livewire component — toggleable design preview (`?design=a` or `?design=b`)
+  - `mock-a.blade.php` — "Analytics Command Center" dense layout with comparison table, sparklines, quota badges
+  - `mock-b.blade.php` — "Clean Dashboard" spacious layout with hero chart, radial progress, planner cards
+  - Temporary design route at `/design/planner-analytics` (auth-gated)
+  - Data inventory document: `docs/design/planner-analytics-data-inventory.md`
+  - User flow diagrams: `docs/design/planner-analytics-user-flow.md`
+- **Session handoff document** — `docs/session-handoffs/2026-02-10-credential-audit-and-planner-design.md`
+
+### Fixed
+- `ReferenceDataSeederTest` — corrected expected region order to alphabetical (matches actual `RegionSeeder` sort)
 - **Unit Count in Daily Footage** (2026-02-10)
   - `DailyFootageQuery`: Added `JOIN UNITS` and `SUM(CASE WHEN ...)` to count working units per row (excludes `Summary-NonWork` and empty/null `SUMMARYGRP`)
   - `FetchDailyFootage`: Added `unit_count` (int) to enriched JSON output shape

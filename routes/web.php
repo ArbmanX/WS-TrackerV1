@@ -4,6 +4,7 @@ use App\Livewire\Onboarding\ChangePassword;
 use App\Livewire\Onboarding\Confirmation;
 use App\Livewire\Onboarding\ThemeSelection;
 use App\Livewire\Onboarding\WorkStudioSetup;
+use App\Livewire\PlannerAnalytics\MockPreview;
 use Illuminate\Support\Facades\Route;
 use Spatie\Health\Http\Controllers\HealthCheckJsonResultsController;
 use Spatie\Health\Http\Controllers\HealthCheckResultsController;
@@ -46,6 +47,15 @@ Route::get('/health', HealthCheckJsonResultsController::class)
 Route::get('/health/dashboard', HealthCheckResultsController::class)
     ->middleware(['auth', 'permission:access-health-dashboard'])
     ->name('health.dashboard');
+
+/*
+|--------------------------------------------------------------------------
+| Design Preview Routes (temporary — remove after design approval)
+|--------------------------------------------------------------------------
+*/
+Route::get('/design/planner-analytics', MockPreview::class)
+    ->middleware(['auth'])
+    ->name('design.planner-analytics');
 
 require __DIR__.'/workstudioAPI.php';
 require __DIR__.'/data-management.php';
