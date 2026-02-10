@@ -37,7 +37,7 @@ test('regions have correct sort order', function () {
 
     $ordered = Region::orderBy('sort_order')->pluck('name')->all();
 
-    expect($ordered)->toBe(['HARRISBURG', 'LANCASTER', 'LEHIGH', 'CENTRAL', 'SUSQUEHANNA', 'NORTHEAST']);
+    expect($ordered)->toBe(['CENTRAL', 'HARRISBURG', 'LANCASTER', 'LEHIGH', 'NORTHEAST', 'SUSQUEHANNA']);
 });
 
 test('circuit seeder skips gracefully when data file missing', function () {
