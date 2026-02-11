@@ -408,3 +408,39 @@ test('getDistinctFieldValues uses config-driven CYCLETYPE exclusion', function (
 
     expect($sql)->toContain('CYCLETYPE NOT IN');
 });
+
+// ─── Phase 4: Domain Class Split Tests ──────────────────────────────────────
+
+test('domain classes produce identical SQL to facade', function () {
+    $context = makeContext(['resourceGroups' => ['SPLIT_TEST'], 'contractors' => ['SplitCorp']]);
+
+    $facade = new AssessmentQueries($context);
+
+    $aggregates = new \App\Services\WorkStudio\Assessments\Queries\AggregateQueries($context);
+    $circuits = new \App\Services\WorkStudio\Assessments\Queries\CircuitQueries($context);
+    $activities = new \App\Services\WorkStudio\Assessments\Queries\ActivityQueries($context);
+    $lookups = new \App\Services\WorkStudio\Assessments\Queries\LookupQueries($context);
+
+    // Each domain class method should produce the same SQL as the facade
+    expect($aggregates->systemWideDataQuery())->toBe($facade->systemWideDataQuery());
+    expect($aggregates->groupedByRegionDataQuery())->toBe($facade->groupedByRegionDataQuery());
+    expect($circuits->groupedByCircuitDataQuery())->toBe($facade->groupedByCircuitDataQuery());
+    expect($circuits->getAllJobGUIDsForEntireScopeYear())->toBe($facade->getAllJobGUIDsForEntireScopeYear());
+    expect($activities->getAllAssessmentsDailyActivities())->toBe($facade->getAllAssessmentsDailyActivities());
+    expect($activities->getActiveAssessmentsOrderedByOldest(10))->toBe($facade->getActiveAssessmentsOrderedByOldest(10));
+    expect($lookups->getDistinctFieldValues('VEGUNIT', 'PERMSTAT'))->toBe($facade->getDistinctFieldValues('VEGUNIT', 'PERMSTAT'));
+});
+
+test('CircuitQueries.getAllByJobGuid validates GUID via domain class', function () {
+    $context = makeContext();
+    $circuits = new \App\Services\WorkStudio\Assessments\Queries\CircuitQueries($context);
+
+    $circuits->getAllByJobGuid('invalid-guid');
+})->throws(\InvalidArgumentException::class, 'Invalid JOBGUID format.');
+
+test('LookupQueries.getDistinctFieldValues validates input via domain class', function () {
+    $context = makeContext();
+    $lookups = new \App\Services\WorkStudio\Assessments\Queries\LookupQueries($context);
+
+    $lookups->getDistinctFieldValues('DROP TABLE', 'PERMSTAT');
+})->throws(\InvalidArgumentException::class, 'Invalid table or field name.');

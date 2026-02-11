@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Assessment Query Class Split** (2026-02-11)
+  - Split monolithic `AssessmentQueries` (568 lines) into 4 focused domain classes via `AbstractQueryBuilder` base class:
+    - `AggregateQueries` — `systemWideDataQuery`, `groupedByRegionDataQuery`
+    - `CircuitQueries` — `groupedByCircuitDataQuery`, `getAllByJobGuid`, `getAllJobGUIDsForEntireScopeYear`
+    - `ActivityQueries` — `getAllAssessmentsDailyActivities`, `getActiveAssessmentsOrderedByOldest`
+    - `LookupQueries` — `getDistinctFieldValues`
+  - `AssessmentQueries` is now a thin delegating facade preserving backward compatibility with `GetQueryService`
+  - `SqlFragmentHelpers` trait methods changed from `private` to `protected` for subclass access
+  - 3 new Pest tests: domain-class/facade SQL equivalence, GUID validation via CircuitQueries, input validation via LookupQueries
+
 ### Fixed
 - **Remove SS self-join from Q4 & Q5** (2026-02-11) — Removed redundant `INNER JOIN SS AS WSREQSS ON SS.JOBGUID = WSREQSS.JOBGUID` from `getAllAssessmentsDailyActivities()` and `getAllByJobGuid()`. The self-join produced a Cartesian product on the same PK for no benefit.
 - **Standardize CYCLETYPE filtering** (2026-02-11) — Replaced hardcoded `NOT IN ('Reactive', 'Storm Follow Up', ...)` with config-driven `excluded_from_assessments` array in `getActiveAssessmentsOrderedByOldest()` and `getDistinctFieldValues()`

@@ -16,7 +16,7 @@ trait SqlFragmentHelpers
      * Uses INNER JOIN for xrefs since WHERE filters on WP_STARTDATE
      * already force INNER behavior (BUG-002 resolution).
      */
-    private function baseFromClause(): string
+    protected function baseFromClause(): string
     {
         return 'FROM SS
                 INNER JOIN VEGJOB ON SS.JOBGUID = VEGJOB.JOBGUID
@@ -33,7 +33,7 @@ trait SqlFragmentHelpers
      *     cycleTypeSql?: string,
      * }  $overrides  Per-query variations
      */
-    private function baseWhereClause(array $overrides = []): string
+    protected function baseWhereClause(array $overrides = []): string
     {
         $statusSql = $overrides['statusSql'] ?? "('ACTIV', 'QC', 'REWRK', 'CLOSE')";
         $cycleTypeSql = $overrides['cycleTypeSql'] ?? $this->cycleTypesSql;
@@ -59,7 +59,7 @@ trait SqlFragmentHelpers
      * CROSS APPLY for permission counts from VEGUNIT.
      * Uses config-driven PERMSTAT values. Includes valid unit filter in WHERE.
      */
-    private static function permissionCountsCrossApply(string $jobGuidRef = 'SS.JOBGUID'): string
+    protected static function permissionCountsCrossApply(string $jobGuidRef = 'SS.JOBGUID'): string
     {
         $approved = config('ws_assessment_query.permission_statuses.approved');
         $pending = config('ws_assessment_query.permission_statuses.pending');
@@ -88,7 +88,7 @@ trait SqlFragmentHelpers
      * Extended CROSS APPLY for permission counts with assessed dates.
      * Used by circuit-detail views that need First/Last Assessed Date.
      */
-    private static function permissionCountsWithDatesCrossApply(string $jobGuidRef = 'SS.JOBGUID'): string
+    protected static function permissionCountsWithDatesCrossApply(string $jobGuidRef = 'SS.JOBGUID'): string
     {
         $approved = config('ws_assessment_query.permission_statuses.approved');
         $pending = config('ws_assessment_query.permission_statuses.pending');
@@ -119,7 +119,7 @@ trait SqlFragmentHelpers
      * CROSS APPLY for work measurements from JOBVEGETATIONUNITS.
      * Uses config-driven unit code groups.
      */
-    private static function workMeasurementsCrossApply(string $jobGuidRef = 'SS.JOBGUID'): string
+    protected static function workMeasurementsCrossApply(string $jobGuidRef = 'SS.JOBGUID'): string
     {
         $rem612 = WSHelpers::toSqlInClause(config('ws_assessment_query.unit_groups.removal_6_12'));
         $remOver12 = WSHelpers::toSqlInClause(config('ws_assessment_query.unit_groups.removal_over_12'));
@@ -153,7 +153,7 @@ trait SqlFragmentHelpers
      * Parse Microsoft JSON date format to SQL DATE.
      * Converts '/Date(1234567890000)/' to a proper DATE.
      */
-    private static function parseMsDateToDate(string $column): string
+    protected static function parseMsDateToDate(string $column): string
     {
         return "CAST(CAST(REPLACE(REPLACE({$column}, '/Date(', ''), ')/', '') AS DATETIME) AS DATE)";
     }
@@ -162,7 +162,7 @@ trait SqlFragmentHelpers
      * Extract YEAR from date format: /Date(Jan 1, 2026)/ or similar
      * Used for Scope_Year calculation.
      */
-    private static function extractYearFromMsDate(string $column): string
+    protected static function extractYearFromMsDate(string $column): string
     {
         return "CASE
             WHEN {$column} IS NULL OR {$column} = '' THEN NULL
@@ -173,7 +173,7 @@ trait SqlFragmentHelpers
     /**
      * Filter condition for valid units (excludes NW, empty, and null).
      */
-    private static function validUnitFilter(string $tableAlias = 'VEGUNIT'): string
+    protected static function validUnitFilter(string $tableAlias = 'VEGUNIT'): string
     {
         return "{$tableAlias}.UNIT != 'NW' AND {$tableAlias}.UNIT != '' AND {$tableAlias}.UNIT IS NOT NULL";
     }
@@ -181,7 +181,7 @@ trait SqlFragmentHelpers
     /**
      * Filter condition using NOT IN syntax.
      */
-    private static function validUnitFilterNotIn(string $tableAlias = 'V'): string
+    protected static function validUnitFilterNotIn(string $tableAlias = 'V'): string
     {
         return "{$tableAlias}.UNIT NOT IN ('NW', '') AND {$tableAlias}.UNIT IS NOT NULL";
     }
@@ -189,7 +189,7 @@ trait SqlFragmentHelpers
     /**
      * Get the first forester for a circuit.
      */
-    private static function foresterSubquery(string $jobGuidRef = 'SS.JOBGUID'): string
+    protected static function foresterSubquery(string $jobGuidRef = 'SS.JOBGUID'): string
     {
         return "(SELECT TOP 1 VEGUNIT.FORESTER
             FROM VEGUNIT
@@ -201,7 +201,7 @@ trait SqlFragmentHelpers
     /**
      * Get total footage for a circuit (sum of all station span lengths).
      */
-    private static function totalFootageSubquery(string $jobGuidRef = 'SS.JOBGUID'): string
+    protected static function totalFootageSubquery(string $jobGuidRef = 'SS.JOBGUID'): string
     {
         return "(SELECT CAST(SUM(SPANLGTH) AS DECIMAL(10,2)) FROM STATIONS WHERE STATIONS.JOBGUID = {$jobGuidRef})";
     }
@@ -209,7 +209,7 @@ trait SqlFragmentHelpers
     /**
      * Format OLE Automation datetime to Eastern time with readable format.
      */
-    private static function formatToEasternTime(string $column): string
+    protected static function formatToEasternTime(string $column): string
     {
         return WSSQLCaster::cast($column, 'MM/dd/yyyy h:mm tt');
     }
@@ -217,7 +217,7 @@ trait SqlFragmentHelpers
     /**
      * Build a unit count subquery for a specific permission status.
      */
-    private static function unitCountSubquery(string $jobGuidRef, ?string $permStatus = null, bool $requireAssessedDate = false): string
+    protected static function unitCountSubquery(string $jobGuidRef, ?string $permStatus = null, bool $requireAssessedDate = false): string
     {
         $validUnit = self::validUnitFilter();
 
@@ -242,7 +242,7 @@ trait SqlFragmentHelpers
      * Build the CROSS APPLY for unit counts (more efficient for list queries).
      * Includes ASSDDATE filter for Total_Units_Planned. Uses config PERMSTAT values.
      */
-    private static function unitCountsCrossApply(string $jobGuidRef = 'SS.JOBGUID'): string
+    protected static function unitCountsCrossApply(string $jobGuidRef = 'SS.JOBGUID'): string
     {
         $validUnit = self::validUnitFilter();
         $approved = config('ws_assessment_query.permission_statuses.approved');
@@ -286,7 +286,7 @@ trait SqlFragmentHelpers
      * Each station's SPANLGTH is only counted ONCE - on its first assessment date.
      * Uses ROW_NUMBER() to identify each station's first appearance.
      */
-    private static function dailyRecordsQuery(string $jobGuidRef = 'WSREQSS.JOBGUID', bool $asOuterApply = true): string
+    protected static function dailyRecordsQuery(string $jobGuidRef = 'WSREQSS.JOBGUID', bool $asOuterApply = true): string
     {
         $parseDateV = self::parseMsDateToDate('V.ASSDDATE');
         $parseDateV2 = self::parseMsDateToDate('V2.ASSDDATE');
@@ -356,7 +356,7 @@ trait SqlFragmentHelpers
     /**
      * Build the Stations with nested Units subquery.
      */
-    private static function stationsWithUnitsQuery(string $jobGuidRef = 'SS.JOBGUID'): string
+    protected static function stationsWithUnitsQuery(string $jobGuidRef = 'SS.JOBGUID'): string
     {
         $stationFields = SqlFieldBuilder::select('Stations', 'S');
         $vegunitFields = SqlFieldBuilder::select('VEGUNIT', 'U');
