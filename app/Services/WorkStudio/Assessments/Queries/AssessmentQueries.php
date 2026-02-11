@@ -273,7 +273,7 @@ class AssessmentQueries
                         COUNT(CASE WHEN VEGUNIT.PERMSTAT = 'Approved' THEN 1 END) AS Approved_Count,
                         COUNT(CASE WHEN VEGUNIT.PERMSTAT = 'Pending' OR VEGUNIT.PERMSTAT IS NULL OR VEGUNIT.PERMSTAT = '' THEN 1 END) AS Pending_Count,
                         COUNT(CASE WHEN VEGUNIT.PERMSTAT = 'No Contact' THEN 1 END) AS No_Contact_Count,
-                        COUNT(CASE WHEN VEGUNIT.PERMSTAT = 'Refusal' THEN 1 END) AS Refusal_Count,
+                        COUNT(CASE WHEN VEGUNIT.PERMSTAT = 'Refused' THEN 1 END) AS Refusal_Count,
                         COUNT(CASE WHEN VEGUNIT.PERMSTAT = 'Deferred' THEN 1 END) AS Deferred_Count,
                         COUNT(CASE WHEN VEGUNIT.PERMSTAT = 'PPL Approved' THEN 1 END) AS PPL_Approved_Count
                     FROM VEGUNIT
@@ -402,7 +402,7 @@ class AssessmentQueries
         $totalApprovals = self::unitCountSubquery('WSREQSS.JOBGUID', 'Approved');
         $totalPending = self::unitCountSubquery('WSREQSS.JOBGUID', 'Pending');
         $totalNoContacts = self::unitCountSubquery('WSREQSS.JOBGUID', 'No Contact');
-        $totalRefusals = self::unitCountSubquery('WSREQSS.JOBGUID', 'Refusal');
+        $totalRefusals = self::unitCountSubquery('WSREQSS.JOBGUID', 'Refused');
         $totalDeferred = self::unitCountSubquery('WSREQSS.JOBGUID', 'Deferred');
         $totalPplApproved = self::unitCountSubquery('WSREQSS.JOBGUID', 'PPL Approved');
 

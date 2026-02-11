@@ -35,6 +35,13 @@ return [
         'data_driven' => [
             'VM Detection',
         ],
+        // Types excluded from assessment queries (used in NOT IN filters)
+        'excluded_from_assessments' => [
+            'Reactive',
+            'Storm Follow Up',
+            'Misc. Project Work',
+            'PUC-STORM FOLLOW UP',
+        ],
     ],
 
     'job_types' => [
@@ -98,5 +105,28 @@ return [
 
             'closed' => ['value' => 'CLOSE', 'caption' => 'Closed'],
         ],
+    ],
+
+    // VEGUNIT.PERMSTAT values — single source of truth for permission status strings.
+    // 'Pending' also includes NULL and empty string in query logic.
+    'permission_statuses' => [
+        'approved' => 'Approved',
+        'pending' => 'Pending',
+        'no_contact' => 'No Contact',
+        'refused' => 'Refused',
+        'deferred' => 'Deferred',
+        'ppl_approved' => 'PPL Approved',
+    ],
+
+    // JOBVEGETATIONUNITS/VEGUNIT unit code groups for work measurement aggregation.
+    'unit_groups' => [
+        'removal_6_12' => ['REM612'],
+        'removal_over_12' => ['REM1218', 'REM1824', 'REM2430', 'REM3036'],
+        'ash_removal' => ['ASH612', 'ASH1218', 'ASH1824', 'ASH2430', 'ASH3036'],
+        'vps' => ['VPS'],
+        'brush' => ['BRUSH', 'HCB', 'BRUSHTRIM'],
+        'herbicide' => ['HERBA', 'HERBNA'],
+        'bucket_trim' => ['SPB', 'MPB'],
+        'manual_trim' => ['SPM', 'MPM'],
     ],
 ];

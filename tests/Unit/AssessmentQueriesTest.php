@@ -128,3 +128,66 @@ test('Active_Planners filters by domain in groupedByRegionDataQuery', function (
         ->and($sql)->toContain('Active_Planners')
         ->and($sql)->toContain('CHARINDEX');
 });
+
+// ─── Config Value Tests ─────────────────────────────────────────────────────
+
+test('permission_statuses config is a non-empty array with expected keys', function () {
+    $statuses = config('ws_assessment_query.permission_statuses');
+
+    expect($statuses)->toBeArray()
+        ->not->toBeEmpty()
+        ->toHaveKeys(['approved', 'pending', 'no_contact', 'refused', 'deferred', 'ppl_approved']);
+});
+
+test('permission_statuses.refused is Refused (BUG-001 regression guard)', function () {
+    expect(config('ws_assessment_query.permission_statuses.refused'))->toBe('Refused');
+});
+
+test('unit_groups config is a non-empty array with expected keys', function () {
+    $groups = config('ws_assessment_query.unit_groups');
+
+    expect($groups)->toBeArray()
+        ->not->toBeEmpty()
+        ->toHaveKeys(['removal_6_12', 'removal_over_12', 'ash_removal', 'vps', 'brush', 'herbicide', 'bucket_trim', 'manual_trim']);
+});
+
+test('unit_groups values are non-empty arrays of strings', function () {
+    $groups = config('ws_assessment_query.unit_groups');
+
+    foreach ($groups as $key => $codes) {
+        expect($codes)->toBeArray()->not->toBeEmpty("unit_groups.{$key} should not be empty");
+
+        foreach ($codes as $code) {
+            expect($code)->toBeString();
+        }
+    }
+});
+
+test('excluded_from_assessments cycle types config is a non-empty array', function () {
+    $excluded = config('ws_assessment_query.cycle_types.excluded_from_assessments');
+
+    expect($excluded)->toBeArray()
+        ->not->toBeEmpty()
+        ->toContain('Reactive')
+        ->toContain('Storm Follow Up');
+});
+
+// ─── BUG-001 Regression: PERMSTAT uses 'Refused' not 'Refusal' ──────────────
+
+test('groupedByCircuitDataQuery uses Refused not Refusal for PERMSTAT', function () {
+    $context = makeContext();
+    $queries = new AssessmentQueries($context);
+    $sql = $queries->groupedByCircuitDataQuery();
+
+    expect($sql)->toContain("'Refused'")
+        ->and($sql)->not->toContain("'Refusal'");
+});
+
+test('groupedByRegionDataQuery uses Refused not Refusal for PERMSTAT', function () {
+    $context = makeContext();
+    $queries = new AssessmentQueries($context);
+    $sql = $queries->groupedByRegionDataQuery();
+
+    expect($sql)->toContain("'Refused'")
+        ->and($sql)->not->toContain("'Refusal'");
+});

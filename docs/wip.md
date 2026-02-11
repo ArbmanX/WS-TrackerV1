@@ -1,16 +1,21 @@
 # Work In Progress
 
-## Active: Credential Security Fix (SEC-001)
+## Branch: `feature/query-config-extraction`
 
-**Branch:** `feature/credential-security`
+**Phase 1 of 4:** Assessment Queries Refactor & Optimization
 
-### Completed:
-1. Added `buildDbParameters()` and `formatDbParameters()` to `ApiCredentialManager`
-2. Fixed `GetQueryService.php` — removed hardcoded credentials, uses manager
-3. Cleaned `config/workstudio.php` — empty string defaults
-4. Updated `QueryExplorer`, `UserDetailsService`, `HeartbeatService` to use manager
-5. Updated all 7 Fetch commands to use manager
-6. 7 new tests (48 assertions) — all passing
-7. Full test suite: 289 passed, 0 failures
+### What's Being Done
+- Adding `permission_statuses` array to config (PERMSTAT values)
+- Adding `unit_groups` array to config (work measurement unit codes)
+- Adding `excluded_from_assessments` cycle type array to config
+- Writing unit tests for config values
+- Applying BUG-001 fix (Refusal -> Refused)
 
-### Ready to commit and merge.
+### Files Modified
+- `config/ws_assessment_query.php`
+- `app/Services/WorkStudio/Assessments/Queries/AssessmentQueries.php` (BUG-001 fix)
+- `app/Services/WorkStudio/Assessments/Queries/SqlFragmentHelpers.php` (BUG-001 fix)
+- `tests/Unit/AssessmentQueriesTest.php` (new config tests)
+
+### Next Phase
+Phase 2: Extract shared SQL fragments to SqlFragmentHelpers
