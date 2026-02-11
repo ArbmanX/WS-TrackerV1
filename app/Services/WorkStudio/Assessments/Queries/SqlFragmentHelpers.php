@@ -120,7 +120,7 @@ trait SqlFragmentHelpers
                 COUNT(CASE WHEN VEGUNIT.PERMSTAT = 'No Contact'
                         AND {$validUnit}
                     THEN 1 END) AS Total_No_Contacts,
-                COUNT(CASE WHEN VEGUNIT.PERMSTAT = 'Refusal'
+                COUNT(CASE WHEN VEGUNIT.PERMSTAT = 'Refused'
                         AND {$validUnit}
                     THEN 1 END) AS Total_Refusals,
                 COUNT(CASE WHEN VEGUNIT.PERMSTAT = 'Deferred'

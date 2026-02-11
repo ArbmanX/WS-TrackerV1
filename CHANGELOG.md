@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Assessment Query Config Extraction** (2026-02-11)
+  - `permission_statuses` array in `config/ws_assessment_query.php` — single source of truth for VEGUNIT.PERMSTAT values (Approved, Pending, No Contact, Refused, Deferred, PPL Approved)
+  - `unit_groups` array — work measurement unit code groups (removal_6_12, removal_over_12, ash_removal, vps, brush, herbicide, bucket_trim, manual_trim)
+  - `excluded_from_assessments` cycle type array — standardized exclusion list for assessment queries
+  - 7 new Pest tests: config structure validation, BUG-001 regression guards
+
+### Fixed
+- **BUG-001: PERMSTAT 'Refusal' → 'Refused'** — corrected incorrect PERMSTAT value in `groupedByCircuitDataQuery`, `getAllByJobGuid` (via `unitCountSubquery`), and `unitCountsCrossApply`. Refusal counts were silently returning 0.
+
 ### Security
 - **Credential Security Fix (SEC-001)** (2026-02-10)
   - Removed hardcoded credentials from `GetQueryService.php` — now uses `ApiCredentialManager`
