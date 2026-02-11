@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\SsJob;
 use App\Services\WorkStudio\Assessments\Queries\DailyFootageQuery;
+use App\Services\WorkStudio\Client\ApiCredentialManager;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -287,8 +288,7 @@ class FetchDailyFootage extends Command
      */
     private function fetchChunk(array $jobGuids): ?Collection
     {
-        $username = config('workstudio.service_account.username');
-        $password = config('workstudio.service_account.password');
+        $credentials = app(ApiCredentialManager::class)->getServiceAccountCredentials();
         $baseUrl = rtrim((string) config('workstudio.base_url'), '/');
 
         $sql = DailyFootageQuery::build(
@@ -299,13 +299,13 @@ class FetchDailyFootage extends Command
 
         $payload = [
             'Protocol' => 'GETQUERY',
-            'DBParameters' => "USER NAME={$username}\r\nPASSWORD={$password}\r\n",
+            'DBParameters' => ApiCredentialManager::formatDbParameters($credentials['username'], $credentials['password']),
             'SQL' => $sql,
         ];
 
         try {
             /** @var \Illuminate\Http\Client\Response $response */
-            $response = Http::withBasicAuth($username, $password)
+            $response = Http::withBasicAuth($credentials['username'], $credentials['password'])
                 ->timeout(180)
                 ->connectTimeout(30)
                 ->post("{$baseUrl}/GETQUERY", $payload);

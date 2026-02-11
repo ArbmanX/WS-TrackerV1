@@ -194,6 +194,29 @@ class ApiCredentialManager
     }
 
     /**
+     * Build the DBParameters string for DDOProtocol API requests.
+     *
+     * The WorkStudio DDOProtocol requires credentials in the POST body
+     * as a formatted string, in addition to HTTP Basic Auth headers.
+     *
+     * @param  int|null  $userId  User ID for credential lookup
+     */
+    public function buildDbParameters(?int $userId = null): string
+    {
+        $credentials = $this->getCredentials($userId);
+
+        return "USER NAME={$credentials['username']}\r\nPASSWORD={$credentials['password']}\r\n";
+    }
+
+    /**
+     * Build the DBParameters string from explicit credentials.
+     */
+    public static function formatDbParameters(string $username, string $password): string
+    {
+        return "USER NAME={$username}\r\nPASSWORD={$password}\r\n";
+    }
+
+    /**
      * Get info about credentials without exposing password.
      *
      * @return array{type: string, username: string, user_id: int|null, is_valid: bool}

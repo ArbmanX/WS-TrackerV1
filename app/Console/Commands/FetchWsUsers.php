@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\WsUser;
+use App\Services\WorkStudio\Client\ApiCredentialManager;
 use App\Services\WorkStudio\Shared\Contracts\UserDetailsServiceInterface;
 use App\Services\WorkStudio\Shared\Exceptions\UserNotFoundException;
 use App\Services\WorkStudio\Shared\Exceptions\WorkStudioApiException;
@@ -64,8 +65,7 @@ class FetchWsUsers extends Command
      */
     private function fetchDistinctUsernames(string $year): ?\Illuminate\Support\Collection
     {
-        $username = config('workstudio.service_account.username');
-        $password = config('workstudio.service_account.password');
+        $credentials = app(ApiCredentialManager::class)->getServiceAccountCredentials();
         $baseUrl = rtrim((string) config('workstudio.base_url'), '/');
 
         $yearJoin = 'INNER JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID '
@@ -98,13 +98,13 @@ class FetchWsUsers extends Command
 
         $payload = [
             'Protocol' => 'GETQUERY',
-            'DBParameters' => "USER NAME={$username}\r\nPASSWORD={$password}\r\n",
+            'DBParameters' => ApiCredentialManager::formatDbParameters($credentials['username'], $credentials['password']),
             'SQL' => $sql,
         ];
 
         try {
             /** @var \Illuminate\Http\Client\Response $response */
-            $response = Http::withBasicAuth($username, $password)
+            $response = Http::withBasicAuth($credentials['username'], $credentials['password'])
                 ->timeout(120)
                 ->connectTimeout(30)
                 ->post("{$baseUrl}/GETQUERY", $payload);
