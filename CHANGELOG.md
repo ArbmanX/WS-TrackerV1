@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Shared SQL Fragment Extraction** (2026-02-11)
+  - Extracted `baseFromClause()` to `SqlFragmentHelpers` — standard 3-table INNER JOIN used by 6+ queries
+  - Extracted `baseWhereClause(array $overrides)` — parameterized WHERE builder with statusSql, cycleTypeSql, includeExcludedUsers options
+  - Extracted `permissionCountsCrossApply()` — config-driven VEGUNIT permission counts with validUnitFilter
+  - Extracted `permissionCountsWithDatesCrossApply()` — same as above with MIN/MAX ASSDDATE for circuit views
+  - Extracted `workMeasurementsCrossApply()` — config-driven JOBVEGETATIONUNITS work measurement aggregation
+  - Updated `unitCountsCrossApply()` to use config PERMSTAT values instead of hardcoded strings
+  - Refactored all 7 query methods in `AssessmentQueries.php` to use shared fragments
+  - 7 new Pest tests: INNER JOIN verification, baseWhereClause overrides, config-driven CROSS APPLY fragments
+
+### Fixed
+- **BUG-002: LEFT JOIN → INNER JOIN for xrefs** (2026-02-11) — `baseFromClause()` uses `INNER JOIN` for `WPStartDate_Assessment_Xrefs` since the WHERE clause on `WP_STARTDATE` already forced INNER behavior. Explicit INNER JOIN gives the query optimizer better information.
+
 ### Added
 - **Assessment Query Config Extraction** (2026-02-11)
   - `permission_statuses` array in `config/ws_assessment_query.php` — single source of truth for VEGUNIT.PERMSTAT values (Approved, Pending, No Contact, Refused, Deferred, PPL Approved)

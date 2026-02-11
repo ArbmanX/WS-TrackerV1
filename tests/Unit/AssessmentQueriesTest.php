@@ -191,3 +191,120 @@ test('groupedByRegionDataQuery uses Refused not Refusal for PERMSTAT', function 
     expect($sql)->toContain("'Refused'")
         ->and($sql)->not->toContain("'Refusal'");
 });
+
+// ─── Phase 2: Shared Fragment Tests ─────────────────────────────────────────
+
+test('baseFromClause uses INNER JOIN not LEFT JOIN (BUG-002)', function () {
+    $context = makeContext();
+    $queries = new AssessmentQueries($context);
+    $sql = $queries->systemWideDataQuery();
+
+    expect($sql)
+        ->toContain('INNER JOIN VEGJOB ON SS.JOBGUID = VEGJOB.JOBGUID')
+        ->toContain('INNER JOIN WPStartDate_Assessment_Xrefs');
+
+    // Ensure no LEFT JOIN for xrefs (BUG-002 resolution)
+    expect($sql)->not->toContain('LEFT JOIN WPStartDate_Assessment_Xrefs');
+});
+
+test('baseWhereClause includes all standard filters', function () {
+    $context = makeContext(['resourceGroups' => ['TESTING_REGION'], 'contractors' => ['TestCorp']]);
+    $queries = new AssessmentQueries($context);
+    $sql = $queries->systemWideDataQuery();
+
+    // Standard WHERE clause should include all these filters
+    expect($sql)
+        ->toContain("VEGJOB.REGION IN ('TESTING_REGION')")
+        ->toContain("VEGJOB.CONTRACTOR IN ('TestCorp')")
+        ->toContain('SS.STATUS IN')
+        ->toContain('SS.JOBTYPE IN')
+        ->toContain('VEGJOB.CYCLETYPE IN')
+        ->toContain('SS.TAKENBY NOT IN');
+});
+
+test('baseWhereClause overrides work for dailyActivities', function () {
+    $context = makeContext();
+    $queries = new AssessmentQueries($context);
+
+    $systemSql = $queries->systemWideDataQuery();
+    $dailySql = $queries->getAllAssessmentsDailyActivities();
+
+    // systemWideDataQuery uses default statuses (ACTIV, QC, REWRK, CLOSE)
+    expect($systemSql)->toContain("'ACTIV', 'QC', 'REWRK', 'CLOSE'");
+
+    // dailyActivities uses planner_concern from config via statusSql override
+    $plannerConcern = config('ws_assessment_query.statuses.planner_concern');
+    foreach ($plannerConcern as $status) {
+        expect($dailySql)->toContain("'{$status}'");
+    }
+
+    // dailyActivities does NOT include excluded users (includeExcludedUsers: false)
+    expect($dailySql)->not->toContain('TAKENBY NOT IN');
+});
+
+test('permissionCountsCrossApply uses config PERMSTAT values', function () {
+    $context = makeContext();
+    $queries = new AssessmentQueries($context);
+    $sql = $queries->groupedByRegionDataQuery();
+
+    // Should contain config-driven values from permissionCountsCrossApply
+    $statuses = config('ws_assessment_query.permission_statuses');
+    foreach ($statuses as $status) {
+        expect($sql)->toContain("'{$status}'");
+    }
+
+    // Should use CROSS APPLY pattern
+    expect($sql)->toContain('CROSS APPLY');
+    expect($sql)->toContain('AS UnitData');
+});
+
+test('workMeasurementsCrossApply uses config unit codes', function () {
+    $context = makeContext();
+    $queries = new AssessmentQueries($context);
+    $sql = $queries->groupedByRegionDataQuery();
+
+    // Should contain config-driven unit codes from workMeasurementsCrossApply
+    $unitGroups = config('ws_assessment_query.unit_groups');
+    foreach ($unitGroups as $codes) {
+        foreach ($codes as $code) {
+            expect($sql)->toContain("'{$code}'");
+        }
+    }
+
+    // Should reference JOBVEGETATIONUNITS table
+    expect($sql)->toContain('JOBVEGETATIONUNITS');
+    expect($sql)->toContain('AS WorkData');
+});
+
+test('groupedByCircuitDataQuery uses CROSS APPLY fragments', function () {
+    $context = makeContext();
+    $queries = new AssessmentQueries($context);
+    $sql = $queries->groupedByCircuitDataQuery();
+
+    // Uses permissionCountsWithDatesCrossApply (includes assessed dates)
+    expect($sql)
+        ->toContain('First_Assessed_Date')
+        ->toContain('Last_Assessed_Date')
+        ->toContain('AS UnitData')
+        ->toContain('AS WorkData')
+        ->toContain('CROSS APPLY');
+
+    // Uses workMeasurementsCrossApply column references
+    expect($sql)
+        ->toContain('WorkData.Rem_6_12_Count')
+        ->toContain('WorkData.Brush_Acres')
+        ->toContain('UnitData.Approved_Count');
+});
+
+test('getAllJobGUIDsForEntireScopeYear uses baseFromClause and baseWhereClause', function () {
+    $context = makeContext(['resourceGroups' => ['FRAGMENT_TEST']]);
+    $queries = new AssessmentQueries($context);
+    $sql = $queries->getAllJobGUIDsForEntireScopeYear();
+
+    // Uses baseFromClause (INNER JOIN)
+    expect($sql)->toContain('INNER JOIN VEGJOB ON SS.JOBGUID = VEGJOB.JOBGUID');
+
+    // Uses baseWhereClause with overrides (planner_concern statuses, no excluded users)
+    expect($sql)->toContain("VEGJOB.REGION IN ('FRAGMENT_TEST')");
+    expect($sql)->not->toContain('TAKENBY NOT IN');
+});

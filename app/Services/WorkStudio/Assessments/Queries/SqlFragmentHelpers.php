@@ -2,12 +2,151 @@
 
 namespace App\Services\WorkStudio\Assessments\Queries;
 
+use App\Services\WorkStudio\Shared\Helpers\WSHelpers;
 use App\Services\WorkStudio\Shared\Helpers\WSSQLCaster;
 
 trait SqlFragmentHelpers
 {
     // =========================================================================
-    // SQL Fragment Helpers
+    // Shared Query Building Blocks (context-aware, non-static)
+    // =========================================================================
+
+    /**
+     * Standard 3-table FROM clause used by all assessment queries.
+     * Uses INNER JOIN for xrefs since WHERE filters on WP_STARTDATE
+     * already force INNER behavior (BUG-002 resolution).
+     */
+    private function baseFromClause(): string
+    {
+        return 'FROM SS
+                INNER JOIN VEGJOB ON SS.JOBGUID = VEGJOB.JOBGUID
+                INNER JOIN WPStartDate_Assessment_Xrefs
+                    ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID';
+    }
+
+    /**
+     * Standard WHERE clause for assessment queries.
+     *
+     * @param  array{
+     *     statusSql?: string,
+     *     includeExcludedUsers?: bool,
+     *     cycleTypeSql?: string,
+     * }  $overrides  Per-query variations
+     */
+    private function baseWhereClause(array $overrides = []): string
+    {
+        $statusSql = $overrides['statusSql'] ?? "('ACTIV', 'QC', 'REWRK', 'CLOSE')";
+        $cycleTypeSql = $overrides['cycleTypeSql'] ?? $this->cycleTypesSql;
+        $includeExcludedUsers = $overrides['includeExcludedUsers'] ?? true;
+
+        $clauses = [
+            "VEGJOB.REGION IN ({$this->resourceGroupsSql})",
+            "WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$this->scopeYear}%'",
+            "SS.STATUS IN {$statusSql}",
+            "VEGJOB.CONTRACTOR IN ({$this->contractorsSql})",
+            "SS.JOBTYPE IN ({$this->jobTypesSql})",
+            "VEGJOB.CYCLETYPE IN ({$cycleTypeSql})",
+        ];
+
+        if ($includeExcludedUsers) {
+            $clauses[] = "SS.TAKENBY NOT IN ({$this->excludedUsersSql})";
+        }
+
+        return implode("\n                    AND ", $clauses);
+    }
+
+    /**
+     * CROSS APPLY for permission counts from VEGUNIT.
+     * Uses config-driven PERMSTAT values. Includes valid unit filter in WHERE.
+     */
+    private static function permissionCountsCrossApply(string $jobGuidRef = 'SS.JOBGUID'): string
+    {
+        $approved = config('ws_assessment_query.permission_statuses.approved');
+        $pending = config('ws_assessment_query.permission_statuses.pending');
+        $noContact = config('ws_assessment_query.permission_statuses.no_contact');
+        $refused = config('ws_assessment_query.permission_statuses.refused');
+        $deferred = config('ws_assessment_query.permission_statuses.deferred');
+        $pplApproved = config('ws_assessment_query.permission_statuses.ppl_approved');
+        $validUnit = self::validUnitFilter();
+
+        return "CROSS APPLY (
+                    SELECT
+                        COUNT(*) AS Total_Units,
+                        COUNT(CASE WHEN VEGUNIT.PERMSTAT = '{$approved}' THEN 1 END) AS Approved_Count,
+                        COUNT(CASE WHEN VEGUNIT.PERMSTAT = '{$pending}' OR VEGUNIT.PERMSTAT IS NULL OR VEGUNIT.PERMSTAT = '' THEN 1 END) AS Pending_Count,
+                        COUNT(CASE WHEN VEGUNIT.PERMSTAT = '{$noContact}' THEN 1 END) AS No_Contact_Count,
+                        COUNT(CASE WHEN VEGUNIT.PERMSTAT = '{$refused}' THEN 1 END) AS Refusal_Count,
+                        COUNT(CASE WHEN VEGUNIT.PERMSTAT = '{$deferred}' THEN 1 END) AS Deferred_Count,
+                        COUNT(CASE WHEN VEGUNIT.PERMSTAT = '{$pplApproved}' THEN 1 END) AS PPL_Approved_Count
+                    FROM VEGUNIT
+                    WHERE VEGUNIT.JOBGUID = {$jobGuidRef}
+                    AND {$validUnit}
+                ) AS UnitData";
+    }
+
+    /**
+     * Extended CROSS APPLY for permission counts with assessed dates.
+     * Used by circuit-detail views that need First/Last Assessed Date.
+     */
+    private static function permissionCountsWithDatesCrossApply(string $jobGuidRef = 'SS.JOBGUID'): string
+    {
+        $approved = config('ws_assessment_query.permission_statuses.approved');
+        $pending = config('ws_assessment_query.permission_statuses.pending');
+        $noContact = config('ws_assessment_query.permission_statuses.no_contact');
+        $refused = config('ws_assessment_query.permission_statuses.refused');
+        $deferred = config('ws_assessment_query.permission_statuses.deferred');
+        $pplApproved = config('ws_assessment_query.permission_statuses.ppl_approved');
+        $validUnit = self::validUnitFilter();
+
+        return "CROSS APPLY (
+                    SELECT
+                        MIN(VEGUNIT.ASSDDATE) AS First_Assessed_Date,
+                        MAX(VEGUNIT.ASSDDATE) AS Last_Assessed_Date,
+                        COUNT(*) AS Total_Units,
+                        COUNT(CASE WHEN VEGUNIT.PERMSTAT = '{$approved}' THEN 1 END) AS Approved_Count,
+                        COUNT(CASE WHEN VEGUNIT.PERMSTAT = '{$pending}' OR VEGUNIT.PERMSTAT IS NULL OR VEGUNIT.PERMSTAT = '' THEN 1 END) AS Pending_Count,
+                        COUNT(CASE WHEN VEGUNIT.PERMSTAT = '{$noContact}' THEN 1 END) AS No_Contact_Count,
+                        COUNT(CASE WHEN VEGUNIT.PERMSTAT = '{$refused}' THEN 1 END) AS Refusal_Count,
+                        COUNT(CASE WHEN VEGUNIT.PERMSTAT = '{$deferred}' THEN 1 END) AS Deferred_Count,
+                        COUNT(CASE WHEN VEGUNIT.PERMSTAT = '{$pplApproved}' THEN 1 END) AS PPL_Approved_Count
+                    FROM VEGUNIT
+                    WHERE VEGUNIT.JOBGUID = {$jobGuidRef}
+                    AND {$validUnit}
+                ) AS UnitData";
+    }
+
+    /**
+     * CROSS APPLY for work measurements from JOBVEGETATIONUNITS.
+     * Uses config-driven unit code groups.
+     */
+    private static function workMeasurementsCrossApply(string $jobGuidRef = 'SS.JOBGUID'): string
+    {
+        $rem612 = WSHelpers::toSqlInClause(config('ws_assessment_query.unit_groups.removal_6_12'));
+        $remOver12 = WSHelpers::toSqlInClause(config('ws_assessment_query.unit_groups.removal_over_12'));
+        $ash = WSHelpers::toSqlInClause(config('ws_assessment_query.unit_groups.ash_removal'));
+        $vps = WSHelpers::toSqlInClause(config('ws_assessment_query.unit_groups.vps'));
+        $brush = WSHelpers::toSqlInClause(config('ws_assessment_query.unit_groups.brush'));
+        $herbicide = WSHelpers::toSqlInClause(config('ws_assessment_query.unit_groups.herbicide'));
+        $bucketTrim = WSHelpers::toSqlInClause(config('ws_assessment_query.unit_groups.bucket_trim'));
+        $manualTrim = WSHelpers::toSqlInClause(config('ws_assessment_query.unit_groups.manual_trim'));
+
+        return "CROSS APPLY (
+                    SELECT
+                        COUNT(CASE WHEN UNIT IN ({$rem612}) THEN 1 END) AS Rem_6_12_Count,
+                        COUNT(CASE WHEN UNIT IN ({$remOver12}) THEN 1 END) AS Rem_Over_12_Count,
+                        COUNT(CASE WHEN UNIT IN ({$ash}) THEN 1 END) AS Ash_Removal_Count,
+                        COUNT(CASE WHEN UNIT IN ({$vps}) THEN 1 END) AS VPS_Count,
+                        SUM(CASE WHEN UNIT IN ({$brush}) THEN ACRES ELSE 0 END) AS Brush_Acres,
+                        SUM(CASE WHEN UNIT IN ({$herbicide}) THEN ACRES ELSE 0 END) AS Herbicide_Acres,
+                        SUM(CASE WHEN UNIT IN ({$bucketTrim}) THEN LENGTHWRK ELSE 0 END) AS Bucket_Trim_Length,
+                        SUM(CASE WHEN UNIT IN ({$manualTrim}) THEN LENGTHWRK ELSE 0 END) AS Manual_Trim_Length
+                    FROM JOBVEGETATIONUNITS
+                    WHERE JOBVEGETATIONUNITS.JOBGUID = {$jobGuidRef}
+                ) AS WorkData";
+    }
+
+    // =========================================================================
+    // SQL Fragment Helpers (static utilities)
     // =========================================================================
 
     /**
@@ -101,32 +240,38 @@ trait SqlFragmentHelpers
 
     /**
      * Build the CROSS APPLY for unit counts (more efficient for list queries).
+     * Includes ASSDDATE filter for Total_Units_Planned. Uses config PERMSTAT values.
      */
     private static function unitCountsCrossApply(string $jobGuidRef = 'SS.JOBGUID'): string
     {
         $validUnit = self::validUnitFilter();
+        $approved = config('ws_assessment_query.permission_statuses.approved');
+        $noContact = config('ws_assessment_query.permission_statuses.no_contact');
+        $refused = config('ws_assessment_query.permission_statuses.refused');
+        $deferred = config('ws_assessment_query.permission_statuses.deferred');
+        $pplApproved = config('ws_assessment_query.permission_statuses.ppl_approved');
 
         return "CROSS APPLY (
             SELECT
                 COUNT(CASE WHEN VEGUNIT.ASSDDATE IS NOT NULL AND VEGUNIT.ASSDDATE != ''
                         AND {$validUnit}
                     THEN 1 END) AS Total_Units_Planned,
-                COUNT(CASE WHEN VEGUNIT.PERMSTAT = 'Approved'
+                COUNT(CASE WHEN VEGUNIT.PERMSTAT = '{$approved}'
                         AND {$validUnit}
                     THEN 1 END) AS Total_Approvals,
                 COUNT(CASE WHEN (VEGUNIT.PERMSTAT = '' OR VEGUNIT.PERMSTAT IS NULL)
                         AND {$validUnit}
                     THEN 1 END) AS Total_Pending,
-                COUNT(CASE WHEN VEGUNIT.PERMSTAT = 'No Contact'
+                COUNT(CASE WHEN VEGUNIT.PERMSTAT = '{$noContact}'
                         AND {$validUnit}
                     THEN 1 END) AS Total_No_Contacts,
-                COUNT(CASE WHEN VEGUNIT.PERMSTAT = 'Refused'
+                COUNT(CASE WHEN VEGUNIT.PERMSTAT = '{$refused}'
                         AND {$validUnit}
                     THEN 1 END) AS Total_Refusals,
-                COUNT(CASE WHEN VEGUNIT.PERMSTAT = 'Deferred'
+                COUNT(CASE WHEN VEGUNIT.PERMSTAT = '{$deferred}'
                         AND {$validUnit}
                     THEN 1 END) AS Total_Deferred,
-                COUNT(CASE WHEN VEGUNIT.PERMSTAT = 'PPL Approved'
+                COUNT(CASE WHEN VEGUNIT.PERMSTAT = '{$pplApproved}'
                         AND {$validUnit}
                     THEN 1 END) AS Total_PPL_Approved
             FROM VEGUNIT

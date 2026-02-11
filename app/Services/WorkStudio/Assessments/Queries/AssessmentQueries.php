@@ -45,6 +45,9 @@ class AssessmentQueries
     */
     public function systemWideDataQuery(): string
     {
+        $from = $this->baseFromClause();
+        $where = $this->baseWhereClause();
+
         return "SELECT
                 (SELECT TOP 1 CONTRACTOR FROM VEGJOB WHERE VEGJOB.CONTRACTOR IN ({$this->contractorsSql})) AS contractor,
                         -- Circuit Counts
@@ -58,24 +61,14 @@ class AssessmentQueries
                         CAST(SUM(VEGJOB.LENGTH) AS DECIMAL(10,2)) AS total_miles,
                         CAST(SUM(VEGJOB.LENGTHCOMP) AS DECIMAL(10,2)) AS completed_miles,
 
-
                         -- Active Planners (unique TAKENBY matching domain, ACTIV only)
                         COUNT(DISTINCT CASE WHEN SS.STATUS = 'ACTIV'
                             AND UPPER(LEFT(SS.TAKENBY, CHARINDEX('\\', SS.TAKENBY + '\\') - 1)) = '{$this->domainFilter}'
                             THEN SS.TAKENBY END) AS active_planners
 
-                    FROM SS
-                    INNER JOIN VEGJOB ON SS.JOBGUID = VEGJOB.JOBGUID
-                    LEFT JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID
+                    {$from}
 
-                    WHERE VEGJOB.REGION IN ({$this->resourceGroupsSql})
-                    AND WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$this->scopeYear}%'
-                    AND VEGJOB.CYCLETYPE NOT IN ('Reactive')
-                    AND VEGJOB.CONTRACTOR IN ({$this->contractorsSql})
-                    AND SS.STATUS IN ('ACTIV', 'QC', 'REWRK', 'CLOSE')
-                    AND SS.TAKENBY NOT IN ({$this->excludedUsersSql})
-                    AND SS.JOBTYPE IN ({$this->jobTypesSql})
-                    AND VEGJOB.CYCLETYPE IN ({$this->cycleTypesSql})";
+                    WHERE {$where}";
     }
     /* =========================================================================
     * END
@@ -103,6 +96,11 @@ class AssessmentQueries
     */
     public function groupedByRegionDataQuery(): string
     {
+        $from = $this->baseFromClause();
+        $unitData = self::permissionCountsCrossApply();
+        $workData = self::workMeasurementsCrossApply();
+        $where = $this->baseWhereClause();
+
         return "SELECT
                     -- Region Identifier
                     VEGJOB.REGION AS Region,
@@ -142,49 +140,13 @@ class AssessmentQueries
                     CAST(SUM(WorkData.Bucket_Trim_Length) AS DECIMAL(10,2)) AS Bucket_Trim_Length,
                     CAST(SUM(WorkData.Manual_Trim_Length) AS DECIMAL(10,2)) AS Manual_Trim_Length
 
-                FROM SS
-                INNER JOIN VEGJOB ON SS.JOBGUID = VEGJOB.JOBGUID
-                LEFT JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID
+                {$from}
 
-                -- CROSS APPLY for VEGUNIT (permission counts per circuit)
-                CROSS APPLY (
-                    SELECT
-                        COUNT(*) AS Total_Units,
-                        COUNT(CASE WHEN VEGUNIT.PERMSTAT = 'Approved' THEN 1 END) AS Approved_Count,
-                        COUNT(CASE WHEN VEGUNIT.PERMSTAT = 'Pending' OR VEGUNIT.PERMSTAT IS NULL OR VEGUNIT.PERMSTAT = '' THEN 1 END) AS Pending_Count,
-                        COUNT(CASE WHEN VEGUNIT.PERMSTAT = 'No Contact' THEN 1 END) AS No_Contact_Count,
-                        COUNT(CASE WHEN VEGUNIT.PERMSTAT = 'Refused' THEN 1 END) AS Refusal_Count,
-                        COUNT(CASE WHEN VEGUNIT.PERMSTAT = 'Deferred' THEN 1 END) AS Deferred_Count,
-                        COUNT(CASE WHEN VEGUNIT.PERMSTAT = 'PPL Approved' THEN 1 END) AS PPL_Approved_Count
-                    FROM VEGUNIT
-                    WHERE VEGUNIT.JOBGUID = SS.JOBGUID
-                    AND VEGUNIT.UNIT IS NOT NULL
-                    AND VEGUNIT.UNIT != ''
-                    AND VEGUNIT.UNIT != 'NW'
-                ) AS UnitData
+                {$unitData}
 
-                -- CROSS APPLY for JOBVEGETATIONUNITS (work measurements per circuit)
-                CROSS APPLY (
-                    SELECT
-                        COUNT(CASE WHEN UNIT = 'REM612' THEN 1 END) AS Rem_6_12_Count,
-                        COUNT(CASE WHEN UNIT IN ('REM1218', 'REM1824', 'REM2430', 'REM3036') THEN 1 END) AS Rem_Over_12_Count,
-                        COUNT(CASE WHEN UNIT IN ('ASH612', 'ASH1218', 'ASH1824', 'ASH2430', 'ASH3036') THEN 1 END) AS Ash_Removal_Count,
-                        COUNT(CASE WHEN UNIT = 'VPS' THEN 1 END) AS VPS_Count,
-                        SUM(CASE WHEN UNIT IN ('BRUSH', 'HCB', 'BRUSHTRIM') THEN ACRES ELSE 0 END) AS Brush_Acres,
-                        SUM(CASE WHEN UNIT IN ('HERBA', 'HERBNA') THEN ACRES ELSE 0 END) AS Herbicide_Acres,
-                        SUM(CASE WHEN UNIT IN ('SPB', 'MPB') THEN LENGTHWRK ELSE 0 END) AS Bucket_Trim_Length,
-                        SUM(CASE WHEN UNIT IN ('SPM', 'MPM') THEN LENGTHWRK ELSE 0 END) AS Manual_Trim_Length
-                    FROM JOBVEGETATIONUNITS
-                    WHERE JOBVEGETATIONUNITS.JOBGUID = SS.JOBGUID
-                ) AS WorkData
+                {$workData}
 
-                WHERE VEGJOB.REGION IN ({$this->resourceGroupsSql})
-                AND WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$this->scopeYear}%'
-                AND SS.STATUS IN ('ACTIV', 'QC', 'REWRK', 'CLOSE')
-                AND VEGJOB.CONTRACTOR IN ({$this->contractorsSql})
-                AND SS.TAKENBY NOT IN ({$this->excludedUsersSql})
-                AND SS.JOBTYPE IN ({$this->jobTypesSql})
-                AND VEGJOB.CYCLETYPE IN ({$this->cycleTypesSql})
+                WHERE {$where}
 
                 GROUP BY VEGJOB.REGION
                 ORDER BY VEGJOB.REGION";
@@ -216,6 +178,10 @@ class AssessmentQueries
     public function groupedByCircuitDataQuery(): string
     {
         $lastSync = self::formatToEasternTime('SS.EDITDATE');
+        $from = $this->baseFromClause();
+        $unitData = self::permissionCountsWithDatesCrossApply();
+        $workData = self::workMeasurementsCrossApply();
+        $where = $this->baseWhereClause();
 
         return "SELECT
                     -- Circuit Identifiers
@@ -239,7 +205,7 @@ class AssessmentQueries
                             AND VEGUNIT.FORESTER IS NOT NULL
                             AND VEGUNIT.FORESTER != '') AS DF) AS Planners,
 
-                    -- Phase 1: Permission Data (from VEGUNIT)
+                    -- Permission Data (from VEGUNIT)
                     UnitData.First_Assessed_Date,
                     UnitData.Last_Assessed_Date,
                     UnitData.Total_Units,
@@ -250,7 +216,7 @@ class AssessmentQueries
                     UnitData.Deferred_Count,
                     UnitData.PPL_Approved_Count,
 
-                    -- Phase 2: Work Measurements (from JOBVEGETATIONUNITS)
+                    -- Work Measurements (from JOBVEGETATIONUNITS)
                     WorkData.Rem_6_12_Count,
                     WorkData.Rem_Over_12_Count,
                     WorkData.Ash_Removal_Count,
@@ -260,66 +226,13 @@ class AssessmentQueries
                     WorkData.Bucket_Trim_Length,
                     WorkData.Manual_Trim_Length
 
-                FROM SS
-                INNER JOIN VEGJOB ON SS.JOBGUID = VEGJOB.JOBGUID
-                LEFT JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID
+                {$from}
 
-                -- Phase 1: CROSS APPLY for VEGUNIT (dates, permission counts)
-                CROSS APPLY (
-                    SELECT
-                        MIN(VEGUNIT.ASSDDATE) AS First_Assessed_Date,
-                        MAX(VEGUNIT.ASSDDATE) AS Last_Assessed_Date,
-                        COUNT(*) AS Total_Units,
-                        COUNT(CASE WHEN VEGUNIT.PERMSTAT = 'Approved' THEN 1 END) AS Approved_Count,
-                        COUNT(CASE WHEN VEGUNIT.PERMSTAT = 'Pending' OR VEGUNIT.PERMSTAT IS NULL OR VEGUNIT.PERMSTAT = '' THEN 1 END) AS Pending_Count,
-                        COUNT(CASE WHEN VEGUNIT.PERMSTAT = 'No Contact' THEN 1 END) AS No_Contact_Count,
-                        COUNT(CASE WHEN VEGUNIT.PERMSTAT = 'Refused' THEN 1 END) AS Refusal_Count,
-                        COUNT(CASE WHEN VEGUNIT.PERMSTAT = 'Deferred' THEN 1 END) AS Deferred_Count,
-                        COUNT(CASE WHEN VEGUNIT.PERMSTAT = 'PPL Approved' THEN 1 END) AS PPL_Approved_Count
-                    FROM VEGUNIT
-                    WHERE VEGUNIT.JOBGUID = SS.JOBGUID
-                    AND VEGUNIT.UNIT IS NOT NULL
-                    AND VEGUNIT.UNIT != ''
-                    AND VEGUNIT.UNIT != 'NW'
-                ) AS UnitData
+                {$unitData}
 
-                -- Phase 2: CROSS APPLY for JOBVEGETATIONUNITS (work measurements)
-                CROSS APPLY (
-                    SELECT
-                        -- Removals 6-12 (separate)
-                        COUNT(CASE WHEN UNIT = 'REM612' THEN 1 END) AS Rem_6_12_Count,
+                {$workData}
 
-                        -- Removals > 12 (grouped)
-                        COUNT(CASE WHEN UNIT IN ('REM1218', 'REM1824', 'REM2430', 'REM3036') THEN 1 END) AS Rem_Over_12_Count,
-
-                        -- All Ash Removals (grouped)
-                        COUNT(CASE WHEN UNIT IN ('ASH612', 'ASH1218', 'ASH1824', 'ASH2430', 'ASH3036') THEN 1 END) AS Ash_Removal_Count,
-
-                        -- VPS count
-                        COUNT(CASE WHEN UNIT = 'VPS' THEN 1 END) AS VPS_Count,
-
-                        -- Brush acres (grouped)
-                        SUM(CASE WHEN UNIT IN ('BRUSH', 'HCB', 'BRUSHTRIM') THEN ACRES ELSE 0 END) AS Brush_Acres,
-
-                        -- Herbicide acres (grouped)
-                        SUM(CASE WHEN UNIT IN ('HERBA', 'HERBNA') THEN ACRES ELSE 0 END) AS Herbicide_Acres,
-
-                        -- Bucket trimming length (SPB, MPB)
-                        SUM(CASE WHEN UNIT IN ('SPB', 'MPB') THEN LENGTHWRK ELSE 0 END) AS Bucket_Trim_Length,
-
-                        -- Manual trimming length (SPM, MPM)
-                        SUM(CASE WHEN UNIT IN ('SPM', 'MPM') THEN LENGTHWRK ELSE 0 END) AS Manual_Trim_Length
-                    FROM JOBVEGETATIONUNITS
-                    WHERE JOBVEGETATIONUNITS.JOBGUID = SS.JOBGUID
-                ) AS WorkData
-
-                WHERE VEGJOB.REGION IN ({$this->resourceGroupsSql})
-                AND WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$this->scopeYear}%'
-                AND SS.STATUS IN ('ACTIV', 'QC', 'REWRK', 'CLOSE')
-                AND VEGJOB.CONTRACTOR IN ({$this->contractorsSql})
-                AND SS.TAKENBY NOT IN ({$this->excludedUsersSql})
-                AND SS.JOBTYPE IN ({$this->jobTypesSql})
-                AND VEGJOB.CYCLETYPE IN ({$this->cycleTypesSql})
+                WHERE {$where}
 
                 ORDER BY VEGJOB.REGION, SS.STATUS, SS.WO";
     }
@@ -336,12 +249,14 @@ class AssessmentQueries
     public function getAllAssessmentsDailyActivities(): string
     {
         $scopeYear = self::extractYearFromMsDate('WPStartDate_Assessment_Xrefs.WP_STARTDATE');
-
-        $cycleTypes = WSHelpers::toSqlInClause(config('ws_assessment_query.cycle_types.maintenance'));
-        $statues = WSHelpers::toSqlInClause(config('ws_assessment_query.statuses.planner_concern'));
+        $statusSql = '('.WSHelpers::toSqlInClause(config('ws_assessment_query.statuses.planner_concern')).')';
 
         $lastSync = self::formatToEasternTime('SS.EDITDATE');
         $dailyRecords = self::dailyRecordsQuery('WSREQSS.JOBGUID', false);
+        $where = $this->baseWhereClause([
+            'statusSql' => $statusSql,
+            'includeExcludedUsers' => false,
+        ]);
 
         return "SELECT
                         {$scopeYear} AS Scope_Year,
@@ -363,13 +278,9 @@ class AssessmentQueries
                     FROM SS
                         INNER JOIN SS AS WSREQSS ON SS.JOBGUID = WSREQSS.JOBGUID
                         INNER JOIN VEGJOB ON SS.JOBGUID = VEGJOB.JOBGUID
-                        LEFT JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID
-                    WHERE VEGJOB.REGION IN ({$this->resourceGroupsSql})
-                    AND WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$this->scopeYear}%'
-                    AND WSREQSS.STATUS IN ({$statues})
-                    AND VEGJOB.CONTRACTOR IN ({$this->contractorsSql})
-                    AND WSREQSS.JOBTYPE IN ({$this->jobTypesSql})
-                    AND VEGJOB.CYCLETYPE IN ({$this->cycleTypesSql})
+                        INNER JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID
+
+                    WHERE {$where}
 
                     ORDER BY SS.EDITDATE DESC, SS.WO DESC, SS.EXT DESC
                     FOR JSON PATH";
@@ -500,9 +411,7 @@ class AssessmentQueries
                     -- Last Sync
                     {$lastSync} AS Last_Sync
 
-                FROM SS
-                INNER JOIN VEGJOB ON SS.JOBGUID = VEGJOB.JOBGUID
-                LEFT JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID
+                {$this->baseFromClause()}
 
                 -- Get first/last assessed dates and raw oldest date for ordering
                 CROSS APPLY (
@@ -563,11 +472,14 @@ class AssessmentQueries
     {
         $lastSync = self::formatToEasternTime('SS.EDITDATE');
         $scopeYear = self::extractYearFromMsDate('WPStartDate_Assessment_Xrefs.WP_STARTDATE');
-        $cycleTypes = WSHelpers::toSqlInClause(config('ws_assessment_query.cycle_types.maintenance'));
-        $statues = WSHelpers::toSqlInClause(config('ws_assessment_query.statuses.planner_concern'));
+        $statusSql = '('.WSHelpers::toSqlInClause(config('ws_assessment_query.statuses.planner_concern')).')';
+        $from = $this->baseFromClause();
+        $where = $this->baseWhereClause([
+            'statusSql' => $statusSql,
+            'includeExcludedUsers' => false,
+        ]);
 
         return "SELECT
-                -- getAllJobGUIDsForEntireScopeYear
                             {$scopeYear} AS Scope_Year,
                             SS.JOBGUID AS JOB_GUID,
                             SS.WO AS Work_Order,
@@ -589,15 +501,10 @@ class AssessmentQueries
                             SS.MODIFIEDBY AS Last_User_To_Edit,
                             SS.TAKENBY AS Current_Owner
 
-                            FROM SS
-                            INNER JOIN VEGJOB ON SS.JOBGUID = VEGJOB.JOBGUID
-                            LEFT JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID
-                            WHERE VEGJOB.REGION IN ({$this->resourceGroupsSql})
-                            AND SS.STATUS IN ({$statues})
-                            AND VEGJOB.CONTRACTOR IN ({$this->contractorsSql})
-                            AND WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$this->scopeYear}%'
-                            AND VEGJOB.CYCLETYPE IN ({$cycleTypes})
-                            AND SS.JOBTYPE IN ({$this->jobTypesSql})
+                            {$from}
+
+                            WHERE {$where}
+
                         ORDER BY SS.EDITDATE DESC, SS.WO DESC, SS.EXT DESC";
     }
     /* =========================================================================
@@ -635,12 +542,12 @@ class AssessmentQueries
             $extraJoin = "INNER JOIN {$table} ON SS.JOBGUID = {$table}.JOBGUID";
         }
 
+        $from = $this->baseFromClause();
+
         return "SELECT TOP ({$limit})
                     {$qualifiedField} AS value,
                     COUNT(*) AS record_count
-                FROM SS
-                INNER JOIN VEGJOB ON SS.JOBGUID = VEGJOB.JOBGUID
-                LEFT JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID
+                {$from}
                 {$extraJoin}
                 WHERE VEGJOB.REGION IN ({$this->resourceGroupsSql})
                 AND WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$this->scopeYear}%'
