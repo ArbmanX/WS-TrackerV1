@@ -308,3 +308,103 @@ test('getAllJobGUIDsForEntireScopeYear uses baseFromClause and baseWhereClause',
     expect($sql)->toContain("VEGJOB.REGION IN ('FRAGMENT_TEST')");
     expect($sql)->not->toContain('TAKENBY NOT IN');
 });
+
+// ─── Phase 3: Bug Fixes & Security ─────────────────────────────────────────
+
+test('getAllByJobGuid validates GUID format (SEC-003)', function () {
+    $context = makeContext();
+    $queries = new AssessmentQueries($context);
+
+    // Valid GUIDs should work
+    $sql = $queries->getAllByJobGuid('12345678-1234-1234-1234-123456789abc');
+    expect($sql)->toContain('12345678-1234-1234-1234-123456789abc');
+
+    // Braced GUID should also work
+    $sql = $queries->getAllByJobGuid('{12345678-1234-1234-1234-123456789abc}');
+    expect($sql)->toContain('{12345678-1234-1234-1234-123456789abc}');
+});
+
+test('getAllByJobGuid rejects invalid GUID (SEC-003)', function () {
+    $context = makeContext();
+    $queries = new AssessmentQueries($context);
+
+    $queries->getAllByJobGuid("'; DROP TABLE SS; --");
+})->throws(\InvalidArgumentException::class, 'Invalid JOBGUID format.');
+
+test('getAllByJobGuid rejects empty string (SEC-003)', function () {
+    $context = makeContext();
+    $queries = new AssessmentQueries($context);
+
+    $queries->getAllByJobGuid('');
+})->throws(\InvalidArgumentException::class, 'Invalid JOBGUID format.');
+
+test('getAllAssessmentsDailyActivities has no SS self-join', function () {
+    $context = makeContext();
+    $queries = new AssessmentQueries($context);
+    $sql = $queries->getAllAssessmentsDailyActivities();
+
+    // Should NOT contain the self-join alias
+    expect($sql)->not->toContain('SS AS WSREQSS');
+    expect($sql)->not->toContain('WSREQSS.');
+
+    // Should use SS directly for TAKENBY
+    expect($sql)->toContain('SS.TAKENBY AS Current_Owner');
+});
+
+test('getAllByJobGuid has no SS self-join', function () {
+    $context = makeContext();
+    $queries = new AssessmentQueries($context);
+    $sql = $queries->getAllByJobGuid('12345678-1234-1234-1234-123456789abc');
+
+    // Should NOT contain the self-join alias
+    expect($sql)->not->toContain('SS AS WSREQSS');
+    expect($sql)->not->toContain('WSREQSS.');
+
+    // Should use SS directly
+    expect($sql)->toContain('SS.JOBGUID AS Job_ID');
+    expect($sql)->toContain('SS.TAKENBY AS Current_Owner');
+});
+
+test('getAllByJobGuid uses unitCountsCrossApply instead of subqueries', function () {
+    $context = makeContext();
+    $queries = new AssessmentQueries($context);
+    $sql = $queries->getAllByJobGuid('12345678-1234-1234-1234-123456789abc');
+
+    // Should use CROSS APPLY pattern
+    expect($sql)->toContain('CROSS APPLY');
+    expect($sql)->toContain('AS UnitCounts');
+
+    // Should reference UnitCounts columns, not inline subqueries
+    expect($sql)->toContain('UnitCounts.Total_Units_Planned');
+    expect($sql)->toContain('UnitCounts.Total_Approvals');
+    expect($sql)->toContain('UnitCounts.Total_Refusals');
+});
+
+test('getActiveAssessmentsOrderedByOldest uses config-driven CYCLETYPE exclusion', function () {
+    $context = makeContext();
+    $queries = new AssessmentQueries($context);
+    $sql = $queries->getActiveAssessmentsOrderedByOldest(10);
+
+    // Should contain all excluded cycle types from config
+    $excluded = config('ws_assessment_query.cycle_types.excluded_from_assessments');
+    foreach ($excluded as $type) {
+        expect($sql)->toContain("'{$type}'");
+    }
+
+    // Should use NOT IN pattern
+    expect($sql)->toContain('CYCLETYPE NOT IN');
+});
+
+test('getDistinctFieldValues uses config-driven CYCLETYPE exclusion', function () {
+    $context = makeContext();
+    $queries = new AssessmentQueries($context);
+    $sql = $queries->getDistinctFieldValues('VEGUNIT', 'PERMSTAT');
+
+    // Should contain config-driven excluded cycle types
+    $excluded = config('ws_assessment_query.cycle_types.excluded_from_assessments');
+    foreach ($excluded as $type) {
+        expect($sql)->toContain("'{$type}'");
+    }
+
+    expect($sql)->toContain('CYCLETYPE NOT IN');
+});

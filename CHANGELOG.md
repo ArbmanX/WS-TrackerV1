@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Remove SS self-join from Q4 & Q5** (2026-02-11) — Removed redundant `INNER JOIN SS AS WSREQSS ON SS.JOBGUID = WSREQSS.JOBGUID` from `getAllAssessmentsDailyActivities()` and `getAllByJobGuid()`. The self-join produced a Cartesian product on the same PK for no benefit.
+- **Standardize CYCLETYPE filtering** (2026-02-11) — Replaced hardcoded `NOT IN ('Reactive', 'Storm Follow Up', ...)` with config-driven `excluded_from_assessments` array in `getActiveAssessmentsOrderedByOldest()` and `getDistinctFieldValues()`
+
+### Changed
+- **Replace 7x unitCountSubquery with unitCountsCrossApply in getAllByJobGuid** (2026-02-11) — Single CROSS APPLY scans VEGUNIT once instead of 7 correlated subqueries, significantly reducing VEGUNIT reads
+- 8 new Pest tests: GUID validation (valid/invalid/empty), no SS self-join verification, CROSS APPLY usage, config-driven CYCLETYPE
+
+### Security
+- **SEC-003: GUID validation in getAllByJobGuid** (2026-02-11) — Added regex validation for JOBGUID format before SQL interpolation; throws `InvalidArgumentException` for invalid input
+
 ### Changed
 - **Shared SQL Fragment Extraction** (2026-02-11)
   - Extracted `baseFromClause()` to `SqlFragmentHelpers` — standard 3-table INNER JOIN used by 6+ queries

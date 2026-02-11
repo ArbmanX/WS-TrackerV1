@@ -23,6 +23,8 @@ class AssessmentQueries
 
     private string $domainFilter;
 
+    private string $excludedCycleTypesSql;
+
     /**
      * @param  UserQueryContext  $context  User-specific query parameters
      */
@@ -36,6 +38,7 @@ class AssessmentQueries
         $this->excludedUsersSql = WSHelpers::toSqlInClause(config('ws_assessment_query.excludedUsers'));
         $this->jobTypesSql = WSHelpers::toSqlInClause(config('ws_assessment_query.job_types.assessments'));
         $this->cycleTypesSql = WSHelpers::toSqlInClause(config('ws_assessment_query.cycle_types.maintenance'));
+        $this->excludedCycleTypesSql = WSHelpers::toSqlInClause(config('ws_assessment_query.cycle_types.excluded_from_assessments'));
         $this->scopeYear = config('ws_assessment_query.scope_year');
     }
 
@@ -252,7 +255,8 @@ class AssessmentQueries
         $statusSql = '('.WSHelpers::toSqlInClause(config('ws_assessment_query.statuses.planner_concern')).')';
 
         $lastSync = self::formatToEasternTime('SS.EDITDATE');
-        $dailyRecords = self::dailyRecordsQuery('WSREQSS.JOBGUID', false);
+        $dailyRecords = self::dailyRecordsQuery('SS.JOBGUID', false);
+        $from = $this->baseFromClause();
         $where = $this->baseWhereClause([
             'statusSql' => $statusSql,
             'includeExcludedUsers' => false,
@@ -270,15 +274,12 @@ class AssessmentQueries
                         CAST(VEGJOB.LENGTH AS DECIMAL(10,2)) AS Total_Miles,
                         CAST(VEGJOB.LENGTHCOMP AS DECIMAL(10,2)) AS Completed_Miles,
                         VEGJOB.PRCENT AS Percent_Complete,
-                        WSREQSS.TAKENBY AS Current_Owner,
+                        SS.TAKENBY AS Current_Owner,
                         {$lastSync} AS Last_Sync,
 
                         {$dailyRecords} AS Daily_Records
 
-                    FROM SS
-                        INNER JOIN SS AS WSREQSS ON SS.JOBGUID = WSREQSS.JOBGUID
-                        INNER JOIN VEGJOB ON SS.JOBGUID = VEGJOB.JOBGUID
-                        INNER JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID
+                    {$from}
 
                     WHERE {$where}
 
@@ -300,54 +301,51 @@ class AssessmentQueries
      */
     public function getAllByJobGuid(string $jobGuid): string
     {
+        // SEC-003: Validate GUID format before interpolation
+        if (! preg_match('/^\{?[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}\}?$/', $jobGuid)) {
+            throw new \InvalidArgumentException('Invalid JOBGUID format.');
+        }
+
         // Build reusable fragments
         $scopeYear = self::extractYearFromMsDate('WPStartDate_Assessment_Xrefs.WP_STARTDATE');
         $forester = self::foresterSubquery();
         $totalFootage = self::totalFootageSubquery();
         $lastSync = self::formatToEasternTime('SS.EDITDATE');
-        $dailyRecords = self::dailyRecordsQuery('WSREQSS.JOBGUID', false);
+        $dailyRecords = self::dailyRecordsQuery('SS.JOBGUID', false);
         $stationsWithUnits = self::stationsWithUnitsQuery();
-
-        // Unit count subqueries
-        $totalUnitsPlanned = self::unitCountSubquery('WSREQSS.JOBGUID', null, true);
-        $totalApprovals = self::unitCountSubquery('WSREQSS.JOBGUID', 'Approved');
-        $totalPending = self::unitCountSubquery('WSREQSS.JOBGUID', 'Pending');
-        $totalNoContacts = self::unitCountSubquery('WSREQSS.JOBGUID', 'No Contact');
-        $totalRefusals = self::unitCountSubquery('WSREQSS.JOBGUID', 'Refused');
-        $totalDeferred = self::unitCountSubquery('WSREQSS.JOBGUID', 'Deferred');
-        $totalPplApproved = self::unitCountSubquery('WSREQSS.JOBGUID', 'PPL Approved');
+        $unitCounts = self::unitCountsCrossApply();
 
         return "SELECT
                     -- Circuit Info
-                    WSREQSS.JOBGUID AS Job_ID,
+                    SS.JOBGUID AS Job_ID,
                     VEGJOB.LINENAME AS Line_Name,
-                    WSREQSS.WO AS Work_Order,
-                    WSREQSS.EXT AS Extension,
-                    WSREQSS.STATUS AS Status,
-                    WSREQSS.TAKEN AS Taken,
+                    SS.WO AS Work_Order,
+                    SS.EXT AS Extension,
+                    SS.STATUS AS Status,
+                    SS.TAKEN AS Taken,
                     {$scopeYear} AS Scope_Year,
                     {$forester} AS Forester,
                     VEGJOB.OPCO AS Utility,
                     VEGJOB.REGION AS Region,
                     VEGJOB.SERVCOMP AS Department,
-                    WSREQSS.JOBTYPE AS Job_Type,
+                    SS.JOBTYPE AS Job_Type,
                     VEGJOB.CYCLETYPE AS Cycle_Type,
                     {$totalFootage} AS Total_Footage,
                     CAST(VEGJOB.LENGTH AS DECIMAL(10,2)) AS Total_Miles,
                     CAST(VEGJOB.LENGTHCOMP AS DECIMAL(10,2)) AS Completed_Miles,
                     VEGJOB.PRCENT AS Percent_Complete,
                     VEGJOB.CONTRACTOR AS Contractor,
-                    WSREQSS.TAKENBY AS Current_Owner,
+                    SS.TAKENBY AS Current_Owner,
                     {$lastSync} AS Last_Sync,
 
-                    -- Unit Counts
-                    {$totalUnitsPlanned} AS Total_Units_Planned,
-                    {$totalApprovals} AS Total_Approvals,
-                    {$totalPending} AS Total_Pending,
-                    {$totalNoContacts} AS Total_No_Contacts,
-                    {$totalRefusals} AS Total_Refusals,
-                    {$totalDeferred} AS Total_Deferred,
-                    {$totalPplApproved} AS Total_PPL_Approved,
+                    -- Unit Counts (single CROSS APPLY replaces 7 correlated subqueries)
+                    UnitCounts.Total_Units_Planned,
+                    UnitCounts.Total_Approvals,
+                    UnitCounts.Total_Pending,
+                    UnitCounts.Total_No_Contacts,
+                    UnitCounts.Total_Refusals,
+                    UnitCounts.Total_Deferred,
+                    UnitCounts.Total_PPL_Approved,
 
                     -- Daily Records
                     {$dailyRecords} AS Daily_Records,
@@ -356,10 +354,12 @@ class AssessmentQueries
                     {$stationsWithUnits} AS Stations
 
                 FROM SS
-                    INNER JOIN SS AS WSREQSS ON SS.JOBGUID = WSREQSS.JOBGUID
                     INNER JOIN VEGJOB ON SS.JOBGUID = VEGJOB.JOBGUID
                     LEFT JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID
-                WHERE WSREQSS.JOBGUID = '{$jobGuid}'
+
+                {$unitCounts}
+
+                WHERE SS.JOBGUID = '{$jobGuid}'
                 FOR JSON PATH, WITHOUT_ARRAY_WRAPPER";
     }
     /* =========================================================================
@@ -447,8 +447,8 @@ class AssessmentQueries
                     -- Job type filter
                     AND SS.JOBTYPE IN ({$this->jobTypesSql})
 
-                    -- Exclude reactive cycle types
-                    AND VEGJOB.CYCLETYPE NOT IN ('Reactive', 'Storm Follow Up', 'Misc. Project Work', 'PUC-STORM FOLLOW UP')
+                    -- Exclude non-assessment cycle types (config-driven)
+                    AND VEGJOB.CYCLETYPE NOT IN ({$this->excludedCycleTypesSql})
 
                     -- Domain must match (extract part before backslash)
                     AND UPPER(LEFT(SS.TAKENBY, CHARINDEX('\\', SS.TAKENBY + '\\') - 1)) = '{$this->domainFilter}'
@@ -555,7 +555,7 @@ class AssessmentQueries
                 AND SS.TAKEN = 1
                 AND VEGJOB.CONTRACTOR IN ({$this->contractorsSql})
                 AND SS.JOBTYPE IN ({$this->jobTypesSql})
-                AND VEGJOB.CYCLETYPE NOT IN ('Reactive', 'Storm Follow Up', 'Misc. Project Work', 'PUC-STORM FOLLOW UP')
+                AND VEGJOB.CYCLETYPE NOT IN ({$this->excludedCycleTypesSql})
                 AND {$qualifiedField} IS NOT NULL
                 AND {$qualifiedField} != ''
                 GROUP BY {$qualifiedField}
