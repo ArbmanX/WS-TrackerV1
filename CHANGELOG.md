@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- **Credential Security Fix (SEC-001)** (2026-02-10)
+  - Removed hardcoded credentials from `GetQueryService.php` — now uses `ApiCredentialManager`
+  - Removed hardcoded credential defaults from `config/workstudio.php` (empty string fallbacks)
+  - Routed all 11 credential-consuming files through `ApiCredentialManager`
+  - Added `buildDbParameters()` and `formatDbParameters()` helpers to `ApiCredentialManager`
+  - Files updated: `GetQueryService`, `QueryExplorer`, `UserDetailsService`, `HeartbeatService`, 7 Fetch commands
+  - 7 new Pest tests (48 assertions): credential manager unit tests + source code audits for hardcoded creds
+
+### Fixed
+- `ReferenceDataSeederTest` — corrected expected region order to alphabetical (matches actual `RegionSeeder` sort)
+
 ### Added
 - **Unit Count in Daily Footage** (2026-02-10)
   - `DailyFootageQuery`: Added `JOIN UNITS` and `SUM(CASE WHEN ...)` to count working units per row (excludes `Summary-NonWork` and empty/null `SUMMARYGRP`)

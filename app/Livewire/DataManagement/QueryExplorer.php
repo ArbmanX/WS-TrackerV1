@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire\DataManagement;
 
+use App\Services\WorkStudio\Client\ApiCredentialManager;
 use Illuminate\Support\Facades\Http;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Validate;
@@ -70,20 +71,20 @@ class QueryExplorer extends Component
 
         $this->executedSql = $sql;
 
-        $username = config('workstudio.service_account.username');
-        $password = config('workstudio.service_account.password');
+        $credentialManager = app(ApiCredentialManager::class);
+        $credentials = $credentialManager->getServiceAccountCredentials();
         $baseUrl = rtrim((string) config('workstudio.base_url'), '/');
 
         $payload = [
             'Protocol' => 'GETQUERY',
-            'DBParameters' => "USER NAME={$username}\r\nPASSWORD={$password}\r\n",
+            'DBParameters' => ApiCredentialManager::formatDbParameters($credentials['username'], $credentials['password']),
             'SQL' => $sql,
         ];
 
         try {
             $start = microtime(true);
 
-            $response = Http::withBasicAuth($username, $password)
+            $response = Http::withBasicAuth($credentials['username'], $credentials['password'])
                 ->timeout(120)
                 ->connectTimeout(30)
                 ->post("{$baseUrl}/GETQUERY", $payload);

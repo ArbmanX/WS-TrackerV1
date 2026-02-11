@@ -7,6 +7,10 @@ use Illuminate\Support\Facades\Log;
 
 class HeartbeatService
 {
+    public function __construct(
+        private ApiCredentialManager $credentialManager,
+    ) {}
+
     /**
      * Check if the WorkStudio API server is responsive.
      *
@@ -18,10 +22,12 @@ class HeartbeatService
         $url = rtrim(config('workstudio.base_url'), '/').'/HEARTBEAT';
 
         try {
+            $credentials = $this->credentialManager->getServiceAccountCredentials();
+
             $response = Http::workstudio()
                 ->withBasicAuth(
-                    config('workstudio.service_account.username'),
-                    config('workstudio.service_account.password'),
+                    $credentials['username'],
+                    $credentials['password'],
                 )
                 ->timeout(10)
                 ->connectTimeout(5)

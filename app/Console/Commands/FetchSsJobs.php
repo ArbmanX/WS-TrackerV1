@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Circuit;
 use App\Models\SsJob;
 use App\Models\WsUser;
+use App\Services\WorkStudio\Client\ApiCredentialManager;
 use App\Services\WorkStudio\Shared\Helpers\WSHelpers;
 use App\Services\WorkStudio\Shared\Helpers\WSSQLCaster;
 use Illuminate\Console\Command;
@@ -68,8 +69,7 @@ class FetchSsJobs extends Command
      */
     private function fetchFromApi(string $year): ?Collection
     {
-        $username = config('workstudio.service_account.username');
-        $password = config('workstudio.service_account.password');
+        $credentials = app(ApiCredentialManager::class)->getServiceAccountCredentials();
         $jobTypes = WSHelpers::toSqlInClause(config('ws_assessment_query.job_types.assessments'));
         $baseUrl = rtrim((string) config('workstudio.base_url'), '/');
 
@@ -87,13 +87,13 @@ class FetchSsJobs extends Command
 
         $payload = [
             'Protocol' => 'GETQUERY',
-            'DBParameters' => "USER NAME={$username}\r\nPASSWORD={$password}\r\n",
+            'DBParameters' => ApiCredentialManager::formatDbParameters($credentials['username'], $credentials['password']),
             'SQL' => $sql,
         ];
 
         try {
             /** @var \Iluminate\Http\Client\Response $response */
-            $response = Http::withBasicAuth($username, $password)
+            $response = Http::withBasicAuth($credentials['username'], $credentials['password'])
                 ->timeout(180)
                 ->connectTimeout(30)
                 ->post("{$baseUrl}/GETQUERY", $payload);

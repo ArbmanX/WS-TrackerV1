@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\UnitType;
+use App\Services\WorkStudio\Client\ApiCredentialManager;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
@@ -48,21 +49,20 @@ class FetchUnitTypes extends Command
      */
     private function fetchFromApi(): ?Collection
     {
-        $username = config('workstudio.service_account.username');
-        $password = config('workstudio.service_account.password');
+        $credentials = app(ApiCredentialManager::class)->getServiceAccountCredentials();
         $baseUrl = rtrim((string) config('workstudio.base_url'), '/');
 
         $sql = 'SELECT UNIT, UNITSSNAME, UNITSETID, SUMMARYGRP, ENTITYNAME FROM UNITS ORDER BY UNIT';
 
         $payload = [
             'Protocol' => 'GETQUERY',
-            'DBParameters' => "USER NAME={$username}\r\nPASSWORD={$password}\r\n",
+            'DBParameters' => ApiCredentialManager::formatDbParameters($credentials['username'], $credentials['password']),
             'SQL' => $sql,
         ];
 
         try {
             /** @var \Illuminate\Http\Client\Response $response */
-            $response = Http::withBasicAuth($username, $password)
+            $response = Http::withBasicAuth($credentials['username'], $credentials['password'])
                 ->timeout(180)
                 ->connectTimeout(30)
                 ->post("{$baseUrl}/GETQUERY", $payload);

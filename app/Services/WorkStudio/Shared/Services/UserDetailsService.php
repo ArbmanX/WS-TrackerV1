@@ -2,6 +2,7 @@
 
 namespace App\Services\WorkStudio\Shared\Services;
 
+use App\Services\WorkStudio\Client\ApiCredentialManager;
 use App\Services\WorkStudio\Shared\Contracts\UserDetailsServiceInterface;
 use App\Services\WorkStudio\Shared\Exceptions\UserNotFoundException;
 use App\Services\WorkStudio\Shared\Exceptions\WorkStudioApiException;
@@ -10,6 +11,10 @@ use Illuminate\Support\Facades\Log;
 
 class UserDetailsService implements UserDetailsServiceInterface
 {
+    public function __construct(
+        private ApiCredentialManager $credentialManager,
+    ) {}
+
     /**
      * Get user details from WorkStudio API using GETUSERDETAILS protocol.
      *
@@ -37,9 +42,11 @@ class UserDetailsService implements UserDetailsServiceInterface
 
         try {
             /** @var \Illuminate\Http\Client\Response $response */
+            $credentials = $this->credentialManager->getServiceAccountCredentials();
+
             $response = Http::withBasicAuth(
-                config('workstudio.service_account.username'),
-                config('workstudio.service_account.password')
+                $credentials['username'],
+                $credentials['password']
             )
                 ->timeout(config('workstudio.timeout', 30))
                 ->connectTimeout(config('workstudio.connect_timeout', 10))

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Services\WorkStudio\Client\ApiCredentialManager;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 
@@ -48,21 +49,20 @@ class FetchUniqueJobTypes extends Command
      */
     private function fetchFromApi(): ?\Illuminate\Support\Collection
     {
-        $username = config('workstudio.service_account.username');
-        $password = config('workstudio.service_account.password');
+        $credentials = app(ApiCredentialManager::class)->getServiceAccountCredentials();
         $baseUrl = rtrim((string) config('workstudio.base_url'), '/');
 
         $sql = "SELECT DISTINCT SS.JOBTYPE AS job_type FROM SS WHERE SS.JOBTYPE IS NOT NULL AND SS.JOBTYPE != '' ORDER BY SS.JOBTYPE ASC";
 
         $payload = [
             'Protocol' => 'GETQUERY',
-            'DBParameters' => "USER NAME={$username}\r\nPASSWORD={$password}\r\n",
+            'DBParameters' => ApiCredentialManager::formatDbParameters($credentials['username'], $credentials['password']),
             'SQL' => $sql,
         ];
 
         try {
             /** @var \Illuminate\Http\Client\Response $response */
-            $response = Http::withBasicAuth($username, $password)
+            $response = Http::withBasicAuth($credentials['username'], $credentials['password'])
                 ->timeout(120)
                 ->connectTimeout(30)
                 ->post("{$baseUrl}/GETQUERY", $payload);
@@ -106,6 +106,6 @@ class FetchUniqueJobTypes extends Command
         $content = "<?php\n\nreturn {$export};\n";
 
         file_put_contents($path, $content);
-        $this->info('Saved ' . count($jobTypes) . ' job types to database/data/job_types.php');
+        $this->info('Saved '.count($jobTypes).' job types to database/data/job_types.php');
     }
 }

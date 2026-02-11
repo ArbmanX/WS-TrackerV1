@@ -3,7 +3,6 @@
 namespace App\Services\WorkStudio\Client;
 
 use App\Services\WorkStudio\Assessments\Queries\AssessmentQueries;
-use App\Services\WorkStudio\Client\ApiCredentialManager;
 use App\Services\WorkStudio\Shared\ValueObjects\UserQueryContext;
 use Exception;
 use Illuminate\Support\Collection;
@@ -13,7 +12,7 @@ use Illuminate\Support\Facades\Log;
 class GetQueryService
 {
     public function __construct(
-        private ?ApiCredentialManager $credentialManager = null,
+        private ApiCredentialManager $credentialManager,
     ) {}
 
     /**
@@ -27,13 +26,11 @@ class GetQueryService
      */
     public function executeQuery(string $sql, ?int $userId = null): ?array
     {
-        $credentials = $this->getCredentials($userId);
+        $credentials = $this->credentialManager->getCredentials($userId);
 
-        // TODO: SECURITY - Hardcoded credentials must be replaced with credential manager
-        // @see ApiCredentialManager::getCredentials() - credentials should come from $credentials variable above
         $payload = [
             'Protocol' => 'GETQUERY',
-            'DBParameters' => "USER NAME=ASPLUNDH\\cnewcombe\r\nPASSWORD=chrism\r\n", // TODO: Use $credentials['username'] and $credentials['password']
+            'DBParameters' => ApiCredentialManager::formatDbParameters($credentials['username'], $credentials['password']),
             'SQL' => $sql,
         ];
 
@@ -41,8 +38,7 @@ class GetQueryService
 
         try {
             /** @var \Illuminate\Http\Client\Response $response */
-            // TODO: SECURITY - Hardcoded credentials must be replaced with $credentials from credential manager
-            $response = Http::withBasicAuth('ASPLUNDH\cnewcombe', 'chrism') // TODO: Use $credentials['username'], $credentials['password']
+            $response = Http::withBasicAuth($credentials['username'], $credentials['password'])
                 ->timeout(120)
                 ->connectTimeout(30)
                 ->withOptions(['on_stats' => function (\GuzzleHttp\TransferStats $stats) {
@@ -204,21 +200,5 @@ class GetQueryService
         $sql = $queries->getDistinctFieldValues($table, $field, $limit);
 
         return $this->executeAndHandle($sql, $context->userId);
-    }
-
-    /**
-     * Get credentials for API requests.
-     */
-    private function getCredentials(?int $userId = null): array
-    {
-        if ($this->credentialManager) {
-            return $this->credentialManager->getCredentials($userId);
-        }
-
-        // Fallback to config if no credential manager
-        return [
-            'username' => config('workstudio.service_account.username'),
-            'password' => config('workstudio.service_account.password'),
-        ];
     }
 }

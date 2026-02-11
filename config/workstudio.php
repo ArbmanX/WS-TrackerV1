@@ -49,8 +49,8 @@ return [
     */
 
     'service_account' => [
-        'username' => env('WORKSTUDIO_SERVICE_USERNAME', 'ASPLUNDH\cnewcombe'),
-        'password' => env('WORKSTUDIO_SERVICE_PASSWORD', 'chrism'),
+        'username' => env('WORKSTUDIO_SERVICE_USERNAME', ''),
+        'password' => env('WORKSTUDIO_SERVICE_PASSWORD', ''),
 
     ],
 
