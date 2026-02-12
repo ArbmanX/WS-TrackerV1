@@ -60,7 +60,8 @@ app/
     │   ├── HeartbeatService               # Lightweight server availability check
     │   └── Contracts/WorkStudioApiInterface
     ├── Shared/
-    │   ├── Cache/CachedQueryService       # TTL caching decorator with registry
+    │   ├── Cache/CachedQueryService       # TTL caching decorator with registry + snapshot hook
+    │   ├── Persistence/SnapshotPersistenceService  # Persists metric snapshots to PostgreSQL
     │   ├── ValueObjects/UserQueryContext   # Immutable query scope (regions, contractors, domain)
     │   ├── Services/ResourceGroupAccessService  # WS groups → regions mapping
     │   ├── Services/UserDetailsService    # Enriches user data from /GETUSERDETAILS
@@ -94,10 +95,13 @@ routes/
 ```
 Livewire Component
   → CachedQueryService (TTL cache with registry)
-    → GetQueryService (HTTP POST to /GETQUERY)
-      → AssessmentQueries (SQL string builder)
-        → WorkStudio DDOProtocol API
-          → JSON response → Collection
+    ├── Cache HIT → return cached Collection
+    └── Cache MISS → GetQueryService (HTTP POST to /GETQUERY)
+        → AssessmentQueries (SQL string builder)
+          → WorkStudio DDOProtocol API
+            → JSON response → Collection
+        → SnapshotPersistenceService (fail-silent)
+            → PostgreSQL (system_wide_snapshots / regional_snapshots)
 ```
 
 **Cache key pattern:** `ws:{scope_year}:ctx:{hash8}:{dataset}`
@@ -150,6 +154,20 @@ Livewire Component
 - **Casts:** work_unit→boolean, last_synced_at→datetime
 - **Synced by:** `ws:fetch-unit-types` artisan command (upserts from WorkStudio UNITS table)
 - **`work_unit` derivation:** true when `SUMMARYGRP` is not null, not empty, and not `Summary-NonWork`
+
+### SystemWideSnapshot
+- **Purpose:** Historical time-series of system-wide aggregate metrics, persisted on each cache miss
+- **Fields:** scope_year, context_hash, contractor (nullable), total_assessments, active_count, qc_count, rework_count, closed_count, total_miles (decimal), completed_miles (decimal), active_planners, captured_at
+- **Scopes:** `forYear($year)`, `forContext($hash)`
+- **Indexes:** (scope_year, captured_at), (context_hash)
+- **Populated by:** `SnapshotPersistenceService` via `CachedQueryService` cache miss hook
+
+### RegionalSnapshot
+- **Purpose:** Historical time-series of per-region metrics with permission counts and work measurements
+- **Fields:** All of SystemWideSnapshot plus: region, total_units, approved_count, pending_count, no_contact_count, refusal_count, deferred_count, ppl_approved_count, rem_6_12_count, rem_over_12_count, ash_removal_count, vps_count, brush_acres, herbicide_acres, bucket_trim_length, manual_trim_length (all decimal/integer)
+- **Scopes:** `forYear($year)`, `forContext($hash)`, `forRegion($region)`
+- **Indexes:** (scope_year, captured_at), (region, captured_at), (context_hash)
+- **Populated by:** `SnapshotPersistenceService` via `CachedQueryService` cache miss hook
 
 ---
 

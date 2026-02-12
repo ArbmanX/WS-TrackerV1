@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Historical Metric Snapshot Persistence** (2026-02-11)
+  - New `system_wide_snapshots` table — persists system-wide aggregate metrics on each cache miss
+  - New `regional_snapshots` table — persists per-region metrics with permission counts and work measurements
+  - `SnapshotPersistenceService` — maps API response keys to DB columns with explicit type coercion
+  - `SystemWideSnapshot` and `RegionalSnapshot` Eloquent models with `forYear`, `forContext`, `forRegion` query scopes
+  - Factories with `capturedAt()` state for trend testing
+  - `CachedQueryService` hooks into cache miss flow to trigger snapshot persistence (fail-silent)
+  - Config toggle: `ws_cache.snapshot.enabled` (env: `WS_SNAPSHOT_ENABLED`, default: true)
+  - Config: `ws_cache.snapshot.datasets` controls which datasets trigger snapshots
+  - 37 new tests across 4 test files (persistence service, models, CachedQueryService integration)
+
 ### Changed
 - **Assessment Query Class Split** (2026-02-11)
   - Split monolithic `AssessmentQueries` (568 lines) into 4 focused domain classes via `AbstractQueryBuilder` base class:

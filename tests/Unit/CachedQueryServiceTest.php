@@ -2,6 +2,7 @@
 
 use App\Services\WorkStudio\Client\GetQueryService;
 use App\Services\WorkStudio\Shared\Cache\CachedQueryService;
+use App\Services\WorkStudio\Shared\Persistence\SnapshotPersistenceService;
 use App\Services\WorkStudio\Shared\ValueObjects\UserQueryContext;
 use Illuminate\Support\Facades\Cache;
 
@@ -20,7 +21,8 @@ function testContext(array $overrides = []): UserQueryContext
 
 beforeEach(function () {
     $this->mockQuery = Mockery::mock(GetQueryService::class);
-    $this->service = new CachedQueryService($this->mockQuery);
+    $this->mockSnapshot = Mockery::spy(SnapshotPersistenceService::class);
+    $this->service = new CachedQueryService($this->mockQuery, $this->mockSnapshot);
     $this->context = testContext();
     Cache::flush();
 });
@@ -211,4 +213,101 @@ test('identical contexts share cache entries', function () {
 
     expect($result1)->toEqual($data);
     expect($result2)->toEqual($data);
+});
+
+// ─── Snapshot Persistence Integration ───────────────────────────────
+
+test('snapshot is persisted on cache miss for system_wide_metrics', function () {
+    $data = collect([['contractor' => 'Asplundh', 'total_assessments' => '100']]);
+
+    $this->mockQuery->shouldReceive('getSystemWideMetrics')
+        ->once()
+        ->andReturn($data);
+
+    $this->service->getSystemWideMetrics($this->context);
+
+    $this->mockSnapshot->shouldHaveReceived('persistSystemWideMetrics')
+        ->once()
+        ->with(
+            Mockery::on(fn ($arg) => $arg instanceof \Illuminate\Support\Collection),
+            Mockery::type('string'),
+            Mockery::type('string'),
+        );
+});
+
+test('snapshot is persisted on cache miss for regional_metrics', function () {
+    $data = collect([['Region' => 'HARRISBURG', 'Total_Circuits' => '50']]);
+
+    $this->mockQuery->shouldReceive('getRegionalMetrics')
+        ->once()
+        ->andReturn($data);
+
+    $this->service->getRegionalMetrics($this->context);
+
+    $this->mockSnapshot->shouldHaveReceived('persistRegionalMetrics')
+        ->once();
+});
+
+test('snapshot is NOT persisted on cache hit', function () {
+    $data = collect([['contractor' => 'Asplundh', 'total_assessments' => '100']]);
+
+    $this->mockQuery->shouldReceive('getSystemWideMetrics')
+        ->once()
+        ->andReturn($data);
+
+    // First call — cache miss → persists
+    $this->service->getSystemWideMetrics($this->context);
+    // Second call — cache hit → should NOT persist again
+    $this->service->getSystemWideMetrics($this->context);
+
+    $this->mockSnapshot->shouldHaveReceived('persistSystemWideMetrics')
+        ->once();
+});
+
+test('non-snapshot datasets do not trigger persistence', function () {
+    $data = collect([['assessment' => 'data']]);
+
+    $this->mockQuery->shouldReceive('getActiveAssessmentsOrderedByOldest')
+        ->once()
+        ->andReturn($data);
+
+    $this->service->getActiveAssessmentsOrderedByOldest($this->context);
+
+    $this->mockSnapshot->shouldNotHaveReceived('persistSystemWideMetrics');
+    $this->mockSnapshot->shouldNotHaveReceived('persistRegionalMetrics');
+});
+
+test('snapshot persistence failure does not break caching', function () {
+    $data = collect([['contractor' => 'Asplundh', 'total_assessments' => '100']]);
+
+    $this->mockQuery->shouldReceive('getSystemWideMetrics')
+        ->once()
+        ->andReturn($data);
+
+    // Make snapshot service throw
+    $failingSnapshot = Mockery::mock(SnapshotPersistenceService::class);
+    $failingSnapshot->shouldReceive('persistSystemWideMetrics')
+        ->andThrow(new \RuntimeException('DB connection failed'));
+
+    $service = new CachedQueryService($this->mockQuery, $failingSnapshot);
+
+    // Should NOT throw — the exception is caught inside SnapshotPersistenceService
+    // But since we're mocking at this level, let's verify the cache result still works
+    $result = $service->getSystemWideMetrics($this->context);
+
+    expect($result)->toEqual($data);
+});
+
+test('snapshot is not persisted when disabled via config', function () {
+    config(['ws_cache.snapshot.enabled' => false]);
+
+    $data = collect([['contractor' => 'Asplundh', 'total_assessments' => '100']]);
+
+    $this->mockQuery->shouldReceive('getSystemWideMetrics')
+        ->once()
+        ->andReturn($data);
+
+    $this->service->getSystemWideMetrics($this->context);
+
+    $this->mockSnapshot->shouldNotHaveReceived('persistSystemWideMetrics');
 });

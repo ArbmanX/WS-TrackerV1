@@ -71,4 +71,17 @@ return [
     */
 
     'registry_key' => '_cache_registry',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Snapshot Persistence
+    |--------------------------------------------------------------------------
+    | When enabled, fresh metric data (cache misses) is persisted to
+    | local PostgreSQL for historical trend analysis.
+    */
+
+    'snapshot' => [
+        'enabled' => (bool) env('WS_SNAPSHOT_ENABLED', true),
+        'datasets' => ['system_wide_metrics', 'regional_metrics'],
+    ],
 ];

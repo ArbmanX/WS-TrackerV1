@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\WorkStudio\Shared\Cache;
 
 use App\Services\WorkStudio\Client\GetQueryService;
+use App\Services\WorkStudio\Shared\Persistence\SnapshotPersistenceService;
 use App\Services\WorkStudio\Shared\ValueObjects\UserQueryContext;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -14,6 +15,7 @@ class CachedQueryService
 {
     public function __construct(
         private GetQueryService $queryService,
+        private SnapshotPersistenceService $snapshotService,
     ) {}
 
     /**
@@ -222,10 +224,45 @@ class CachedQueryService
 
         $result = Cache::remember($key, $this->ttl($dataset), $resolver);
 
+        if (! $wasCached) {
+            $this->persistSnapshot($dataset, $result, $context);
+        }
+
         $this->trackAccess($dataset, $context, $wasCached);
         $this->trackContextHash($context);
 
         return $result;
+    }
+
+    /**
+     * Persist a snapshot of fresh metric data to the local database.
+     */
+    private function persistSnapshot(string $dataset, Collection $result, UserQueryContext $context): void
+    {
+        if (! config('ws_cache.snapshot.enabled', true)) {
+            return;
+        }
+
+        $snapshotDatasets = config('ws_cache.snapshot.datasets', []);
+
+        if (! in_array($dataset, $snapshotDatasets, true)) {
+            return;
+        }
+
+        try {
+            $scopeYear = config('ws_assessment_query.scope_year', date('Y'));
+            $contextHash = substr($context->cacheHash(), 0, 8);
+
+            match ($dataset) {
+                'system_wide_metrics' => $this->snapshotService->persistSystemWideMetrics($result, $scopeYear, $contextHash),
+                'regional_metrics' => $this->snapshotService->persistRegionalMetrics($result, $scopeYear, $contextHash),
+                default => null,
+            };
+        } catch (\Throwable $e) {
+            Log::warning("CachedQueryService: snapshot persistence failed for {$dataset}", [
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
