@@ -1,0 +1,58 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class PlannerJobAssignment extends Model
+{
+    /** @use HasFactory<\Database\Factories\PlannerJobAssignmentFactory> */
+    use HasFactory;
+
+    protected $fillable = [
+        'frstr_user',
+        'job_guid',
+        'status',
+        'discovered_at',
+    ];
+
+    /** @return array<string, string> */
+    protected function casts(): array
+    {
+        return [
+            'discovered_at' => 'datetime',
+        ];
+    }
+
+    /** @param Builder<self> $query */
+    public function scopeForUser(Builder $query, string $username): void
+    {
+        $query->where('frstr_user', $username);
+    }
+
+    /** @param Builder<self> $query */
+    public function scopePending(Builder $query): void
+    {
+        $query->where('status', 'discovered');
+    }
+
+    /** @param Builder<self> $query */
+    public function scopeProcessed(Builder $query): void
+    {
+        $query->where('status', 'processed');
+    }
+
+    /** @param Builder<self> $query */
+    public function scopeExported(Builder $query): void
+    {
+        $query->where('status', 'exported');
+    }
+
+    public function wsUser(): BelongsTo
+    {
+        return $this->belongsTo(WsUser::class, 'frstr_user', 'username');
+    }
+}

@@ -1,0 +1,39 @@
+<?php
+
+namespace Database\Factories;
+
+use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
+
+/**
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\PlannerJobAssignment>
+ */
+class PlannerJobAssignmentFactory extends Factory
+{
+    /**
+     * @return array<string, mixed>
+     */
+    public function definition(): array
+    {
+        return [
+            'frstr_user' => fake()->userName(),
+            'job_guid' => '{'.Str::uuid()->toString().'}',
+            'status' => 'discovered',
+            'discovered_at' => now(),
+        ];
+    }
+
+    public function processed(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'processed',
+        ]);
+    }
+
+    public function exported(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'exported',
+        ]);
+    }
+}

@@ -16,3 +16,6 @@ Schedule::command('pulse:clear --force')->weekly();
 
 // Prune old health check results
 Schedule::command('health:delete-old-records')->daily();
+
+// Run daily live monitor snapshots with ghost detection
+Schedule::command('ws:run-live-monitor --include-ghost')->daily();

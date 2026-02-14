@@ -4,6 +4,9 @@ namespace App\Providers;
 
 use App\Services\WorkStudio\Client\Contracts\WorkStudioApiInterface;
 use App\Services\WorkStudio\Client\WorkStudioApiService;
+use App\Services\WorkStudio\DataCollection\CareerLedgerService;
+use App\Services\WorkStudio\DataCollection\GhostDetectionService;
+use App\Services\WorkStudio\DataCollection\LiveMonitorService;
 use App\Services\WorkStudio\Shared\Cache\CachedQueryService;
 use App\Services\WorkStudio\Shared\Contracts\UserDetailsServiceInterface;
 use App\Services\WorkStudio\Shared\Services\UserDetailsService;
@@ -28,6 +31,10 @@ class WorkStudioServiceProvider extends ServiceProvider
         );
 
         $this->app->singleton(CachedQueryService::class);
+
+        $this->app->singleton(CareerLedgerService::class);
+        $this->app->singleton(LiveMonitorService::class);
+        $this->app->singleton(GhostDetectionService::class);
     }
 
     /**

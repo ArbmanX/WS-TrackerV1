@@ -146,6 +146,23 @@ trait SqlFragmentHelpers
     }
 
     // =========================================================================
+    // Validation Helpers
+    // =========================================================================
+
+    /**
+     * Validate a GUID string format before SQL interpolation.
+     * Accepts both braced {GUID} and unbraced GUID formats.
+     *
+     * @throws \InvalidArgumentException If the GUID format is invalid
+     */
+    protected static function validateGuid(string $guid, string $paramName = 'JOBGUID'): void
+    {
+        if (! preg_match('/^\{?[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}\}?$/', $guid)) {
+            throw new \InvalidArgumentException("Invalid {$paramName} format.");
+        }
+    }
+
+    // =========================================================================
     // SQL Fragment Helpers (static utilities)
     // =========================================================================
 

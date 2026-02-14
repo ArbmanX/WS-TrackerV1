@@ -71,9 +71,7 @@ class CircuitQueries extends AbstractQueryBuilder
     public function getAllByJobGuid(string $jobGuid): string
     {
         // SEC-003: Validate GUID format before interpolation
-        if (! preg_match('/^\{?[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}\}?$/', $jobGuid)) {
-            throw new \InvalidArgumentException('Invalid JOBGUID format.');
-        }
+        self::validateGuid($jobGuid);
 
         // Build reusable fragments
         $scopeYear = self::extractYearFromMsDate('WPStartDate_Assessment_Xrefs.WP_STARTDATE');

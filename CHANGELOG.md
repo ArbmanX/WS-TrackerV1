@@ -10,6 +10,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Planner Career Ledger** (2026-02-14)
+  - **Database:** `planner_job_assignments` table — tracks discovered JOBGUIDs per FRSTR_USER with status lifecycle (discovered → processed → exported)
+  - **Model & Factory:** `PlannerJobAssignment` with `forUser`, `pending`, `processed`, `exported` scopes and `wsUser()` relationship
+  - **Query Builder:** `PlannerCareerLedger` in `app/Services/WorkStudio/Planners/Queries/` — 7 methods for user-centric career data extraction using ASSDDATE-only attribution (no DATEPOP fallback)
+  - **Service:** `PlannerCareerLedgerService` in `app/Services/WorkStudio/Planners/` — discover job assignments, export per-user JSON career files
+  - **Artisan Command:** `ws:export-planner-career {users} --output` — discover and export planner career data for specific FRSTR_USERs
+  - **Tests:** 55 new tests (Unit: query SQL validation, Feature: model scopes, service mock tests, command tests)
+
+- **Data Collection Architecture** (2026-02-13)
+  - **Database Layer:** 4 new PostgreSQL tables — `planner_career_entries`, `assessment_monitors`, `ghost_ownership_periods`, `ghost_unit_evidence` — with JSONB columns for daily snapshots and baseline data
+  - **Configuration:** `config/ws_data_collection.php` — thresholds, ghost detection domain, sanity check toggles
+  - **Models & Factories:** `PlannerCareerEntry`, `AssessmentMonitor`, `GhostOwnershipPeriod`, `GhostUnitEvidence` with factory states (`active()`, `resolved()`, `parentTakeover()`, `withSnapshots()`)
+  - **Query Builders:** 3 domain-specific query builders in `app/Services/WorkStudio/DataCollection/Queries/`:
+    - `CareerLedgerQueries` — daily footage attribution (First Unit Wins), assessment timeline, work type breakdown, rework details
+    - `LiveMonitorQueries` — permission breakdown, unit counts, notes compliance, edit recency, aging units, work types
+    - `GhostDetectionQueries` — ownership changes, UNITGUID snapshots, EXT field check
+  - **Services:** 3 service classes in `app/Services/WorkStudio/DataCollection/`:
+    - `CareerLedgerService` — bootstrap import/export from JSON, close-event append from live monitor
+    - `LiveMonitorService` — daily snapshot orchestration, suspicious flag logic, close detection
+    - `GhostDetectionService` — ownership change scanning, baseline creation, ghost comparison, resolution, cleanup
+  - **Event System:** `AssessmentClosed` event + `ProcessAssessmentClose` queued listener — triggered when monitored assessments close, creates career entry and cleans up ghost tracking
+  - **Artisan Commands:**
+    - `ws:import-career-ledger` — bootstrap import from JSON with `--dry-run` preview
+    - `ws:export-career-ledger` — export career data to JSON via API with `--scope-year`/`--region` filter hooks
+    - `ws:run-live-monitor` — daily snapshot with `--job-guid` single-assessment mode and `--include-ghost` ghost detection
+  - **Scheduler:** `ws:run-live-monitor --include-ghost` registered as daily cron in `routes/console.php`
+  - **Tests:** 155 new tests (493 total), 1473 assertions across models, query builders, services, events, and commands
+
 - **Historical Metric Snapshot Persistence** (2026-02-11)
   - New `system_wide_snapshots` table — persists system-wide aggregate metrics on each cache miss
   - New `regional_snapshots` table — persists per-region metrics with permission counts and work measurements

@@ -81,6 +81,6 @@ class Overview extends Component
 
     public function render()
     {
-        return view('livewire.dashboard.overview-mock-a');
+        return view('livewire.dashboard.overview');
     }
 }
