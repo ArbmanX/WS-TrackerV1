@@ -38,19 +38,18 @@ class PlannerCareerLedgerService
 
         foreach ($results as $row) {
             $jobGuid = $row['JOBGUID'] ?? null;
+            $frstrUser = $row['FRSTR_USER'] ?? null;
 
-            if (! $jobGuid) {
+            if (! $jobGuid || ! $frstrUser) {
                 continue;
             }
 
-            foreach ($users as $user) {
-                $assignment = PlannerJobAssignment::firstOrCreate(
-                    ['frstr_user' => $user, 'job_guid' => $jobGuid],
-                    ['status' => 'discovered', 'discovered_at' => now()],
-                );
+            $assignment = PlannerJobAssignment::firstOrCreate(
+                ['frstr_user' => $frstrUser, 'job_guid' => $jobGuid],
+                ['status' => 'discovered', 'discovered_at' => now()],
+            );
 
-                $assignments->push($assignment);
-            }
+            $assignments->push($assignment);
         }
 
         return $assignments;
@@ -70,16 +69,21 @@ class PlannerCareerLedgerService
     {
         $allAssignments = PlannerJobAssignment::forUser($frstrUser)->get();
 
+        $strippedUser = $this->stripDomain($frstrUser);
+
         if ($allAssignments->isEmpty()) {
-            $filePath = rtrim($outputDir, '/')."/{$frstrUser}_".now()->format('Y-m-d').'.json';
-            file_put_contents($filePath, json_encode([], JSON_PRETTY_PRINT));
+            $filePath = rtrim($outputDir, '/')."/{$strippedUser}_".now()->format('Y-m-d').'.json';
+            file_put_contents($filePath, json_encode($this->wrapWithMetadata([]), JSON_PRETTY_PRINT));
 
             return $filePath;
         }
 
-        // Split into new vs previously exported
-        $newAssignments = $allAssignments->filter(fn ($a) => ! $a->export_path);
-        $existingAssignments = $allAssignments->filter(fn ($a) => $a->export_path !== null);
+        // Split into new vs previously exported (scoped to target directory)
+        $targetDir = rtrim($outputDir, '/');
+        $existingAssignments = $allAssignments->filter(
+            fn ($a) => $a->export_path !== null && str_starts_with($a->export_path, $targetDir)
+        );
+        $newAssignments = $allAssignments->diff($existingAssignments);
 
         // Determine stale GUIDs among existing exports
         $staleGuids = [];
@@ -119,9 +123,10 @@ class PlannerCareerLedgerService
                 }
             }
 
-            // Load existing JSON if file exists
+            // Load existing JSON if file exists (unwrap metadata envelope if present)
             if ($existingFilePath && file_exists($existingFilePath)) {
-                $existingEntries = json_decode(file_get_contents($existingFilePath), true) ?? [];
+                $fileData = json_decode(file_get_contents($existingFilePath), true) ?? [];
+                $existingEntries = $fileData['assessments'] ?? $fileData;
             } else {
                 // File missing — treat all existing as new
                 $newAssignments = $allAssignments;
@@ -160,9 +165,9 @@ class PlannerCareerLedgerService
             }
         }
 
-        // Determine output path
-        $filePath = $existingFilePath ?? rtrim($outputDir, '/')."/{$frstrUser}_".now()->format('Y-m-d').'.json';
-        file_put_contents($filePath, json_encode($entries, JSON_PRETTY_PRINT));
+        // Determine output path and write with metadata envelope
+        $filePath = $existingFilePath ?? rtrim($outputDir, '/')."/{$strippedUser}_".now()->format('Y-m-d').'.json';
+        file_put_contents($filePath, json_encode($this->wrapWithMetadata($entries), JSON_PRETTY_PRINT));
 
         // Update all affected assignments
         $affectedGuids = array_merge($newGuids, $staleGuids);
@@ -218,11 +223,15 @@ class PlannerCareerLedgerService
         $dailyMetrics = json_decode($row['daily_metrics'] ?? '[]', true) ?? [];
         $dailyMetrics = $this->enrichDailyMetricsWithStatus($dailyMetrics, $dates, $reworkPeriods);
         $summaryTotals = json_decode($row['work_type_breakdown'] ?? '[]', true) ?? [];
+        $contributions = $this->computeContributions($dailyMetrics, $frstrUser);
 
         return [
             'planner_username' => $frstrUser,
+            'total_contribution' => $contributions['total_contribution'],
             'job_guid' => $row['JOBGUID'],
             'line_name' => $row['line_name'] ?? null,
+            'wo' => $row['WO'] ?? null,
+            'ext' => $row['EXT'] ?? null,
             'region' => $row['region'] ?? null,
             'scope_year' => $row['scope_year'] ?? null,
             'cycle_type' => $row['cycle_type'] ?? null,
@@ -234,6 +243,7 @@ class PlannerCareerLedgerService
             'went_to_rework' => $wentToRework,
             'rework_details' => $reworkDetails,
             'daily_metrics' => $dailyMetrics,
+            'others_total_contribution' => $contributions['others_total_contribution'],
             'summary_totals' => $summaryTotals,
         ];
     }
@@ -269,6 +279,8 @@ class PlannerCareerLedgerService
 
         // Refresh metadata fields
         $existing['line_name'] = $freshEntry['line_name'];
+        $existing['wo'] = $freshEntry['wo'];
+        $existing['ext'] = $freshEntry['ext'];
         $existing['region'] = $freshEntry['region'];
         $existing['cycle_type'] = $freshEntry['cycle_type'];
         $existing['assessment_total_miles'] = $freshEntry['assessment_total_miles'];
@@ -290,8 +302,15 @@ class PlannerCareerLedgerService
         $dates = $this->extractTimelineDates(collect($timeline));
         $reworkPeriods = $this->extractReworkPeriods($timeline, $dates['close']);
         $existing['daily_metrics'] = $this->enrichDailyMetricsWithStatus(
-            $existing['daily_metrics'], $dates, $reworkPeriods
+            $existing['daily_metrics'],
+            $dates,
+            $reworkPeriods
         );
+
+        // Recompute contributions from merged metrics
+        $contributions = $this->computeContributions($existing['daily_metrics'], $frstrUser);
+        $existing['total_contribution'] = $contributions['total_contribution'];
+        $existing['others_total_contribution'] = $contributions['others_total_contribution'];
 
         $entries[$existingIndex] = $existing;
 
@@ -457,6 +476,114 @@ class PlannerCareerLedgerService
 
             return $entry;
         }, $dailyMetrics);
+    }
+
+    /**
+     * Compute contribution totals from daily metrics.
+     *
+     * Sums daily_footage_miles for the queried user into total_contribution,
+     * and aggregates all other users into others_total_contribution keyed
+     * by stripped username (domain prefix removed).
+     *
+     * Future: others_total_contribution will be grouped by assigned role.
+     *
+     * @return array{total_contribution: float, others_total_contribution: array<string, float>}
+     */
+    private function computeContributions(array $dailyMetrics, string $frstrUser): array
+    {
+        $totalContribution = 0.0;
+        $others = [];
+
+        foreach ($dailyMetrics as $entry) {
+            $user = $entry['FRSTR_USER'] ?? null;
+            $miles = (float) ($entry['daily_footage_miles'] ?? 0);
+
+            if ($user === $frstrUser) {
+                $totalContribution += $miles;
+            } elseif ($user) {
+                $stripped = $this->stripDomain($user);
+                $others[$stripped] = ($others[$stripped] ?? 0) + $miles;
+            }
+        }
+
+        return [
+            'total_contribution' => round($totalContribution, 2),
+            'others_total_contribution' => array_map(fn ($v) => round($v, 2), $others),
+        ];
+    }
+
+    /**
+     * Wrap assessment entries with file-level metadata.
+     *
+     * @return array{career_timeframe: ?string, total_career_miles: float, assessment_count: int, total_career_unit_count: int, assessments: array}
+     */
+    private function wrapWithMetadata(array $entries): array
+    {
+        $totalMiles = 0.0;
+        $totalUnits = 0;
+        $earliestPickup = null;
+        $latestClose = null;
+
+        foreach ($entries as $entry) {
+            $totalMiles += (float) ($entry['total_contribution'] ?? 0);
+
+            foreach ($entry['daily_metrics'] ?? [] as $metric) {
+                $totalUnits += (int) ($metric['unit_count'] ?? 0);
+            }
+
+            $pickup = $entry['assessment_pickup_date'] ?? null;
+            $close = $entry['assessment_close_date'] ?? null;
+
+            if ($pickup && ($earliestPickup === null || $pickup < $earliestPickup)) {
+                $earliestPickup = $pickup;
+            }
+            if ($close && ($latestClose === null || $close > $latestClose)) {
+                $latestClose = $close;
+            }
+        }
+
+        return [
+            'career_timeframe' => $this->formatTimeframe($earliestPickup, $latestClose),
+            'total_career_miles' => round($totalMiles, 2),
+            'assessment_count' => count($entries),
+            'total_career_unit_count' => $totalUnits,
+            'assessments' => $entries,
+        ];
+    }
+
+    /**
+     * Format a human-readable timeframe between two dates (e.g. '2yrs 3months 7days').
+     */
+    private function formatTimeframe(?string $start, ?string $end): ?string
+    {
+        if (! $start || ! $end) {
+            return null;
+        }
+
+        $interval = Carbon::parse($start)->diff(Carbon::parse($end));
+        $parts = [];
+
+        if ($interval->y > 0) {
+            $parts[] = "{$interval->y}yrs";
+        }
+        if ($interval->m > 0) {
+            $parts[] = "{$interval->m}months";
+        }
+        if ($interval->d > 0) {
+            $parts[] = "{$interval->d}days";
+        }
+
+        return implode(' ', $parts) ?: '0days';
+    }
+
+    /**
+     * Strip domain prefix and sanitize for filenames (e.g. 'ASPLUNDH\j smith' → 'j_smith').
+     */
+    private function stripDomain(string $user): string
+    {
+        $stripped = str_contains($user, '\\') ? substr($user, strrpos($user, '\\') + 1) : $user;
+
+        return preg_replace('/\s+/', '_', trim($stripped));
     }
 
     /**

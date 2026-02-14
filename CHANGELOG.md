@@ -10,6 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Planner Contribution Fields & Metadata Envelope** (2026-02-14)
+  - **Contribution tracking:** `computeContributions()` sums `daily_footage_miles` per user — `total_contribution` for queried planner, `others_total_contribution` keyed by stripped username
+  - **Metadata envelope:** `wrapWithMetadata()` wraps export JSON with `career_timeframe`, `total_career_miles`, `assessment_count`, `total_career_unit_count` at file level
+  - **New fields:** `wo`, `ext` from VEGJOB added to query and export output
+  - **Domain-aware output paths:** Export command organizes by domain/current/closed subdirectories
+  - **FRSTR_USER scoping fix:** `discoverJobGuids()` now uses FRSTR_USER from API response (not local user list) for correct per-user GUID assignment
+  - **Directory-scoped staleness:** Existing exports only matched when `export_path` is within the target directory
+  - **Domain stripping:** `stripDomain()` helper removes `ASPLUNDH\` prefix and sanitizes for filenames
+  - **Tests:** 4 new tests for contribution computation, domain stripping, WO/EXT fields, stale merge recomputation
+
 - **Incremental Planner Career Export** (2026-02-14)
   - **Migration:** `export_path` column on `planner_job_assignments` — tracks the JSON file path for each exported assignment
   - **Query:** `getEditDates()` method on `PlannerCareerLedger` — fetches OLE-to-ISO8601-converted EDITDATE for staleness detection

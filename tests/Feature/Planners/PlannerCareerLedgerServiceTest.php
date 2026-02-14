@@ -22,8 +22,8 @@ test('discoverJobGuids creates assignments from API results', function () {
     $this->mockQS->shouldReceive('executeAndHandle')
         ->once()
         ->andReturn(collect([
-            ['JOBGUID' => $guid1],
-            ['JOBGUID' => $guid2],
+            ['FRSTR_USER' => 'jsmith', 'JOBGUID' => $guid1],
+            ['FRSTR_USER' => 'jsmith', 'JOBGUID' => $guid2],
         ]));
 
     $service = makePlannerCareerService($this->mockQS);
@@ -49,7 +49,7 @@ test('discoverJobGuids is idempotent — skips existing assignments', function (
 
     $this->mockQS->shouldReceive('executeAndHandle')
         ->once()
-        ->andReturn(collect([['JOBGUID' => $guid]]));
+        ->andReturn(collect([['FRSTR_USER' => 'jsmith', 'JOBGUID' => $guid]]));
 
     $service = makePlannerCareerService($this->mockQS);
     $assignments = $service->discoverJobGuids('jsmith');
@@ -60,12 +60,47 @@ test('discoverJobGuids is idempotent — skips existing assignments', function (
     expect($existing->status)->toBe('exported');
 });
 
-test('discoverJobGuids handles multiple users', function () {
-    $guid = '{11111111-1111-1111-1111-111111111111}';
+test('discoverJobGuids scopes JOBGUIDs to their actual user', function () {
+    $guid1 = '{11111111-1111-1111-1111-111111111111}';
+    $guid2 = '{22222222-2222-2222-2222-222222222222}';
+    $guid3 = '{33333333-3333-3333-3333-333333333333}';
 
     $this->mockQS->shouldReceive('executeAndHandle')
         ->once()
-        ->andReturn(collect([['JOBGUID' => $guid]]));
+        ->andReturn(collect([
+            ['FRSTR_USER' => 'jsmith', 'JOBGUID' => $guid1],
+            ['FRSTR_USER' => 'jsmith', 'JOBGUID' => $guid2],
+            ['FRSTR_USER' => 'jdoe', 'JOBGUID' => $guid3],
+        ]));
+
+    $service = makePlannerCareerService($this->mockQS);
+    $assignments = $service->discoverJobGuids(['jsmith', 'jdoe']);
+
+    expect($assignments)->toHaveCount(3)
+        ->and(PlannerJobAssignment::where('frstr_user', 'jsmith')->count())->toBe(2)
+        ->and(PlannerJobAssignment::where('frstr_user', 'jdoe')->count())->toBe(1);
+
+    // jsmith should NOT have guid3, jdoe should NOT have guid1/guid2
+    expect(PlannerJobAssignment::where('frstr_user', 'jsmith')->pluck('job_guid')->toArray())
+        ->toContain($guid1)
+        ->toContain($guid2)
+        ->not->toContain($guid3);
+
+    expect(PlannerJobAssignment::where('frstr_user', 'jdoe')->pluck('job_guid')->toArray())
+        ->toContain($guid3)
+        ->not->toContain($guid1);
+});
+
+test('discoverJobGuids handles shared JOBGUID across users', function () {
+    $sharedGuid = '{11111111-1111-1111-1111-111111111111}';
+
+    // Both users worked on the same assessment
+    $this->mockQS->shouldReceive('executeAndHandle')
+        ->once()
+        ->andReturn(collect([
+            ['FRSTR_USER' => 'jsmith', 'JOBGUID' => $sharedGuid],
+            ['FRSTR_USER' => 'jdoe', 'JOBGUID' => $sharedGuid],
+        ]));
 
     $service = makePlannerCareerService($this->mockQS);
     $assignments = $service->discoverJobGuids(['jsmith', 'jdoe']);
@@ -134,17 +169,18 @@ test('exportForUser creates JSON file with career data from single API call', fu
         ->and($filePath)->toContain('jsmith_');
 
     $exported = json_decode(file_get_contents($filePath), true);
-    expect($exported)->toHaveCount(1)
-        ->and($exported[0]['planner_username'])->toBe('jsmith')
-        ->and($exported[0]['job_guid'])->toBe($guid)
-        ->and($exported[0]['line_name'])->toBe('Circuit-1234')
-        ->and($exported[0]['region'])->toBe('CENTRAL')
-        ->and($exported[0]['daily_metrics'])->toBeArray()
-        ->and($exported[0]['daily_metrics'])->toHaveCount(1)
-        ->and($exported[0]['daily_metrics'][0]['assumed_status'])->toBe('Active')
-        ->and($exported[0]['summary_totals'])->toBeArray()
-        ->and($exported[0]['went_to_rework'])->toBeFalse()
-        ->and($exported[0]['rework_details'])->toBeNull();
+    $assessments = $exported['assessments'];
+    expect($assessments)->toHaveCount(1)
+        ->and($assessments[0]['planner_username'])->toBe('jsmith')
+        ->and($assessments[0]['job_guid'])->toBe($guid)
+        ->and($assessments[0]['line_name'])->toBe('Circuit-1234')
+        ->and($assessments[0]['region'])->toBe('CENTRAL')
+        ->and($assessments[0]['daily_metrics'])->toBeArray()
+        ->and($assessments[0]['daily_metrics'])->toHaveCount(1)
+        ->and($assessments[0]['daily_metrics'][0]['assumed_status'])->toBe('Active')
+        ->and($assessments[0]['summary_totals'])->toBeArray()
+        ->and($assessments[0]['went_to_rework'])->toBeFalse()
+        ->and($assessments[0]['rework_details'])->toBeNull();
 
     $assignment = PlannerJobAssignment::first();
     expect($assignment->status)->toBe('exported')
@@ -164,7 +200,10 @@ test('exportForUser writes empty JSON when no assignments exist', function () {
     expect(file_exists($filePath))->toBeTrue();
 
     $exported = json_decode(file_get_contents($filePath), true);
-    expect($exported)->toBe([]);
+    $assessments = $exported['assessments'];
+    expect($assessments)->toBe([])
+        ->and($exported['assessment_count'])->toBe(0)
+        ->and($exported['career_timeframe'])->toBeNull();
 
     unlink($filePath);
     rmdir($outputDir);
@@ -210,9 +249,10 @@ test('exportForUser detects rework from timeline JSON column', function () {
     $filePath = $service->exportForUser('jsmith', $outputDir);
 
     $exported = json_decode(file_get_contents($filePath), true);
-    expect($exported[0]['went_to_rework'])->toBeTrue()
-        ->and($exported[0]['rework_details'])->toBeArray()
-        ->and($exported[0]['rework_details'])->not->toBeEmpty();
+    $assessments = $exported['assessments'];
+    expect($assessments[0]['went_to_rework'])->toBeTrue()
+        ->and($assessments[0]['rework_details'])->toBeArray()
+        ->and($assessments[0]['rework_details'])->not->toBeEmpty();
 
     unlink($filePath);
     rmdir($outputDir);
@@ -244,7 +284,7 @@ test('exportForUser checks staleness for already-exported assignments', function
         ],
         'summary_totals' => [],
     ]];
-    file_put_contents($exportPath, json_encode($existingData, JSON_PRETTY_PRINT));
+    file_put_contents($exportPath, json_encode(['assessments' => $existingData], JSON_PRETTY_PRINT));
 
     $assignment = PlannerJobAssignment::factory()->withExportPath($exportPath)->create([
         'frstr_user' => 'jsmith',
@@ -289,12 +329,13 @@ test('exportForUser checks staleness for already-exported assignments', function
     $filePath = $service->exportForUser('jsmith', $outputDir);
 
     $exported = json_decode(file_get_contents($filePath), true);
-    expect($exported)->toHaveCount(1)
-        ->and($exported[0]['line_name'])->toBe('Updated-Circuit')
-        ->and($exported[0]['region'])->toBe('HARRISBURG')
-        ->and($exported[0]['daily_metrics'])->toHaveCount(2)
-        ->and($exported[0]['daily_metrics'][0]['completion_date'])->toBe('2026-01-15')
-        ->and($exported[0]['daily_metrics'][1]['completion_date'])->toBe('2026-02-05');
+    $assessments = $exported['assessments'];
+    expect($assessments)->toHaveCount(1)
+        ->and($assessments[0]['line_name'])->toBe('Updated-Circuit')
+        ->and($assessments[0]['region'])->toBe('HARRISBURG')
+        ->and($assessments[0]['daily_metrics'])->toHaveCount(2)
+        ->and($assessments[0]['daily_metrics'][0]['completion_date'])->toBe('2026-01-15')
+        ->and($assessments[0]['daily_metrics'][1]['completion_date'])->toBe('2026-02-05');
 
     $assignment->refresh();
     expect($assignment->status)->toBe('exported')
@@ -349,7 +390,8 @@ test('exportForUser assigns Active status to days between pickup and QC', functi
     $filePath = $service->exportForUser('jsmith', $outputDir);
 
     $exported = json_decode(file_get_contents($filePath), true);
-    $metrics = $exported[0]['daily_metrics'];
+    $assessments = $exported['assessments'];
+    $metrics = $assessments[0]['daily_metrics'];
 
     expect($metrics)->toHaveCount(3)
         ->and($metrics[0]['assumed_status'])->toBe('Active')
@@ -401,7 +443,8 @@ test('exportForUser assigns QC status to days between QC and close', function ()
     $filePath = $service->exportForUser('jsmith', $outputDir);
 
     $exported = json_decode(file_get_contents($filePath), true);
-    $metrics = $exported[0]['daily_metrics'];
+    $assessments = $exported['assessments'];
+    $metrics = $assessments[0]['daily_metrics'];
 
     expect($metrics[0]['assumed_status'])->toBe('Active')
         ->and($metrics[1]['assumed_status'])->toBe('QC')
@@ -457,7 +500,8 @@ test('exportForUser assigns Rework status during rework periods', function () {
     $filePath = $service->exportForUser('jsmith', $outputDir);
 
     $exported = json_decode(file_get_contents($filePath), true);
-    $metrics = $exported[0]['daily_metrics'];
+    $assessments = $exported['assessments'];
+    $metrics = $assessments[0]['daily_metrics'];
 
     expect($metrics[0]['assumed_status'])->toBe('Active')   // 01-20: before QC
         ->and($metrics[1]['assumed_status'])->toBe('QC')     // 02-02: after QC, before rework
@@ -509,7 +553,8 @@ test('exportForUser assigns Closed status to days on/after close date', function
     $filePath = $service->exportForUser('jsmith', $outputDir);
 
     $exported = json_decode(file_get_contents($filePath), true);
-    $metrics = $exported[0]['daily_metrics'];
+    $assessments = $exported['assessments'];
+    $metrics = $assessments[0]['daily_metrics'];
 
     expect($metrics[0]['assumed_status'])->toBe('QC')      // 02-09: day before close
         ->and($metrics[1]['assumed_status'])->toBe('Closed') // 02-10: close date itself
@@ -566,7 +611,8 @@ test('exportForUser handles multiple rework periods correctly', function () {
     $filePath = $service->exportForUser('jsmith', $outputDir);
 
     $exported = json_decode(file_get_contents($filePath), true);
-    $metrics = $exported[0]['daily_metrics'];
+    $assessments = $exported['assessments'];
+    $metrics = $assessments[0]['daily_metrics'];
 
     expect($metrics[0]['assumed_status'])->toBe('QC')      // 02-02: after QC, before 1st rework
         ->and($metrics[1]['assumed_status'])->toBe('Rework') // 02-04: during 1st rework (02-03 to 02-05)
@@ -585,7 +631,7 @@ test('discoverJobGuids passes current flag to query layer', function () {
 
     $this->mockQS->shouldReceive('executeAndHandle')
         ->once()
-        ->andReturn(collect([['JOBGUID' => $guid]]));
+        ->andReturn(collect([['FRSTR_USER' => 'jsmith', 'JOBGUID' => $guid]]));
 
     $service = makePlannerCareerService($this->mockQS);
     $assignments = $service->discoverJobGuids('jsmith', current: true);
@@ -632,13 +678,14 @@ test('exportForUser works for current assessments without close date', function 
     $filePath = $service->exportForUser('jsmith', $outputDir, current: true);
 
     $exported = json_decode(file_get_contents($filePath), true);
-    expect($exported)->toHaveCount(1)
-        ->and($exported[0]['assessment_pickup_date'])->toBe('2026-01-15')
-        ->and($exported[0]['assessment_qc_date'])->toBeNull()
-        ->and($exported[0]['assessment_close_date'])->toBeNull()
-        ->and($exported[0]['daily_metrics'])->toHaveCount(2)
-        ->and($exported[0]['daily_metrics'][0]['assumed_status'])->toBe('Active')
-        ->and($exported[0]['daily_metrics'][1]['assumed_status'])->toBe('Active');
+    $assessments = $exported['assessments'];
+    expect($assessments)->toHaveCount(1)
+        ->and($assessments[0]['assessment_pickup_date'])->toBe('2026-01-15')
+        ->and($assessments[0]['assessment_qc_date'])->toBeNull()
+        ->and($assessments[0]['assessment_close_date'])->toBeNull()
+        ->and($assessments[0]['daily_metrics'])->toHaveCount(2)
+        ->and($assessments[0]['daily_metrics'][0]['assumed_status'])->toBe('Active')
+        ->and($assessments[0]['daily_metrics'][1]['assumed_status'])->toBe('Active');
 
     unlink($filePath);
     rmdir($outputDir);
@@ -683,7 +730,8 @@ test('exportForUser handles current QC assessment with assumed statuses', functi
     $filePath = $service->exportForUser('jsmith', $outputDir, current: true);
 
     $exported = json_decode(file_get_contents($filePath), true);
-    $metrics = $exported[0]['daily_metrics'];
+    $assessments = $exported['assessments'];
+    $metrics = $assessments[0]['daily_metrics'];
 
     expect($metrics[0]['assumed_status'])->toBe('Active')  // before QC
         ->and($metrics[1]['assumed_status'])->toBe('QC');   // after QC, no close
@@ -768,7 +816,7 @@ test('exportForUser deduplicates daily_metrics by completion_date', function () 
         ],
         'summary_totals' => [],
     ]];
-    file_put_contents($exportPath, json_encode($existingData, JSON_PRETTY_PRINT));
+    file_put_contents($exportPath, json_encode(['assessments' => $existingData], JSON_PRETTY_PRINT));
 
     PlannerJobAssignment::factory()->withExportPath($exportPath)->create([
         'frstr_user' => 'jsmith',
@@ -815,7 +863,8 @@ test('exportForUser deduplicates daily_metrics by completion_date', function () 
     $filePath = $service->exportForUser('jsmith', $outputDir);
 
     $exported = json_decode(file_get_contents($filePath), true);
-    $metrics = $exported[0]['daily_metrics'];
+    $assessments = $exported['assessments'];
+    $metrics = $assessments[0]['daily_metrics'];
 
     // 3 unique dates: 01-15 (existing), 01-20 (overwritten), 01-25 (new)
     expect($metrics)->toHaveCount(3)
@@ -853,7 +902,7 @@ test('exportForUser skips up-to-date exported assignments', function () {
         ],
         'summary_totals' => [],
     ]];
-    file_put_contents($exportPath, json_encode($existingData, JSON_PRETTY_PRINT));
+    file_put_contents($exportPath, json_encode(['assessments' => $existingData], JSON_PRETTY_PRINT));
 
     PlannerJobAssignment::factory()->withExportPath($exportPath)->create([
         'frstr_user' => 'jsmith',
@@ -873,9 +922,10 @@ test('exportForUser skips up-to-date exported assignments', function () {
 
     // File should contain original data unchanged — only 1 API call (getEditDates)
     $exported = json_decode(file_get_contents($filePath), true);
-    expect($exported)->toHaveCount(1)
-        ->and($exported[0]['line_name'])->toBe('Circuit-1234')
-        ->and($exported[0]['daily_metrics'])->toHaveCount(1);
+    $assessments = $exported['assessments'];
+    expect($assessments)->toHaveCount(1)
+        ->and($assessments[0]['line_name'])->toBe('Circuit-1234')
+        ->and($assessments[0]['daily_metrics'])->toHaveCount(1);
 
     unlink($filePath);
     rmdir($outputDir);
@@ -907,7 +957,7 @@ test('exportForUser handles new and stale assignments in same run', function () 
         ],
         'summary_totals' => [],
     ]];
-    file_put_contents($exportPath, json_encode($existingData, JSON_PRETTY_PRINT));
+    file_put_contents($exportPath, json_encode(['assessments' => $existingData], JSON_PRETTY_PRINT));
 
     // Existing stale assignment
     PlannerJobAssignment::factory()->withExportPath($exportPath)->create([
@@ -966,14 +1016,15 @@ test('exportForUser handles new and stale assignments in same run', function () 
     $filePath = $service->exportForUser('jsmith', $outputDir);
 
     $exported = json_decode(file_get_contents($filePath), true);
-    expect($exported)->toHaveCount(2);
+    $assessments = $exported['assessments'];
+    expect($assessments)->toHaveCount(2);
 
-    $guids = array_column($exported, 'job_guid');
+    $guids = array_column($assessments, 'job_guid');
     expect($guids)->toContain($existingGuid)
         ->and($guids)->toContain($newGuid);
 
     // Verify stale was updated
-    $existingEntry = collect($exported)->firstWhere('job_guid', $existingGuid);
+    $existingEntry = collect($assessments)->firstWhere('job_guid', $existingGuid);
     expect($existingEntry['line_name'])->toBe('Updated-Circuit');
 
     // Verify both assignments updated
@@ -987,26 +1038,19 @@ test('exportForUser handles new and stale assignments in same run', function () 
     rmdir($outputDir);
 });
 
-test('exportForUser falls back to full export when file is missing', function () {
+test('exportForUser falls back to full export when export_path is outside target dir', function () {
     $guid = '{11111111-1111-1111-1111-111111111111}';
     $outputDir = sys_get_temp_dir().'/career_test_'.uniqid();
     mkdir($outputDir);
 
-    // Assignment has export_path pointing to non-existent file
+    // Assignment has export_path in a different directory — treated as new for this outputDir
     PlannerJobAssignment::factory()->withExportPath('/tmp/nonexistent_file.json')->create([
         'frstr_user' => 'jsmith',
         'job_guid' => $guid,
         'updated_at' => now()->subDays(5),
     ]);
 
-    // Mock: getEditDates
-    $this->mockQS->shouldReceive('executeAndHandle')
-        ->once()
-        ->andReturn(collect([
-            ['JOBGUID' => $guid, 'edit_date' => now()->toIso8601String()],
-        ]));
-
-    // Mock: getFullCareerData — full export (file missing means all treated as new)
+    // Only one API call needed — no staleness check since it's treated as new
     $this->mockQS->shouldReceive('executeAndHandle')
         ->once()
         ->andReturn(collect([
@@ -1035,8 +1079,9 @@ test('exportForUser falls back to full export when file is missing', function ()
     $filePath = $service->exportForUser('jsmith', $outputDir);
 
     $exported = json_decode(file_get_contents($filePath), true);
-    expect($exported)->toHaveCount(1)
-        ->and($exported[0]['line_name'])->toBe('Circuit-1234');
+    $assessments = $exported['assessments'];
+    expect($assessments)->toHaveCount(1)
+        ->and($assessments[0]['line_name'])->toBe('Circuit-1234');
 
     $assignment = PlannerJobAssignment::first();
     expect($assignment->status)->toBe('exported')
@@ -1071,7 +1116,7 @@ test('exportForUser re-enriches assumed_status on merged metrics', function () {
         ],
         'summary_totals' => [],
     ]];
-    file_put_contents($exportPath, json_encode($existingData, JSON_PRETTY_PRINT));
+    file_put_contents($exportPath, json_encode(['assessments' => $existingData], JSON_PRETTY_PRINT));
 
     PlannerJobAssignment::factory()->withExportPath($exportPath)->create([
         'frstr_user' => 'jsmith',
@@ -1116,7 +1161,8 @@ test('exportForUser re-enriches assumed_status on merged metrics', function () {
     $filePath = $service->exportForUser('jsmith', $outputDir);
 
     $exported = json_decode(file_get_contents($filePath), true);
-    $metrics = $exported[0]['daily_metrics'];
+    $assessments = $exported['assessments'];
+    $metrics = $assessments[0]['daily_metrics'];
 
     // Existing metric should be re-enriched with current timeline
     expect($metrics)->toHaveCount(2)
@@ -1152,7 +1198,7 @@ test('exportForUser refreshes metadata on stale assessment', function () {
         'daily_metrics' => [],
         'summary_totals' => [],
     ]];
-    file_put_contents($exportPath, json_encode($existingData, JSON_PRETTY_PRINT));
+    file_put_contents($exportPath, json_encode(['assessments' => $existingData], JSON_PRETTY_PRINT));
 
     PlannerJobAssignment::factory()->withExportPath($exportPath)->create([
         'frstr_user' => 'jsmith',
@@ -1195,14 +1241,15 @@ test('exportForUser refreshes metadata on stale assessment', function () {
     $filePath = $service->exportForUser('jsmith', $outputDir);
 
     $exported = json_decode(file_get_contents($filePath), true);
-    expect($exported[0]['line_name'])->toBe('New-Name')
-        ->and($exported[0]['region'])->toBe('HARRISBURG')
-        ->and($exported[0]['cycle_type'])->toBe('Removal')
-        ->and($exported[0]['assessment_total_miles'])->toEqual(15.0)
-        ->and($exported[0]['assessment_total_miles_planned'])->toEqual(12.5)
-        ->and($exported[0]['assessment_qc_date'])->toBe('2026-02-01')
-        ->and($exported[0]['assessment_close_date'])->toBe('2026-02-10')
-        ->and($exported[0]['summary_totals'])->toHaveCount(1);
+    $assessments = $exported['assessments'];
+    expect($assessments[0]['line_name'])->toBe('New-Name')
+        ->and($assessments[0]['region'])->toBe('HARRISBURG')
+        ->and($assessments[0]['cycle_type'])->toBe('Removal')
+        ->and($assessments[0]['assessment_total_miles'])->toEqual(15.0)
+        ->and($assessments[0]['assessment_total_miles_planned'])->toEqual(12.5)
+        ->and($assessments[0]['assessment_qc_date'])->toBe('2026-02-01')
+        ->and($assessments[0]['assessment_close_date'])->toBe('2026-02-10')
+        ->and($assessments[0]['summary_totals'])->toHaveCount(1);
 
     unlink($filePath);
     rmdir($outputDir);
@@ -1225,5 +1272,247 @@ test('exportForUsers returns map of username to file path', function () {
             unlink($path);
         }
     }
+    rmdir($outputDir);
+});
+
+// ─── contribution fields ─────────────────────────────────────────────────────
+
+test('exportForUser computes total_contribution from queried user daily metrics', function () {
+    $guid = '{11111111-1111-1111-1111-111111111111}';
+    $outputDir = sys_get_temp_dir().'/career_test_'.uniqid();
+    mkdir($outputDir);
+
+    PlannerJobAssignment::factory()->create([
+        'frstr_user' => 'jsmith',
+        'job_guid' => $guid,
+        'status' => 'discovered',
+    ]);
+
+    $this->mockQS->shouldReceive('executeAndHandle')
+        ->once()
+        ->andReturn(collect([
+            [
+                'JOBGUID' => $guid,
+                'STATUS' => 'CLOSE',
+                'line_name' => 'Circuit-1234',
+                'WO' => 'WO-100',
+                'EXT' => '@',
+                'region' => 'CENTRAL',
+                'cycle_type' => 'Trim',
+                'assigned_planner' => 'jsmith',
+                'total_miles' => 10.5,
+                'total_miles_planned' => 8.0,
+                'timeline' => json_encode([
+                    ['JOBSTATUS' => 'ACTIV', 'LOGDATE' => '2026-01-10'],
+                    ['JOBSTATUS' => 'CLOSE', 'LOGDATE' => '2026-02-10'],
+                ]),
+                'work_type_breakdown' => json_encode([]),
+                'rework_details' => null,
+                'daily_metrics' => json_encode([
+                    ['completion_date' => '2026-01-15', 'FRSTR_USER' => 'jsmith', 'daily_footage_miles' => 1.5, 'unit_count' => 5],
+                    ['completion_date' => '2026-01-20', 'FRSTR_USER' => 'jsmith', 'daily_footage_miles' => 2.3, 'unit_count' => 8],
+                    ['completion_date' => '2026-01-25', 'FRSTR_USER' => 'jsmith', 'daily_footage_miles' => 0.75, 'unit_count' => 3],
+                ]),
+            ],
+        ]));
+
+    $service = makePlannerCareerService($this->mockQS);
+    $filePath = $service->exportForUser('jsmith', $outputDir);
+
+    $exported = json_decode(file_get_contents($filePath), true);
+    $assessments = $exported['assessments'];
+    expect($assessments[0]['total_contribution'])->toBe(4.55)
+        ->and($assessments[0]['others_total_contribution'])->toBe([])
+        ->and($assessments[0]['wo'])->toBe('WO-100')
+        ->and($assessments[0]['ext'])->toBe('@');
+
+    unlink($filePath);
+    rmdir($outputDir);
+});
+
+test('exportForUser computes others_total_contribution with stripped domain keys', function () {
+    $guid = '{11111111-1111-1111-1111-111111111111}';
+    $outputDir = sys_get_temp_dir().'/career_test_'.uniqid();
+    mkdir($outputDir);
+
+    PlannerJobAssignment::factory()->create([
+        'frstr_user' => 'jsmith',
+        'job_guid' => $guid,
+        'status' => 'discovered',
+    ]);
+
+    $this->mockQS->shouldReceive('executeAndHandle')
+        ->once()
+        ->andReturn(collect([
+            [
+                'JOBGUID' => $guid,
+                'STATUS' => 'CLOSE',
+                'line_name' => 'Circuit-1234',
+                'WO' => 'WO-200',
+                'EXT' => '@',
+                'region' => 'CENTRAL',
+                'cycle_type' => 'Trim',
+                'assigned_planner' => 'jsmith',
+                'total_miles' => 10.5,
+                'total_miles_planned' => 8.0,
+                'timeline' => json_encode([
+                    ['JOBSTATUS' => 'ACTIV', 'LOGDATE' => '2026-01-10'],
+                    ['JOBSTATUS' => 'CLOSE', 'LOGDATE' => '2026-02-10'],
+                ]),
+                'work_type_breakdown' => json_encode([]),
+                'rework_details' => null,
+                'daily_metrics' => json_encode([
+                    ['completion_date' => '2026-01-15', 'FRSTR_USER' => 'jsmith', 'daily_footage_miles' => 3.0, 'unit_count' => 10],
+                    ['completion_date' => '2026-01-16', 'FRSTR_USER' => 'ASPLUNDH\\jdoe', 'daily_footage_miles' => 1.2, 'unit_count' => 4],
+                    ['completion_date' => '2026-01-17', 'FRSTR_USER' => 'ASPLUNDH\\jdoe', 'daily_footage_miles' => 0.8, 'unit_count' => 3],
+                    ['completion_date' => '2026-01-18', 'FRSTR_USER' => 'ASPLUNDH\\bsmith', 'daily_footage_miles' => 2.5, 'unit_count' => 7],
+                ]),
+            ],
+        ]));
+
+    $service = makePlannerCareerService($this->mockQS);
+    $filePath = $service->exportForUser('jsmith', $outputDir);
+
+    $exported = json_decode(file_get_contents($filePath), true);
+    $assessments = $exported['assessments'];
+    expect($assessments[0]['total_contribution'])->toEqual(3.0)
+        ->and($assessments[0]['others_total_contribution'])->toEqual([
+            'jdoe' => 2.0,
+            'bsmith' => 2.5,
+        ]);
+
+    unlink($filePath);
+    rmdir($outputDir);
+});
+
+test('exportForUser recomputes contributions after stale merge', function () {
+    $guid = '{11111111-1111-1111-1111-111111111111}';
+    $outputDir = sys_get_temp_dir().'/career_test_'.uniqid();
+    mkdir($outputDir);
+
+    $exportPath = $outputDir.'/jsmith_2026-02-01.json';
+    $existingData = [[
+        'planner_username' => 'jsmith',
+        'total_contribution' => 1.5,
+        'job_guid' => $guid,
+        'line_name' => 'Circuit-1234',
+        'wo' => 'WO-300',
+        'ext' => '@',
+        'region' => 'CENTRAL',
+        'scope_year' => '2026',
+        'cycle_type' => 'Trim',
+        'assessment_total_miles' => 10.5,
+        'assessment_total_miles_planned' => 8.0,
+        'assessment_pickup_date' => '2026-01-10',
+        'assessment_qc_date' => null,
+        'assessment_close_date' => null,
+        'went_to_rework' => false,
+        'rework_details' => null,
+        'daily_metrics' => [
+            ['completion_date' => '2026-01-15', 'FRSTR_USER' => 'jsmith', 'daily_footage_miles' => 1.5, 'unit_count' => 5, 'assumed_status' => 'Active'],
+        ],
+        'others_total_contribution' => [],
+        'summary_totals' => [],
+    ]];
+    file_put_contents($exportPath, json_encode(['assessments' => $existingData], JSON_PRETTY_PRINT));
+
+    PlannerJobAssignment::factory()->withExportPath($exportPath)->create([
+        'frstr_user' => 'jsmith',
+        'job_guid' => $guid,
+        'updated_at' => now()->subDays(5),
+    ]);
+
+    // Mock: stale
+    $this->mockQS->shouldReceive('executeAndHandle')
+        ->once()
+        ->andReturn(collect([
+            ['JOBGUID' => $guid, 'edit_date' => now()->toIso8601String()],
+        ]));
+
+    // Mock: fresh data with another user's contribution
+    $this->mockQS->shouldReceive('executeAndHandle')
+        ->once()
+        ->andReturn(collect([
+            [
+                'JOBGUID' => $guid,
+                'STATUS' => 'CLOSE',
+                'line_name' => 'Circuit-1234',
+                'WO' => 'WO-300',
+                'EXT' => '@',
+                'region' => 'CENTRAL',
+                'cycle_type' => 'Trim',
+                'assigned_planner' => 'jsmith',
+                'total_miles' => 10.5,
+                'total_miles_planned' => 8.0,
+                'timeline' => json_encode([
+                    ['JOBSTATUS' => 'ACTIV', 'LOGDATE' => '2026-01-10'],
+                    ['JOBSTATUS' => 'CLOSE', 'LOGDATE' => '2026-02-10'],
+                ]),
+                'work_type_breakdown' => json_encode([]),
+                'rework_details' => null,
+                'daily_metrics' => json_encode([
+                    ['completion_date' => '2026-01-20', 'FRSTR_USER' => 'jsmith', 'daily_footage_miles' => 2.0, 'unit_count' => 6],
+                    ['completion_date' => '2026-01-21', 'FRSTR_USER' => 'ASPLUNDH\\jdoe', 'daily_footage_miles' => 1.0, 'unit_count' => 3],
+                ]),
+            ],
+        ]));
+
+    $service = makePlannerCareerService($this->mockQS);
+    $filePath = $service->exportForUser('jsmith', $outputDir);
+
+    $exported = json_decode(file_get_contents($filePath), true);
+    $assessments = $exported['assessments'];
+    // 1.5 (existing) + 2.0 (new) = 3.5
+    expect($assessments[0]['total_contribution'])->toEqual(3.5)
+        ->and($assessments[0]['others_total_contribution'])->toEqual(['jdoe' => 1.0])
+        ->and($assessments[0]['daily_metrics'])->toHaveCount(3);
+
+    unlink($filePath);
+    rmdir($outputDir);
+});
+
+test('exportForUser includes wo and ext fields as null when missing from API', function () {
+    $guid = '{11111111-1111-1111-1111-111111111111}';
+    $outputDir = sys_get_temp_dir().'/career_test_'.uniqid();
+    mkdir($outputDir);
+
+    PlannerJobAssignment::factory()->create([
+        'frstr_user' => 'jsmith',
+        'job_guid' => $guid,
+        'status' => 'discovered',
+    ]);
+
+    $this->mockQS->shouldReceive('executeAndHandle')
+        ->once()
+        ->andReturn(collect([
+            [
+                'JOBGUID' => $guid,
+                'STATUS' => 'CLOSE',
+                'line_name' => 'Circuit-1234',
+                'region' => 'CENTRAL',
+                'cycle_type' => 'Trim',
+                'assigned_planner' => 'jsmith',
+                'total_miles' => 10.5,
+                'timeline' => json_encode([
+                    ['JOBSTATUS' => 'ACTIV', 'LOGDATE' => '2026-01-10'],
+                    ['JOBSTATUS' => 'CLOSE', 'LOGDATE' => '2026-02-10'],
+                ]),
+                'work_type_breakdown' => json_encode([]),
+                'rework_details' => null,
+                'daily_metrics' => json_encode([]),
+            ],
+        ]));
+
+    $service = makePlannerCareerService($this->mockQS);
+    $filePath = $service->exportForUser('jsmith', $outputDir);
+
+    $exported = json_decode(file_get_contents($filePath), true);
+    $assessments = $exported['assessments'];
+    expect($assessments[0]['wo'])->toBeNull()
+        ->and($assessments[0]['ext'])->toBeNull()
+        ->and($assessments[0]['total_contribution'])->toEqual(0.0)
+        ->and($assessments[0]['others_total_contribution'])->toEqual([]);
+
+    unlink($filePath);
     rmdir($outputDir);
 });

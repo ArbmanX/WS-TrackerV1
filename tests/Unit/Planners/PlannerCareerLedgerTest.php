@@ -26,7 +26,7 @@ test('getDistinctJobGuids queries VEGUNIT joined with SS for closed parent asses
     $sql = $queries->getDistinctJobGuids('jsmith');
 
     expect($sql)
-        ->toContain('SELECT DISTINCT VU.JOBGUID')
+        ->toContain('SELECT DISTINCT VU.FRSTR_USER, VU.JOBGUID')
         ->toContain('FROM VEGUNIT VU')
         ->toContain('INNER JOIN SS ON SS.JOBGUID = VU.JOBGUID')
         ->toContain("SS.STATUS = 'CLOSE'")

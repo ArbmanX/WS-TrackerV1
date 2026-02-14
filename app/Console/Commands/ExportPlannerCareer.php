@@ -27,7 +27,9 @@ class ExportPlannerCareer extends Command
 
         $current = $this->option('current');
         $allYears = $this->option('all-years');
-        $outputDir = $this->option('output') ?: storage_path('app/career');
+        $subDir = $current ? 'current' : 'closed';
+        $domain = strtolower($this->extractDomain($users[0]));
+        $outputDir = $this->option('output') ?: storage_path("app/{$domain}/planners/{$subDir}");
 
         if (! is_dir($outputDir)) {
             mkdir($outputDir, 0755, true);
@@ -64,5 +66,14 @@ class ExportPlannerCareer extends Command
         $this->info("Exported {$successCount}/".count($users).' planner career file(s).');
 
         return $successCount === count($users) ? self::SUCCESS : self::FAILURE;
+    }
+
+    private function extractDomain(string $user): string
+    {
+        $domain = str_contains($user, '\\')
+            ? substr($user, 0, strrpos($user, '\\'))
+            : config('ws_assessment_query.contractors.0', 'asplundh');
+
+        return preg_replace('/\s+/', '_', trim($domain));
     }
 }

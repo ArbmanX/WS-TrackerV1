@@ -60,9 +60,9 @@ test('import command fails when file not found', function () {
 });
 
 test('import command uses config default path', function () {
-    $defaultPath = config('ws_data_collection.career_ledger.bootstrap_path');
+    // Override config to a guaranteed-nonexistent path so the test is filesystem-independent
+    config()->set('ws_data_collection.career_ledger.bootstrap_path', '/tmp/nonexistent_bootstrap_'.uniqid().'.json');
 
-    // File doesn't exist at default path — should fail with file not found
     $this->artisan('ws:import-career-ledger')
         ->expectsOutputToContain('File not found')
         ->assertFailed();

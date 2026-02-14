@@ -35,7 +35,7 @@ class PlannerCareerLedger extends AbstractQueryBuilder
             $yearFilter = "AND WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$this->scopeYear}%'";
         }
 
-        return "SELECT DISTINCT VU.JOBGUID
+        return "SELECT DISTINCT VU.FRSTR_USER, VU.JOBGUID
 FROM VEGUNIT VU
 INNER JOIN SS ON SS.JOBGUID = VU.JOBGUID
 {$xrefJoin}
@@ -117,6 +117,8 @@ WHERE SS.JOBGUID IN ({$guidsSql})";
     VEGJOB.REGION AS region,
     VEGJOB.CYCLETYPE AS cycle_type,
     VEGJOB.FRSTR_USER AS assigned_planner,
+    VEGJOB.WO,
+    VEGJOB.EXT,
     VEGJOB.LENGTH AS total_miles,
     VEGJOB.LENGTHCOMP AS total_miles_planned,
     (SELECT TOP 1 {$extractYear}
