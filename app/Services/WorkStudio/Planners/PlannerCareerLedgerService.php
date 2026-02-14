@@ -75,46 +75,28 @@ class PlannerCareerLedgerService
 
         $guids = $assignments->pluck('job_guid')->toArray();
 
-        $metadataSql = $this->queries->getAssessmentMetadataBatch($guids);
-        $metadata = $this->queryService->executeAndHandle($metadataSql)
-            ->keyBy('JOBGUID');
-
-        $footageSql = $this->queries->getDailyFootageAttributionBatch($guids);
-        $footageData = $this->queryService->executeAndHandle($footageSql);
+        // Single API call — returns one row per assessment with JSON columns
+        $sql = $this->queries->getFullCareerData($guids);
+        $results = $this->queryService->executeAndHandle($sql);
 
         $entries = [];
 
-        foreach ($guids as $jobGuid) {
-            $meta = $metadata->get($jobGuid, []);
-
-            $dailyMetrics = $footageData
-                ->filter(fn (array $row) => $row['JOBGUID'] === $jobGuid)
-                ->values()
-                ->toArray();
-
-            $timelineSql = $this->queries->getAssessmentTimeline($jobGuid);
-            $timeline = $this->queryService->executeAndHandle($timelineSql);
-            $dates = $this->extractTimelineDates($timeline);
-
-            $summaryTotalsSql = $this->queries->getWorkTypeBreakdown($jobGuid);
-            $summaryTotals = $this->queryService->executeAndHandle($summaryTotalsSql)->toArray();
-
-            $wentToRework = $this->hadRework($timeline);
-            $reworkDetails = null;
-
-            if ($wentToRework) {
-                $reworkSql = $this->queries->getReworkDetails($jobGuid);
-                $reworkDetails = $this->queryService->executeAndHandle($reworkSql)->toArray();
-            }
+        foreach ($results as $row) {
+            $timeline = json_decode($row['timeline'] ?? '[]', true) ?? [];
+            $dates = $this->extractTimelineDates(collect($timeline));
+            $wentToRework = $this->hadRework(collect($timeline));
+            $reworkDetails = json_decode($row['rework_details'] ?? 'null', true);
+            $dailyMetrics = json_decode($row['daily_metrics'] ?? '[]', true) ?? [];
+            $summaryTotals = json_decode($row['work_type_breakdown'] ?? '[]', true) ?? [];
 
             $entries[] = [
                 'planner_username' => $frstrUser,
-                'job_guid' => $jobGuid,
-                'line_name' => $meta['line_name'] ?? null,
-                'region' => $meta['region'] ?? null,
+                'job_guid' => $row['JOBGUID'],
+                'line_name' => $row['line_name'] ?? null,
+                'region' => $row['region'] ?? null,
                 'scope_year' => $this->scopeYear(),
-                'cycle_type' => $meta['cycle_type'] ?? null,
-                'assessment_total_miles' => $meta['total_miles'] ?? null,
+                'cycle_type' => $row['cycle_type'] ?? null,
+                'assessment_total_miles' => $row['total_miles'] ?? null,
                 'assessment_pickup_date' => $dates['pickup'] ?? null,
                 'assessment_qc_date' => $dates['qc'] ?? null,
                 'assessment_close_date' => $dates['close'] ?? null,

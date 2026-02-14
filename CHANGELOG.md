@@ -13,8 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Planner Career Ledger** (2026-02-14)
   - **Database:** `planner_job_assignments` table — tracks discovered JOBGUIDs per FRSTR_USER with status lifecycle (discovered → processed → exported)
   - **Model & Factory:** `PlannerJobAssignment` with `forUser`, `pending`, `processed`, `exported` scopes and `wsUser()` relationship
-  - **Query Builder:** `PlannerCareerLedger` in `app/Services/WorkStudio/Planners/Queries/` — 7 methods for user-centric career data extraction using ASSDDATE-only attribution (no DATEPOP fallback)
-  - **Service:** `PlannerCareerLedgerService` in `app/Services/WorkStudio/Planners/` — discover job assignments, export per-user JSON career files
+  - **Query Builder:** `PlannerCareerLedger` in `app/Services/WorkStudio/Planners/Queries/` — consolidated single-query career data extraction using FOR JSON PATH subqueries and OUTER APPLY for daily metrics (ASSDDATE-only attribution)
+  - **Service:** `PlannerCareerLedgerService` in `app/Services/WorkStudio/Planners/` — discover job assignments, export per-user JSON career files (1 API call per export via consolidated query)
   - **Artisan Command:** `ws:export-planner-career {users} --output` — discover and export planner career data for specific FRSTR_USERs
   - **Tests:** 55 new tests (Unit: query SQL validation, Feature: model scopes, service mock tests, command tests)
 
