@@ -58,6 +58,35 @@ test('getDistinctJobGuids uses no CTEs', function () {
     expect($sql)->not->toMatch('/\bWITH\b(?!IN)/');
 });
 
+// ─── getDistinctJobGuids — current mode ─────────────────────────────────────
+
+test('getDistinctJobGuids with current flag queries active statuses', function () {
+    $queries = new PlannerCareerLedger(makePlannerContext());
+    $sql = $queries->getDistinctJobGuids('jsmith', current: true);
+
+    expect($sql)
+        ->toContain("SS.STATUS IN ('ACTIV', 'QC', 'REWRK')")
+        ->not->toContain("SS.STATUS = 'CLOSE'");
+});
+
+test('getDistinctJobGuids without current flag queries closed status', function () {
+    $queries = new PlannerCareerLedger(makePlannerContext());
+    $sql = $queries->getDistinctJobGuids('jsmith', current: false);
+
+    expect($sql)
+        ->toContain("SS.STATUS = 'CLOSE'")
+        ->not->toContain("'ACTIV'");
+});
+
+test('getDistinctJobGuids current mode still requires parent assessments and ASSDDATE', function () {
+    $queries = new PlannerCareerLedger(makePlannerContext());
+    $sql = $queries->getDistinctJobGuids('jsmith', current: true);
+
+    expect($sql)
+        ->toContain("SS.EXT = '@'")
+        ->toContain('VU.ASSDDATE IS NOT NULL');
+});
+
 // ─── getFullCareerData — Metadata (flat columns) ────────────────────────────
 
 test('getFullCareerData includes metadata columns from SS and VEGJOB', function () {
@@ -72,6 +101,7 @@ test('getFullCareerData includes metadata columns from SS and VEGJOB', function 
         ->toContain('VEGJOB.CYCLETYPE AS cycle_type')
         ->toContain('VEGJOB.FRSTR_USER AS assigned_planner')
         ->toContain('VEGJOB.LENGTH AS total_miles')
+        ->toContain('VEGJOB.LENGTHCOMP AS total_miles_planned')
         ->toContain('INNER JOIN VEGJOB ON VEGJOB.JOBGUID = SS.JOBGUID');
 });
 

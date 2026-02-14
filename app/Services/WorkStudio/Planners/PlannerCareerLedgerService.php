@@ -24,13 +24,14 @@ class PlannerCareerLedgerService
      * Discover JOBGUIDs for given FRSTR_USERs and upsert to planner_job_assignments.
      *
      * @param  string|array<int, string>  $frstrUsers
+     * @param  bool  $current  When true, discover active/QC/rework assessments instead of closed
      * @return Collection<int, PlannerJobAssignment>
      */
-    public function discoverJobGuids(string|array $frstrUsers): Collection
+    public function discoverJobGuids(string|array $frstrUsers, bool $current = false): Collection
     {
         $users = is_array($frstrUsers) ? $frstrUsers : [$frstrUsers];
 
-        $sql = $this->queries->getDistinctJobGuids($users);
+        $sql = $this->queries->getDistinctJobGuids($users, $current);
         $results = $this->queryService->executeAndHandle($sql);
 
         $assignments = collect();
@@ -58,9 +59,10 @@ class PlannerCareerLedgerService
     /**
      * Export career data for a single user to a JSON file.
      *
+     * @param  bool  $current  When true, export active/QC/rework assessments instead of closed
      * @return string File path of the exported JSON
      */
-    public function exportForUser(string $frstrUser, string $outputDir): string
+    public function exportForUser(string $frstrUser, string $outputDir, bool $current = false): string
     {
         $assignments = PlannerJobAssignment::forUser($frstrUser)
             ->whereIn('status', ['discovered', 'processed'])
@@ -85,8 +87,10 @@ class PlannerCareerLedgerService
             $timeline = json_decode($row['timeline'] ?? '[]', true) ?? [];
             $dates = $this->extractTimelineDates(collect($timeline));
             $wentToRework = $this->hadRework(collect($timeline));
+            $reworkPeriods = $this->extractReworkPeriods($timeline, $dates['close']);
             $reworkDetails = json_decode($row['rework_details'] ?? 'null', true);
             $dailyMetrics = json_decode($row['daily_metrics'] ?? '[]', true) ?? [];
+            $dailyMetrics = $this->enrichDailyMetricsWithStatus($dailyMetrics, $dates, $reworkPeriods);
             $summaryTotals = json_decode($row['work_type_breakdown'] ?? '[]', true) ?? [];
 
             $entries[] = [
@@ -97,6 +101,7 @@ class PlannerCareerLedgerService
                 'scope_year' => $this->scopeYear(),
                 'cycle_type' => $row['cycle_type'] ?? null,
                 'assessment_total_miles' => $row['total_miles'] ?? null,
+                'assessment_total_miles_planned' => $row['total_miles_planned'] ?? null,
                 'assessment_pickup_date' => $dates['pickup'] ?? null,
                 'assessment_qc_date' => $dates['qc'] ?? null,
                 'assessment_close_date' => $dates['close'] ?? null,
@@ -121,15 +126,16 @@ class PlannerCareerLedgerService
      * Batch export career data for multiple users.
      *
      * @param  array<int, string>  $frstrUsers
+     * @param  bool  $current  When true, export active/QC/rework assessments instead of closed
      * @return array<string, string> Map of username => file path
      */
-    public function exportForUsers(array $frstrUsers, string $outputDir): array
+    public function exportForUsers(array $frstrUsers, string $outputDir, bool $current = false): array
     {
         $results = [];
 
         foreach ($frstrUsers as $user) {
             try {
-                $results[$user] = $this->exportForUser($user, $outputDir);
+                $results[$user] = $this->exportForUser($user, $outputDir, $current);
             } catch (\Throwable $e) {
                 Log::warning('Planner career export failed', [
                     'user' => $user,
@@ -185,6 +191,94 @@ class PlannerCareerLedgerService
         }
 
         return false;
+    }
+
+    /**
+     * Extract rework periods from timeline as date pairs.
+     *
+     * Each rework period starts when JOBSTATUS = 'REWRK' and ends
+     * at the next timeline entry's date (or the close date as fallback).
+     *
+     * @return array<int, array{start: string, end: ?string}>
+     */
+    private function extractReworkPeriods($timeline, ?string $closeDate): array
+    {
+        $periods = [];
+
+        foreach ($timeline as $i => $entry) {
+            if (($entry['JOBSTATUS'] ?? null) !== 'REWRK') {
+                continue;
+            }
+
+            $start = $this->parseDdoDate($entry['LOGDATE'] ?? '');
+
+            if (! $start) {
+                continue;
+            }
+
+            // End is the next timeline entry's date, or close date as fallback
+            $end = null;
+            for ($j = $i + 1; $j < count($timeline); $j++) {
+                $nextDate = $this->parseDdoDate($timeline[$j]['LOGDATE'] ?? '');
+                if ($nextDate) {
+                    $end = $nextDate;
+                    break;
+                }
+            }
+
+            $end = $end ?? $closeDate;
+
+            $periods[] = ['start' => $start, 'end' => $end];
+        }
+
+        return $periods;
+    }
+
+    /**
+     * Determine the assumed status for a given date based on assessment lifecycle.
+     *
+     * @param  array{pickup: ?string, qc: ?string, close: ?string}  $lifecycle
+     * @param  array<int, array{start: string, end: ?string}>  $reworkPeriods
+     */
+    private function determineAssumedStatus(string $date, array $lifecycle, array $reworkPeriods): string
+    {
+        if ($lifecycle['close'] && $date >= $lifecycle['close']) {
+            return 'Closed';
+        }
+
+        if ($lifecycle['qc'] && $date >= $lifecycle['qc']) {
+            foreach ($reworkPeriods as $period) {
+                $afterStart = $date >= $period['start'];
+                $beforeEnd = $period['end'] === null || $date < $period['end'];
+
+                if ($afterStart && $beforeEnd) {
+                    return 'Rework';
+                }
+            }
+
+            return 'QC';
+        }
+
+        return 'Active';
+    }
+
+    /**
+     * Add assumed_status to each daily metric entry.
+     *
+     * @param  array{pickup: ?string, qc: ?string, close: ?string}  $lifecycle
+     * @param  array<int, array{start: string, end: ?string}>  $reworkPeriods
+     */
+    private function enrichDailyMetricsWithStatus(array $dailyMetrics, array $lifecycle, array $reworkPeriods): array
+    {
+        return array_map(function ($entry) use ($lifecycle, $reworkPeriods) {
+            $date = $entry['completion_date'] ?? null;
+
+            if ($date) {
+                $entry['assumed_status'] = $this->determineAssumedStatus($date, $lifecycle, $reworkPeriods);
+            }
+
+            return $entry;
+        }, $dailyMetrics);
     }
 
     /**

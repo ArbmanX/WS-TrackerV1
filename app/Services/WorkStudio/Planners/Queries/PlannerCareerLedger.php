@@ -8,24 +8,30 @@ use App\Services\WorkStudio\Shared\Helpers\WSHelpers;
 class PlannerCareerLedger extends AbstractQueryBuilder
 {
     /**
-     * Discover distinct closed JOBGUIDs for one or more FRSTR_USERs.
+     * Discover distinct JOBGUIDs for one or more FRSTR_USERs.
      *
      * Joins VEGUNIT → SS to find assessments where the user performed
-     * field work (has ASSDDATE) and the assessment is closed.
-     * Only includes parent assessments (EXT = '@').
+     * field work (has ASSDDATE). Only includes parent assessments (EXT = '@').
+     *
+     * When $current is true, returns active assessments (ACTIV, QC, REWRK).
+     * When false (default), returns closed assessments only.
      *
      * @param  string|array<int, string>  $frstrUsers
      */
-    public function getDistinctJobGuids(string|array $frstrUsers): string
+    public function getDistinctJobGuids(string|array $frstrUsers, bool $current = false): string
     {
         $users = is_array($frstrUsers) ? $frstrUsers : [$frstrUsers];
         $usersSql = WSHelpers::toSqlInClause($users);
+
+        $statusFilter = $current
+            ? "SS.STATUS IN ('ACTIV', 'QC', 'REWRK')"
+            : "SS.STATUS = 'CLOSE'";
 
         return "SELECT DISTINCT VU.JOBGUID
 FROM VEGUNIT VU
 INNER JOIN SS ON SS.JOBGUID = VU.JOBGUID
 WHERE VU.FRSTR_USER IN ({$usersSql})
-    AND SS.STATUS = 'CLOSE'
+    AND {$statusFilter}
     AND SS.EXT = '@'
     AND VU.ASSDDATE IS NOT NULL
     AND VU.ASSDDATE != ''";
@@ -76,6 +82,7 @@ WHERE VU.FRSTR_USER IN ({$usersSql})
     VEGJOB.CYCLETYPE AS cycle_type,
     VEGJOB.FRSTR_USER AS assigned_planner,
     VEGJOB.LENGTH AS total_miles,
+    VEGJOB.LENGTHCOMP AS total_miles_planned,
     (SELECT
         JH.USERNAME, JH.ACTION, JH.LOGDATE,
         JH.OLDSTATUS, JH.JOBSTATUS, JH.ASSIGNEDTO
@@ -84,7 +91,7 @@ WHERE VU.FRSTR_USER IN ({$usersSql})
      ORDER BY JH.LOGDATE ASC
      FOR JSON PATH
     ) AS timeline,
-    (SELECT VA.unit, VA.UnitQty
+    (SELECT VA.unit, ROUND(VA.UnitQty, 2) AS UnitQty
      FROM V_ASSESSMENT VA
      WHERE VA.jobguid = SS.JOBGUID
      ORDER BY VA.unit
@@ -114,7 +121,7 @@ OUTER APPLY (
         SELECT
             FU.completion_date,
             FU.FRSTR_USER,
-            CAST(SUM(ISNULL(ST.SPANLGTH, 0)) / 1609.34 AS DECIMAL(10,4)) AS daily_footage_miles,
+            CAST(SUM(ISNULL(ST.SPANLGTH, 0)) / 1609.34 AS DECIMAL(10,2)) AS daily_footage_miles,
             STRING_AGG(CAST(FU.STATNAME AS VARCHAR(MAX)), ',') WITHIN GROUP (ORDER BY FU.STATNAME) AS station_list,
             SUM(CASE WHEN U.SUMMARYGRP IS NOT NULL AND U.SUMMARYGRP != '' AND U.SUMMARYGRP != 'Summary-NonWork' THEN 1 ELSE 0 END) AS unit_count
         FROM (

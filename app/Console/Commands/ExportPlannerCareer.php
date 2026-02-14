@@ -9,9 +9,10 @@ class ExportPlannerCareer extends Command
 {
     protected $signature = 'ws:export-planner-career
         {users?* : One or more FRSTR_USER usernames}
-        {--output= : Output directory (default: storage/app/career)}';
+        {--output= : Output directory (default: storage/app/career)}
+        {--current : Export active/QC/rework assessments instead of closed}';
 
-    protected $description = 'Export per-planner career data from closed assessments';
+    protected $description = 'Export per-planner career data from assessments';
 
     public function handle(PlannerCareerLedgerService $service): int
     {
@@ -23,17 +24,19 @@ class ExportPlannerCareer extends Command
             return self::FAILURE;
         }
 
+        $current = $this->option('current');
         $outputDir = $this->option('output') ?: storage_path('app/career');
 
         if (! is_dir($outputDir)) {
             mkdir($outputDir, 0755, true);
         }
 
-        $this->info('Discovering job assignments for: '.implode(', ', $users));
+        $mode = $current ? 'current (active/QC/rework)' : 'closed';
+        $this->info("Discovering {$mode} job assignments for: ".implode(', ', $users));
         $this->warn('This makes API calls and may take a while.');
 
         try {
-            $discovered = $service->discoverJobGuids($users);
+            $discovered = $service->discoverJobGuids($users, $current);
             $this->info("Discovered {$discovered->count()} job assignment(s).");
         } catch (\Throwable $e) {
             $this->error("Discovery failed: {$e->getMessage()}");
@@ -43,7 +46,7 @@ class ExportPlannerCareer extends Command
 
         $this->info('Exporting career data...');
 
-        $results = $service->exportForUsers($users, $outputDir);
+        $results = $service->exportForUsers($users, $outputDir, $current);
 
         foreach ($results as $user => $path) {
             if (str_starts_with($path, 'ERROR:')) {

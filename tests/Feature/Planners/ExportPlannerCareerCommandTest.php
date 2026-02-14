@@ -44,8 +44,29 @@ test('command outputs discovery and export info', function () {
         'users' => ['jsmith'],
         '--output' => $outputDir,
     ])
-        ->expectsOutputToContain('Discovering job assignments for: jsmith')
+        ->expectsOutputToContain('Discovering closed job assignments for: jsmith')
         ->expectsOutputToContain('Discovered 0 job assignment(s)')
+        ->assertExitCode(0);
+
+    array_map('unlink', glob($outputDir.'/*'));
+    rmdir($outputDir);
+});
+
+test('command with --current flag outputs current mode info', function () {
+    $mockQS = Mockery::mock(GetQueryService::class);
+    $mockQS->shouldReceive('executeAndHandle')
+        ->andReturn(collect());
+
+    $this->app->bind(GetQueryService::class, fn () => $mockQS);
+
+    $outputDir = sys_get_temp_dir().'/planner_career_test_'.uniqid();
+
+    $this->artisan('ws:export-planner-career', [
+        'users' => ['jsmith'],
+        '--output' => $outputDir,
+        '--current' => true,
+    ])
+        ->expectsOutputToContain('Discovering current (active/QC/rework) job assignments')
         ->assertExitCode(0);
 
     array_map('unlink', glob($outputDir.'/*'));
