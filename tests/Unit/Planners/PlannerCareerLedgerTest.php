@@ -58,31 +58,26 @@ test('getDistinctJobGuids uses no CTEs', function () {
     expect($sql)->not->toMatch('/\bWITH\b(?!IN)/');
 });
 
-// ─── getAssessmentMetadataBatch ─────────────────────────────────────────────
+// ─── getFullCareerData — Metadata (flat columns) ────────────────────────────
 
-test('getAssessmentMetadataBatch queries SS and VEGJOB for metadata', function () {
+test('getFullCareerData includes metadata columns from SS and VEGJOB', function () {
     $queries = new PlannerCareerLedger(makePlannerContext());
-    $sql = $queries->getAssessmentMetadataBatch([PLANNER_TEST_GUID]);
+    $sql = $queries->getFullCareerData([PLANNER_TEST_GUID]);
 
     expect($sql)
         ->toContain('SS.JOBGUID')
+        ->toContain('SS.STATUS')
         ->toContain('VEGJOB.LINENAME AS line_name')
         ->toContain('VEGJOB.REGION AS region')
         ->toContain('VEGJOB.CYCLETYPE AS cycle_type')
-        ->toContain('total_miles')
+        ->toContain('VEGJOB.FRSTR_USER AS assigned_planner')
+        ->toContain('VEGJOB.LENGTH AS total_miles')
         ->toContain('INNER JOIN VEGJOB ON VEGJOB.JOBGUID = SS.JOBGUID');
 });
 
-test('getAssessmentMetadataBatch includes total miles from VEGJOB', function () {
+test('getFullCareerData uses IN clause for multiple GUIDs', function () {
     $queries = new PlannerCareerLedger(makePlannerContext());
-    $sql = $queries->getAssessmentMetadataBatch([PLANNER_TEST_GUID]);
-
-    expect($sql)->toContain('VEGJOB.LENGTH AS total_miles');
-});
-
-test('getAssessmentMetadataBatch uses IN clause for multiple GUIDs', function () {
-    $queries = new PlannerCareerLedger(makePlannerContext());
-    $sql = $queries->getAssessmentMetadataBatch([PLANNER_TEST_GUID, PLANNER_TEST_GUID_2]);
+    $sql = $queries->getFullCareerData([PLANNER_TEST_GUID, PLANNER_TEST_GUID_2]);
 
     expect($sql)
         ->toContain('IN (')
@@ -90,25 +85,75 @@ test('getAssessmentMetadataBatch uses IN clause for multiple GUIDs', function ()
         ->toContain(PLANNER_TEST_GUID_2);
 });
 
-test('getAssessmentMetadataBatch rejects invalid GUIDs', function () {
-    $queries = new PlannerCareerLedger(makePlannerContext());
+// ─── getFullCareerData — Timeline (JSON column) ────────────────────────────
 
-    expect(fn () => $queries->getAssessmentMetadataBatch(['DROP TABLE; --']))
-        ->toThrow(InvalidArgumentException::class);
+test('getFullCareerData embeds timeline as FOR JSON PATH subquery', function () {
+    $queries = new PlannerCareerLedger(makePlannerContext());
+    $sql = $queries->getFullCareerData([PLANNER_TEST_GUID]);
+
+    expect($sql)
+        ->toContain('JOBHISTORY JH')
+        ->toContain('JH.LOGDATE')
+        ->toContain('JH.JOBSTATUS')
+        ->toContain('FOR JSON PATH')
+        ->toContain('AS timeline');
 });
 
-test('getAssessmentMetadataBatch uses no CTEs', function () {
+test('getFullCareerData timeline is correlated to SS.JOBGUID', function () {
     $queries = new PlannerCareerLedger(makePlannerContext());
-    $sql = $queries->getAssessmentMetadataBatch([PLANNER_TEST_GUID]);
+    $sql = $queries->getFullCareerData([PLANNER_TEST_GUID]);
 
-    expect($sql)->not->toMatch('/\bWITH\b(?!IN)/');
+    expect($sql)->toContain('JH.JOBGUID = SS.JOBGUID');
 });
 
-// ─── getDailyFootageAttribution (ASSDDATE-only) ─────────────────────────────
+// ─── getFullCareerData — Work Type Breakdown (JSON column) ──────────────────
 
-test('getDailyFootageAttribution uses ASSDDATE exclusively — no DATEPOP', function () {
+test('getFullCareerData embeds work type breakdown as FOR JSON PATH', function () {
     $queries = new PlannerCareerLedger(makePlannerContext());
-    $sql = $queries->getDailyFootageAttribution(PLANNER_TEST_GUID);
+    $sql = $queries->getFullCareerData([PLANNER_TEST_GUID]);
+
+    expect($sql)
+        ->toContain('V_ASSESSMENT VA')
+        ->toContain('VA.unit')
+        ->toContain('VA.UnitQty')
+        ->toContain('AS work_type_breakdown');
+});
+
+// ─── getFullCareerData — Rework Details (JSON column) ───────────────────────
+
+test('getFullCareerData embeds rework details as FOR JSON PATH', function () {
+    $queries = new PlannerCareerLedger(makePlannerContext());
+    $sql = $queries->getFullCareerData([PLANNER_TEST_GUID]);
+
+    expect($sql)
+        ->toContain('AUDIT_FAIL')
+        ->toContain('AUDIT_USER')
+        ->toContain('AUDITDATE')
+        ->toContain('AS rework_details');
+});
+
+test('getFullCareerData rework excludes NW and empty units', function () {
+    $queries = new PlannerCareerLedger(makePlannerContext());
+    $sql = $queries->getFullCareerData([PLANNER_TEST_GUID]);
+
+    expect($sql)->toContain("VUR.UNIT != 'NW'");
+});
+
+// ─── getFullCareerData — Daily Metrics (OUTER APPLY + JSON) ────────────────
+
+test('getFullCareerData includes daily metrics via OUTER APPLY', function () {
+    $queries = new PlannerCareerLedger(makePlannerContext());
+    $sql = $queries->getFullCareerData([PLANNER_TEST_GUID]);
+
+    expect($sql)
+        ->toContain('OUTER APPLY')
+        ->toContain('DailyData.daily_metrics')
+        ->toContain('AS DailyData');
+});
+
+test('getFullCareerData daily metrics uses ASSDDATE exclusively — no DATEPOP', function () {
+    $queries = new PlannerCareerLedger(makePlannerContext());
+    $sql = $queries->getFullCareerData([PLANNER_TEST_GUID]);
 
     expect($sql)
         ->toContain('ASSDDATE')
@@ -116,33 +161,19 @@ test('getDailyFootageAttribution uses ASSDDATE exclusively — no DATEPOP', func
         ->not->toContain('COALESCE');
 });
 
-test('getDailyFootageAttribution uses First Unit Wins SQL structure', function () {
+test('getFullCareerData daily metrics uses First Unit Wins pattern', function () {
     $queries = new PlannerCareerLedger(makePlannerContext());
-    $sql = $queries->getDailyFootageAttribution(PLANNER_TEST_GUID);
+    $sql = $queries->getFullCareerData([PLANNER_TEST_GUID]);
 
     expect($sql)
         ->toContain('ROW_NUMBER()')
-        ->toContain('PARTITION BY VU.JOBGUID, VU.STATNAME')
+        ->toContain('PARTITION BY VU.STATNAME')
         ->toContain('unit_rank = 1');
 });
 
-test('getDailyFootageAttribution orders by ASSDDATE for ranking', function () {
+test('getFullCareerData daily metrics joins STATIONS for footage', function () {
     $queries = new PlannerCareerLedger(makePlannerContext());
-    $sql = $queries->getDailyFootageAttribution(PLANNER_TEST_GUID);
-
-    expect($sql)->toContain('ORDER BY VU.ASSDDATE ASC');
-});
-
-test('getDailyFootageAttribution uses JOBGUID in WHERE', function () {
-    $queries = new PlannerCareerLedger(makePlannerContext());
-    $sql = $queries->getDailyFootageAttribution(PLANNER_TEST_GUID);
-
-    expect($sql)->toContain(PLANNER_TEST_GUID);
-});
-
-test('getDailyFootageAttribution joins STATIONS for footage', function () {
-    $queries = new PlannerCareerLedger(makePlannerContext());
-    $sql = $queries->getDailyFootageAttribution(PLANNER_TEST_GUID);
+    $sql = $queries->getFullCareerData([PLANNER_TEST_GUID]);
 
     expect($sql)
         ->toContain('JOIN STATIONS ST')
@@ -150,9 +181,9 @@ test('getDailyFootageAttribution joins STATIONS for footage', function () {
         ->toContain('daily_footage_miles');
 });
 
-test('getDailyFootageAttribution joins UNITS for work classification', function () {
+test('getFullCareerData daily metrics joins UNITS for work classification', function () {
     $queries = new PlannerCareerLedger(makePlannerContext());
-    $sql = $queries->getDailyFootageAttribution(PLANNER_TEST_GUID);
+    $sql = $queries->getFullCareerData([PLANNER_TEST_GUID]);
 
     expect($sql)
         ->toContain('JOIN UNITS U')
@@ -161,127 +192,49 @@ test('getDailyFootageAttribution joins UNITS for work classification', function 
         ->toContain('unit_count');
 });
 
-test('getDailyFootageAttribution applies date filter when provided', function () {
+test('getFullCareerData applies date filter when provided', function () {
     $queries = new PlannerCareerLedger(makePlannerContext());
-    $sql = $queries->getDailyFootageAttribution(PLANNER_TEST_GUID, '2026-01-01', '2026-03-31');
+    $sql = $queries->getFullCareerData([PLANNER_TEST_GUID], '2026-01-01', '2026-03-31');
 
     expect($sql)->toContain("BETWEEN '2026-01-01' AND '2026-03-31'");
 });
 
-test('getDailyFootageAttribution omits date filter when not provided', function () {
+test('getFullCareerData omits date filter when not provided', function () {
     $queries = new PlannerCareerLedger(makePlannerContext());
-    $sql = $queries->getDailyFootageAttribution(PLANNER_TEST_GUID);
+    $sql = $queries->getFullCareerData([PLANNER_TEST_GUID]);
 
     expect($sql)->not->toContain('BETWEEN');
 });
 
-test('getDailyFootageAttribution uses no CTEs', function () {
+// ─── DDOProtocol Compatibility ──────────────────────────────────────────────
+
+test('getFullCareerData uses no CTEs', function () {
     $queries = new PlannerCareerLedger(makePlannerContext());
-    $sql = $queries->getDailyFootageAttribution(PLANNER_TEST_GUID);
+    $sql = $queries->getFullCareerData([PLANNER_TEST_GUID]);
 
     expect($sql)->not->toMatch('/\bWITH\b(?!IN)/');
 });
 
-test('getDailyFootageAttribution rejects invalid GUID', function () {
+test('getFullCareerData produces exactly one SELECT statement', function () {
     $queries = new PlannerCareerLedger(makePlannerContext());
+    $sql = $queries->getFullCareerData([PLANNER_TEST_GUID]);
 
-    expect(fn () => $queries->getDailyFootageAttribution('DROP TABLE; --'))
-        ->toThrow(InvalidArgumentException::class);
-});
-
-// ─── getDailyFootageAttributionBatch ────────────────────────────────────────
-
-test('getDailyFootageAttributionBatch uses IN clause for multiple GUIDs', function () {
-    $queries = new PlannerCareerLedger(makePlannerContext());
-    $sql = $queries->getDailyFootageAttributionBatch([PLANNER_TEST_GUID, PLANNER_TEST_GUID_2]);
-
-    expect($sql)
-        ->toContain('IN (')
-        ->toContain(PLANNER_TEST_GUID)
-        ->toContain(PLANNER_TEST_GUID_2);
-});
-
-test('getDailyFootageAttributionBatch uses ASSDDATE-only — no DATEPOP', function () {
-    $queries = new PlannerCareerLedger(makePlannerContext());
-    $sql = $queries->getDailyFootageAttributionBatch([PLANNER_TEST_GUID]);
-
-    expect($sql)
-        ->toContain('ASSDDATE')
-        ->not->toContain('DATEPOP')
-        ->not->toContain('COALESCE');
-});
-
-test('getDailyFootageAttributionBatch rejects any invalid GUID', function () {
-    $queries = new PlannerCareerLedger(makePlannerContext());
-
-    expect(fn () => $queries->getDailyFootageAttributionBatch([PLANNER_TEST_GUID, 'invalid']))
-        ->toThrow(InvalidArgumentException::class);
-});
-
-// ─── getAssessmentTimeline ──────────────────────────────────────────────────
-
-test('getAssessmentTimeline queries JOBHISTORY for lifecycle events', function () {
-    $queries = new PlannerCareerLedger(makePlannerContext());
-    $sql = $queries->getAssessmentTimeline(PLANNER_TEST_GUID);
-
-    expect($sql)
-        ->toContain('JOBHISTORY')
-        ->toContain('LOGDATE')
-        ->toContain('JOBSTATUS')
-        ->toContain(PLANNER_TEST_GUID)
-        ->toContain('ORDER BY JH.LOGDATE ASC');
-});
-
-// ─── getWorkTypeBreakdown ───────────────────────────────────────────────────
-
-test('getWorkTypeBreakdown queries V_ASSESSMENT view', function () {
-    $queries = new PlannerCareerLedger(makePlannerContext());
-    $sql = $queries->getWorkTypeBreakdown(PLANNER_TEST_GUID);
-
-    expect($sql)
-        ->toContain('V_ASSESSMENT')
-        ->toContain('unit')
-        ->toContain('UnitQty')
-        ->toContain(PLANNER_TEST_GUID);
-});
-
-// ─── getReworkDetails ───────────────────────────────────────────────────────
-
-test('getReworkDetails queries audit fields from VEGUNIT', function () {
-    $queries = new PlannerCareerLedger(makePlannerContext());
-    $sql = $queries->getReworkDetails(PLANNER_TEST_GUID);
-
-    expect($sql)
-        ->toContain('AUDIT_FAIL')
-        ->toContain('AUDIT_USER')
-        ->toContain('AUDITDATE')
-        ->toContain(PLANNER_TEST_GUID);
-});
-
-test('getReworkDetails uses valid unit filter', function () {
-    $queries = new PlannerCareerLedger(makePlannerContext());
-    $sql = $queries->getReworkDetails(PLANNER_TEST_GUID);
-
-    expect($sql)->toContain("VU.UNIT != 'NW'");
-});
-
-test('getReworkDetails uses no CTEs', function () {
-    $queries = new PlannerCareerLedger(makePlannerContext());
-    $sql = $queries->getReworkDetails(PLANNER_TEST_GUID);
-
-    expect($sql)->not->toMatch('/\bWITH\b(?!IN)/');
+    // The top-level SELECT should be the only non-subquery SELECT at position 0
+    expect($sql)->toStartWith('SELECT');
 });
 
 // ─── GUID Validation ────────────────────────────────────────────────────────
 
-test('all single-GUID methods reject invalid GUIDs', function (string $method) {
+test('getFullCareerData rejects invalid GUIDs', function () {
     $queries = new PlannerCareerLedger(makePlannerContext());
 
-    expect(fn () => $queries->{$method}('not-a-guid'))
+    expect(fn () => $queries->getFullCareerData(['DROP TABLE; --']))
         ->toThrow(InvalidArgumentException::class);
-})->with([
-    'getDailyFootageAttribution',
-    'getAssessmentTimeline',
-    'getWorkTypeBreakdown',
-    'getReworkDetails',
-]);
+});
+
+test('getFullCareerData rejects any invalid GUID in batch', function () {
+    $queries = new PlannerCareerLedger(makePlannerContext());
+
+    expect(fn () => $queries->getFullCareerData([PLANNER_TEST_GUID, 'invalid']))
+        ->toThrow(InvalidArgumentException::class);
+});

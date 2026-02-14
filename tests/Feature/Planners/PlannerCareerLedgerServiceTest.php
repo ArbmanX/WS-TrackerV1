@@ -87,9 +87,9 @@ test('discoverJobGuids handles empty API response', function () {
         ->and(PlannerJobAssignment::count())->toBe(0);
 });
 
-// ─── exportForUser ───────────────────────────────────────────────────────────
+// ─── exportForUser (consolidated single-query) ──────────────────────────────
 
-test('exportForUser creates JSON file with career data', function () {
+test('exportForUser creates JSON file with career data from single API call', function () {
     $guid = '{11111111-1111-1111-1111-111111111111}';
     $outputDir = sys_get_temp_dir().'/career_test_'.uniqid();
     mkdir($outputDir);
@@ -100,26 +100,32 @@ test('exportForUser creates JSON file with career data', function () {
         'status' => 'discovered',
     ]);
 
+    // Single API call returns all data — JSON columns for nested data
     $this->mockQS->shouldReceive('executeAndHandle')
-        ->times(4)
-        ->andReturn(
-            // getAssessmentMetadataBatch
-            collect([
-                ['JOBGUID' => $guid, 'line_name' => 'Circuit-1234', 'region' => 'CENTRAL', 'cycle_type' => 'Trim', 'total_miles' => 10.5],
-            ]),
-            // getDailyFootageAttributionBatch
-            collect([
-                ['JOBGUID' => $guid, 'completion_date' => '2026-01-15', 'FRSTR_USER' => 'jsmith', 'daily_footage_miles' => 500, 'unit_count' => 10],
-            ]),
-            // getAssessmentTimeline
-            collect([
-                ['JOBSTATUS' => 'ACTIV', 'LOGDATE' => '2026-01-10'],
-                ['JOBSTATUS' => 'QC', 'LOGDATE' => '2026-02-01'],
-                ['JOBSTATUS' => 'CLOSE', 'LOGDATE' => '2026-02-05'],
-            ]),
-            // getWorkTypeBreakdown
-            collect([['unit' => 'SPM', 'UnitQty' => 15]]),
-        );
+        ->once()
+        ->andReturn(collect([
+            [
+                'JOBGUID' => $guid,
+                'STATUS' => 'CLOSE',
+                'line_name' => 'Circuit-1234',
+                'region' => 'CENTRAL',
+                'cycle_type' => 'Trim',
+                'assigned_planner' => 'jsmith',
+                'total_miles' => 10.5,
+                'timeline' => json_encode([
+                    ['JOBSTATUS' => 'ACTIV', 'LOGDATE' => '2026-01-10'],
+                    ['JOBSTATUS' => 'QC', 'LOGDATE' => '2026-02-01'],
+                    ['JOBSTATUS' => 'CLOSE', 'LOGDATE' => '2026-02-05'],
+                ]),
+                'work_type_breakdown' => json_encode([
+                    ['unit' => 'SPM', 'UnitQty' => 15],
+                ]),
+                'rework_details' => null,
+                'daily_metrics' => json_encode([
+                    ['completion_date' => '2026-01-15', 'FRSTR_USER' => 'jsmith', 'daily_footage_miles' => 500, 'unit_count' => 10],
+                ]),
+            ],
+        ]));
 
     $service = makePlannerCareerService($this->mockQS);
     $filePath = $service->exportForUser('jsmith', $outputDir);
@@ -134,8 +140,10 @@ test('exportForUser creates JSON file with career data', function () {
         ->and($exported[0]['line_name'])->toBe('Circuit-1234')
         ->and($exported[0]['region'])->toBe('CENTRAL')
         ->and($exported[0]['daily_metrics'])->toBeArray()
+        ->and($exported[0]['daily_metrics'])->toHaveCount(1)
         ->and($exported[0]['summary_totals'])->toBeArray()
-        ->and($exported[0]['went_to_rework'])->toBeFalse();
+        ->and($exported[0]['went_to_rework'])->toBeFalse()
+        ->and($exported[0]['rework_details'])->toBeNull();
 
     $assignment = PlannerJobAssignment::first();
     expect($assignment->status)->toBe('exported');
@@ -160,7 +168,7 @@ test('exportForUser writes empty JSON when no assignments exist', function () {
     rmdir($outputDir);
 });
 
-test('exportForUser detects rework and fetches rework details', function () {
+test('exportForUser detects rework from timeline JSON column', function () {
     $guid = '{11111111-1111-1111-1111-111111111111}';
     $outputDir = sys_get_temp_dir().'/career_test_'.uniqid();
     mkdir($outputDir);
@@ -172,26 +180,29 @@ test('exportForUser detects rework and fetches rework details', function () {
     ]);
 
     $this->mockQS->shouldReceive('executeAndHandle')
-        ->times(5)
-        ->andReturn(
-            // metadata
-            collect([['JOBGUID' => $guid, 'line_name' => 'Circuit-1234', 'region' => 'CENTRAL']]),
-            // daily footage
-            collect([]),
-            // timeline with REWRK
-            collect([
-                ['JOBSTATUS' => 'ACTIV', 'LOGDATE' => '2026-01-10'],
-                ['JOBSTATUS' => 'QC', 'LOGDATE' => '2026-02-01'],
-                ['JOBSTATUS' => 'REWRK', 'LOGDATE' => '2026-02-03'],
-                ['JOBSTATUS' => 'CLOSE', 'LOGDATE' => '2026-02-10'],
-            ]),
-            // work type breakdown
-            collect([]),
-            // rework details
-            collect([
-                ['UNITGUID' => '{AAAAAAAA-1111-2222-3333-444444444444}', 'AUDIT_FAIL' => 'Wrong species'],
-            ]),
-        );
+        ->once()
+        ->andReturn(collect([
+            [
+                'JOBGUID' => $guid,
+                'STATUS' => 'CLOSE',
+                'line_name' => 'Circuit-1234',
+                'region' => 'CENTRAL',
+                'cycle_type' => 'Trim',
+                'assigned_planner' => 'jsmith',
+                'total_miles' => 10.5,
+                'timeline' => json_encode([
+                    ['JOBSTATUS' => 'ACTIV', 'LOGDATE' => '2026-01-10'],
+                    ['JOBSTATUS' => 'QC', 'LOGDATE' => '2026-02-01'],
+                    ['JOBSTATUS' => 'REWRK', 'LOGDATE' => '2026-02-03'],
+                    ['JOBSTATUS' => 'CLOSE', 'LOGDATE' => '2026-02-10'],
+                ]),
+                'work_type_breakdown' => json_encode([]),
+                'rework_details' => json_encode([
+                    ['UNITGUID' => '{AAAAAAAA-1111-2222-3333-444444444444}', 'AUDIT_FAIL' => 'Wrong species'],
+                ]),
+                'daily_metrics' => json_encode([]),
+            ],
+        ]));
 
     $service = makePlannerCareerService($this->mockQS);
     $filePath = $service->exportForUser('jsmith', $outputDir);
