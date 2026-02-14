@@ -44,7 +44,7 @@ test('command outputs discovery and export info', function () {
         'users' => ['jsmith'],
         '--output' => $outputDir,
     ])
-        ->expectsOutputToContain('Discovering closed job assignments for: jsmith')
+        ->expectsOutputToContain('Discovering closed job assignments (scope year')
         ->expectsOutputToContain('Discovered 0 job assignment(s)')
         ->assertExitCode(0);
 

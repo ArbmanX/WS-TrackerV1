@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Incremental Planner Career Export** (2026-02-14)
+  - **Migration:** `export_path` column on `planner_job_assignments` — tracks the JSON file path for each exported assignment
+  - **Query:** `getEditDates()` method on `PlannerCareerLedger` — fetches OLE-to-ISO8601-converted EDITDATE for staleness detection
+  - **Factory:** `withExportPath()` state on `PlannerJobAssignmentFactory`
+  - **Incremental export logic:** `exportForUser()` now compares local `updated_at` against remote `EDITDATE` to detect stale data. Stale assessments get metadata refreshed and new daily_metrics appended+deduplicated. Up-to-date assessments are skipped entirely. Missing export files trigger full re-export fallback.
+  - **Scope year fix:** `scope_year` in JSON output now derived from `WPStartDate_Assessment_Xrefs` via API (was hardcoded to config). Discovery defaults to config scope year with `--all-years` flag to fetch across all years.
+  - **Tests:** 16 new tests (9 query, 7 service) covering staleness detection, metric deduplication, metadata refresh, mixed new+stale runs, missing file fallback, assumed_status re-enrichment, scope year filtering, allYears flag
+
 - **Planner Career Ledger** (2026-02-14)
   - **Database:** `planner_job_assignments` table — tracks discovered JOBGUIDs per FRSTR_USER with status lifecycle (discovered → processed → exported)
   - **Model & Factory:** `PlannerJobAssignment` with `forUser`, `pending`, `processed`, `exported` scopes and `wsUser()` relationship

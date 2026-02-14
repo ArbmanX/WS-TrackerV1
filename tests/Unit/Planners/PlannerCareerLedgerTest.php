@@ -34,6 +34,33 @@ test('getDistinctJobGuids queries VEGUNIT joined with SS for closed parent asses
         ->toContain('VU.ASSDDATE IS NOT NULL');
 });
 
+test('getDistinctJobGuids defaults to scope year filter via xref join', function () {
+    $queries = new PlannerCareerLedger(makePlannerContext());
+    $sql = $queries->getDistinctJobGuids('jsmith');
+
+    expect($sql)
+        ->toContain('WPStartDate_Assessment_Xrefs')
+        ->toContain('WP_STARTDATE LIKE');
+});
+
+test('getDistinctJobGuids with allYears skips xref join and year filter', function () {
+    $queries = new PlannerCareerLedger(makePlannerContext());
+    $sql = $queries->getDistinctJobGuids('jsmith', allYears: true);
+
+    expect($sql)
+        ->not->toContain('WPStartDate_Assessment_Xrefs')
+        ->not->toContain('WP_STARTDATE');
+});
+
+test('getDistinctJobGuids current mode skips year filter regardless of allYears', function () {
+    $queries = new PlannerCareerLedger(makePlannerContext());
+    $sql = $queries->getDistinctJobGuids('jsmith', current: true, allYears: false);
+
+    expect($sql)
+        ->not->toContain('WPStartDate_Assessment_Xrefs')
+        ->not->toContain('WP_STARTDATE');
+});
+
 test('getDistinctJobGuids accepts single user string', function () {
     $queries = new PlannerCareerLedger(makePlannerContext());
     $sql = $queries->getDistinctJobGuids('jsmith');
@@ -103,6 +130,16 @@ test('getFullCareerData includes metadata columns from SS and VEGJOB', function 
         ->toContain('VEGJOB.LENGTH AS total_miles')
         ->toContain('VEGJOB.LENGTHCOMP AS total_miles_planned')
         ->toContain('INNER JOIN VEGJOB ON VEGJOB.JOBGUID = SS.JOBGUID');
+});
+
+test('getFullCareerData derives scope_year from WPStartDate_Assessment_Xrefs', function () {
+    $queries = new PlannerCareerLedger(makePlannerContext());
+    $sql = $queries->getFullCareerData([PLANNER_TEST_GUID]);
+
+    expect($sql)
+        ->toContain('WPStartDate_Assessment_Xrefs XR')
+        ->toContain('XR.Assess_JOBGUID = SS.JOBGUID')
+        ->toContain('AS scope_year');
 });
 
 test('getFullCareerData uses IN clause for multiple GUIDs', function () {
@@ -267,4 +304,51 @@ test('getFullCareerData rejects any invalid GUID in batch', function () {
 
     expect(fn () => $queries->getFullCareerData([PLANNER_TEST_GUID, 'invalid']))
         ->toThrow(InvalidArgumentException::class);
+});
+
+// ─── getEditDates ────────────────────────────────────────────────────────────
+
+test('getEditDates queries SS joined with VEGJOB for EDITDATE', function () {
+    $queries = new PlannerCareerLedger(makePlannerContext());
+    $sql = $queries->getEditDates([PLANNER_TEST_GUID]);
+
+    expect($sql)
+        ->toContain('SS.JOBGUID')
+        ->toContain('INNER JOIN VEGJOB ON VEGJOB.JOBGUID = SS.JOBGUID')
+        ->toContain('VEGJOB.EDITDATE');
+});
+
+test('getEditDates converts EDITDATE to ISO 8601 format', function () {
+    $queries = new PlannerCareerLedger(makePlannerContext());
+    $sql = $queries->getEditDates([PLANNER_TEST_GUID]);
+
+    expect($sql)
+        ->toContain('CONVERT(VARCHAR(23)')
+        ->toContain('CAST(VEGJOB.EDITDATE AS DATETIME)')
+        ->toContain('126')
+        ->toContain('AS edit_date');
+});
+
+test('getEditDates uses IN clause for multiple GUIDs', function () {
+    $queries = new PlannerCareerLedger(makePlannerContext());
+    $sql = $queries->getEditDates([PLANNER_TEST_GUID, PLANNER_TEST_GUID_2]);
+
+    expect($sql)
+        ->toContain('IN (')
+        ->toContain(PLANNER_TEST_GUID)
+        ->toContain(PLANNER_TEST_GUID_2);
+});
+
+test('getEditDates validates GUIDs', function () {
+    $queries = new PlannerCareerLedger(makePlannerContext());
+
+    expect(fn () => $queries->getEditDates(['DROP TABLE; --']))
+        ->toThrow(InvalidArgumentException::class);
+});
+
+test('getEditDates uses no CTEs', function () {
+    $queries = new PlannerCareerLedger(makePlannerContext());
+    $sql = $queries->getEditDates([PLANNER_TEST_GUID]);
+
+    expect($sql)->not->toMatch('/\bWITH\b(?!IN)/');
 });

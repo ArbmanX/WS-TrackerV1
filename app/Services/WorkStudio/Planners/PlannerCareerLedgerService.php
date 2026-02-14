@@ -27,11 +27,11 @@ class PlannerCareerLedgerService
      * @param  bool  $current  When true, discover active/QC/rework assessments instead of closed
      * @return Collection<int, PlannerJobAssignment>
      */
-    public function discoverJobGuids(string|array $frstrUsers, bool $current = false): Collection
+    public function discoverJobGuids(string|array $frstrUsers, bool $current = false, bool $allYears = false): Collection
     {
         $users = is_array($frstrUsers) ? $frstrUsers : [$frstrUsers];
 
-        $sql = $this->queries->getDistinctJobGuids($users, $current);
+        $sql = $this->queries->getDistinctJobGuids($users, $current, $allYears);
         $results = $this->queryService->executeAndHandle($sql);
 
         $assignments = collect();
@@ -59,65 +59,122 @@ class PlannerCareerLedgerService
     /**
      * Export career data for a single user to a JSON file.
      *
+     * Incremental by default: previously-exported assignments are checked for
+     * staleness (EDITDATE > updated_at) and only new daily metrics are fetched.
+     * Metadata fields are always refreshed for stale assessments.
+     *
      * @param  bool  $current  When true, export active/QC/rework assessments instead of closed
      * @return string File path of the exported JSON
      */
     public function exportForUser(string $frstrUser, string $outputDir, bool $current = false): string
     {
-        $assignments = PlannerJobAssignment::forUser($frstrUser)
-            ->whereIn('status', ['discovered', 'processed'])
-            ->get();
+        $allAssignments = PlannerJobAssignment::forUser($frstrUser)->get();
 
-        if ($assignments->isEmpty()) {
+        if ($allAssignments->isEmpty()) {
             $filePath = rtrim($outputDir, '/')."/{$frstrUser}_".now()->format('Y-m-d').'.json';
             file_put_contents($filePath, json_encode([], JSON_PRETTY_PRINT));
 
             return $filePath;
         }
 
-        $guids = $assignments->pluck('job_guid')->toArray();
+        // Split into new vs previously exported
+        $newAssignments = $allAssignments->filter(fn ($a) => ! $a->export_path);
+        $existingAssignments = $allAssignments->filter(fn ($a) => $a->export_path !== null);
 
-        // Single API call — returns one row per assessment with JSON columns
-        $sql = $this->queries->getFullCareerData($guids);
-        $results = $this->queryService->executeAndHandle($sql);
+        // Determine stale GUIDs among existing exports
+        $staleGuids = [];
+        $existingEntries = [];
+        $existingFilePath = null;
 
-        $entries = [];
+        if ($existingAssignments->isNotEmpty()) {
+            $existingFilePath = $existingAssignments->first()->export_path;
+            $existingGuids = $existingAssignments->pluck('job_guid')->toArray();
 
-        foreach ($results as $row) {
-            $timeline = json_decode($row['timeline'] ?? '[]', true) ?? [];
-            $dates = $this->extractTimelineDates(collect($timeline));
-            $wentToRework = $this->hadRework(collect($timeline));
-            $reworkPeriods = $this->extractReworkPeriods($timeline, $dates['close']);
-            $reworkDetails = json_decode($row['rework_details'] ?? 'null', true);
-            $dailyMetrics = json_decode($row['daily_metrics'] ?? '[]', true) ?? [];
-            $dailyMetrics = $this->enrichDailyMetricsWithStatus($dailyMetrics, $dates, $reworkPeriods);
-            $summaryTotals = json_decode($row['work_type_breakdown'] ?? '[]', true) ?? [];
+            // Fetch EDITDATE from remote API
+            $sql = $this->queries->getEditDates($existingGuids);
+            $editDates = $this->queryService->executeAndHandle($sql);
 
-            $entries[] = [
-                'planner_username' => $frstrUser,
-                'job_guid' => $row['JOBGUID'],
-                'line_name' => $row['line_name'] ?? null,
-                'region' => $row['region'] ?? null,
-                'scope_year' => $this->scopeYear(),
-                'cycle_type' => $row['cycle_type'] ?? null,
-                'assessment_total_miles' => $row['total_miles'] ?? null,
-                'assessment_total_miles_planned' => $row['total_miles_planned'] ?? null,
-                'assessment_pickup_date' => $dates['pickup'] ?? null,
-                'assessment_qc_date' => $dates['qc'] ?? null,
-                'assessment_close_date' => $dates['close'] ?? null,
-                'went_to_rework' => $wentToRework,
-                'rework_details' => $reworkDetails,
-                'daily_metrics' => $dailyMetrics,
-                'summary_totals' => $summaryTotals,
-            ];
+            foreach ($editDates as $row) {
+                $guid = $row['JOBGUID'] ?? null;
+                $editDate = $row['edit_date'] ?? null;
+
+                if (! $guid || ! $editDate) {
+                    continue;
+                }
+
+                $assignment = $existingAssignments->firstWhere('job_guid', $guid);
+
+                if (! $assignment) {
+                    continue;
+                }
+
+                try {
+                    $remoteEditDate = Carbon::parse($editDate);
+                } catch (\Throwable) {
+                    continue;
+                }
+
+                if ($remoteEditDate->gt($assignment->updated_at)) {
+                    $staleGuids[] = $guid;
+                }
+            }
+
+            // Load existing JSON if file exists
+            if ($existingFilePath && file_exists($existingFilePath)) {
+                $existingEntries = json_decode(file_get_contents($existingFilePath), true) ?? [];
+            } else {
+                // File missing — treat all existing as new
+                $newAssignments = $allAssignments;
+                $staleGuids = [];
+                $existingEntries = [];
+                $existingFilePath = null;
+            }
         }
 
-        $filePath = rtrim($outputDir, '/')."/{$frstrUser}_".now()->format('Y-m-d').'.json';
+        $entries = $existingEntries;
+
+        // Fetch full data for new assignments
+        $newGuids = $newAssignments->pluck('job_guid')->toArray();
+
+        if (! empty($newGuids)) {
+            $sql = $this->queries->getFullCareerData($newGuids);
+            $results = $this->queryService->executeAndHandle($sql);
+
+            foreach ($results as $row) {
+                $entries[] = $this->buildEntry($frstrUser, $row);
+            }
+        }
+
+        // Fetch data for stale assignments (date-filtered daily metrics)
+        if (! empty($staleGuids)) {
+            $staleAssignments = $existingAssignments->whereIn('job_guid', $staleGuids);
+            $earliestUpdatedAt = $staleAssignments->min('updated_at');
+            $dateStart = Carbon::parse($earliestUpdatedAt)->toDateString();
+            $dateEnd = now()->toDateString();
+
+            $sql = $this->queries->getFullCareerData($staleGuids, $dateStart, $dateEnd);
+            $results = $this->queryService->executeAndHandle($sql);
+
+            foreach ($results as $row) {
+                $entries = $this->updateExistingEntry($entries, $frstrUser, $row);
+            }
+        }
+
+        // Determine output path
+        $filePath = $existingFilePath ?? rtrim($outputDir, '/')."/{$frstrUser}_".now()->format('Y-m-d').'.json';
         file_put_contents($filePath, json_encode($entries, JSON_PRETTY_PRINT));
 
-        PlannerJobAssignment::forUser($frstrUser)
-            ->whereIn('job_guid', $guids)
-            ->update(['status' => 'exported']);
+        // Update all affected assignments
+        $affectedGuids = array_merge($newGuids, $staleGuids);
+
+        if (! empty($affectedGuids)) {
+            PlannerJobAssignment::forUser($frstrUser)
+                ->whereIn('job_guid', $affectedGuids)
+                ->update([
+                    'status' => 'exported',
+                    'export_path' => $filePath,
+                ]);
+        }
 
         return $filePath;
     }
@@ -146,6 +203,127 @@ class PlannerCareerLedgerService
         }
 
         return $results;
+    }
+
+    /**
+     * Build a single export entry from an API result row.
+     */
+    private function buildEntry(string $frstrUser, array $row): array
+    {
+        $timeline = json_decode($row['timeline'] ?? '[]', true) ?? [];
+        $dates = $this->extractTimelineDates(collect($timeline));
+        $wentToRework = $this->hadRework(collect($timeline));
+        $reworkPeriods = $this->extractReworkPeriods($timeline, $dates['close']);
+        $reworkDetails = json_decode($row['rework_details'] ?? 'null', true);
+        $dailyMetrics = json_decode($row['daily_metrics'] ?? '[]', true) ?? [];
+        $dailyMetrics = $this->enrichDailyMetricsWithStatus($dailyMetrics, $dates, $reworkPeriods);
+        $summaryTotals = json_decode($row['work_type_breakdown'] ?? '[]', true) ?? [];
+
+        return [
+            'planner_username' => $frstrUser,
+            'job_guid' => $row['JOBGUID'],
+            'line_name' => $row['line_name'] ?? null,
+            'region' => $row['region'] ?? null,
+            'scope_year' => $row['scope_year'] ?? null,
+            'cycle_type' => $row['cycle_type'] ?? null,
+            'assessment_total_miles' => $row['total_miles'] ?? null,
+            'assessment_total_miles_planned' => $row['total_miles_planned'] ?? null,
+            'assessment_pickup_date' => $dates['pickup'] ?? null,
+            'assessment_qc_date' => $dates['qc'] ?? null,
+            'assessment_close_date' => $dates['close'] ?? null,
+            'went_to_rework' => $wentToRework,
+            'rework_details' => $reworkDetails,
+            'daily_metrics' => $dailyMetrics,
+            'summary_totals' => $summaryTotals,
+        ];
+    }
+
+    /**
+     * Update an existing entry in the entries array with fresh API data.
+     *
+     * Refreshes metadata fields and merges new daily_metrics.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function updateExistingEntry(array $entries, string $frstrUser, array $row): array
+    {
+        $jobGuid = $row['JOBGUID'];
+        $freshEntry = $this->buildEntry($frstrUser, $row);
+
+        $existingIndex = null;
+        foreach ($entries as $i => $entry) {
+            if (($entry['job_guid'] ?? null) === $jobGuid) {
+                $existingIndex = $i;
+                break;
+            }
+        }
+
+        if ($existingIndex === null) {
+            // Not found in existing entries — add as new
+            $entries[] = $freshEntry;
+
+            return $entries;
+        }
+
+        $existing = $entries[$existingIndex];
+
+        // Refresh metadata fields
+        $existing['line_name'] = $freshEntry['line_name'];
+        $existing['region'] = $freshEntry['region'];
+        $existing['cycle_type'] = $freshEntry['cycle_type'];
+        $existing['assessment_total_miles'] = $freshEntry['assessment_total_miles'];
+        $existing['assessment_total_miles_planned'] = $freshEntry['assessment_total_miles_planned'];
+        $existing['assessment_pickup_date'] = $freshEntry['assessment_pickup_date'];
+        $existing['assessment_qc_date'] = $freshEntry['assessment_qc_date'];
+        $existing['assessment_close_date'] = $freshEntry['assessment_close_date'];
+        $existing['went_to_rework'] = $freshEntry['went_to_rework'];
+        $existing['rework_details'] = $freshEntry['rework_details'];
+        $existing['summary_totals'] = $freshEntry['summary_totals'];
+
+        // Merge and deduplicate daily metrics
+        $existingMetrics = $existing['daily_metrics'] ?? [];
+        $newMetrics = $freshEntry['daily_metrics'] ?? [];
+        $existing['daily_metrics'] = $this->mergeAndDeduplicateDailyMetrics($existingMetrics, $newMetrics);
+
+        // Re-enrich assumed_status on merged metrics
+        $timeline = json_decode($row['timeline'] ?? '[]', true) ?? [];
+        $dates = $this->extractTimelineDates(collect($timeline));
+        $reworkPeriods = $this->extractReworkPeriods($timeline, $dates['close']);
+        $existing['daily_metrics'] = $this->enrichDailyMetricsWithStatus(
+            $existing['daily_metrics'], $dates, $reworkPeriods
+        );
+
+        $entries[$existingIndex] = $existing;
+
+        return $entries;
+    }
+
+    /**
+     * Merge new daily metrics into existing, deduplicate by completion_date, and sort.
+     */
+    private function mergeAndDeduplicateDailyMetrics(array $existing, array $new): array
+    {
+        // Index by completion_date — new values overwrite old for same date
+        $merged = [];
+
+        foreach ($existing as $metric) {
+            $date = $metric['completion_date'] ?? null;
+            if ($date !== null) {
+                $merged[$date] = $metric;
+            }
+        }
+
+        foreach ($new as $metric) {
+            $date = $metric['completion_date'] ?? null;
+            if ($date !== null) {
+                $merged[$date] = $metric;
+            }
+        }
+
+        // Sort by completion_date and re-index
+        ksort($merged);
+
+        return array_values($merged);
     }
 
     /**
@@ -297,14 +475,6 @@ class PlannerCareerLedgerService
         } catch (\Throwable) {
             return null;
         }
-    }
-
-    /**
-     * Get scope year from config.
-     */
-    private function scopeYear(): string
-    {
-        return config('ws_assessment_query.scope_year', (string) now()->year);
     }
 
     /**

@@ -16,6 +16,7 @@ class PlannerJobAssignment extends Model
         'frstr_user',
         'job_guid',
         'status',
+        'export_path',
         'discovered_at',
     ];
 

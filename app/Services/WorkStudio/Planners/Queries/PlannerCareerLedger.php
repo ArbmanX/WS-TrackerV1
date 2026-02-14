@@ -18,7 +18,7 @@ class PlannerCareerLedger extends AbstractQueryBuilder
      *
      * @param  string|array<int, string>  $frstrUsers
      */
-    public function getDistinctJobGuids(string|array $frstrUsers, bool $current = false): string
+    public function getDistinctJobGuids(string|array $frstrUsers, bool $current = false, bool $allYears = false): string
     {
         $users = is_array($frstrUsers) ? $frstrUsers : [$frstrUsers];
         $usersSql = WSHelpers::toSqlInClause($users);
@@ -27,14 +27,48 @@ class PlannerCareerLedger extends AbstractQueryBuilder
             ? "SS.STATUS IN ('ACTIV', 'QC', 'REWRK')"
             : "SS.STATUS = 'CLOSE'";
 
+        $xrefJoin = '';
+        $yearFilter = '';
+
+        if (! $allYears && ! $current) {
+            $xrefJoin = 'INNER JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID';
+            $yearFilter = "AND WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$this->scopeYear}%'";
+        }
+
         return "SELECT DISTINCT VU.JOBGUID
 FROM VEGUNIT VU
 INNER JOIN SS ON SS.JOBGUID = VU.JOBGUID
+{$xrefJoin}
 WHERE VU.FRSTR_USER IN ({$usersSql})
     AND {$statusFilter}
     AND SS.EXT = '@'
     AND VU.ASSDDATE IS NOT NULL
-    AND VU.ASSDDATE != ''";
+    AND VU.ASSDDATE != ''
+    {$yearFilter}";
+    }
+
+    /**
+     * Query EDITDATE for a set of JOBGUIDs to detect stale data.
+     *
+     * EDITDATE is stored as OLE Automation float — CAST to DATETIME then
+     * CONVERT to ISO 8601 (style 126) for clean PHP parsing.
+     *
+     * @param  array<int, string>  $jobGuids
+     */
+    public function getEditDates(array $jobGuids): string
+    {
+        foreach ($jobGuids as $guid) {
+            self::validateGuid($guid);
+        }
+
+        $guidsSql = WSHelpers::toSqlInClause($jobGuids);
+
+        return "SELECT
+    SS.JOBGUID,
+    CONVERT(VARCHAR(23), CAST(VEGJOB.EDITDATE AS DATETIME), 126) AS edit_date
+FROM SS
+INNER JOIN VEGJOB ON VEGJOB.JOBGUID = SS.JOBGUID
+WHERE SS.JOBGUID IN ({$guidsSql})";
     }
 
     /**
@@ -74,6 +108,8 @@ WHERE VU.FRSTR_USER IN ({$usersSql})
             $dateFilter = "AND FU.completion_date BETWEEN '{$dateStart}' AND '{$dateEnd}'";
         }
 
+        $extractYear = self::extractYearFromMsDate('XR.WP_STARTDATE');
+
         return "SELECT
     SS.JOBGUID,
     SS.STATUS,
@@ -83,6 +119,10 @@ WHERE VU.FRSTR_USER IN ({$usersSql})
     VEGJOB.FRSTR_USER AS assigned_planner,
     VEGJOB.LENGTH AS total_miles,
     VEGJOB.LENGTHCOMP AS total_miles_planned,
+    (SELECT TOP 1 {$extractYear}
+     FROM WPStartDate_Assessment_Xrefs XR
+     WHERE XR.Assess_JOBGUID = SS.JOBGUID
+    ) AS scope_year,
     (SELECT
         JH.USERNAME, JH.ACTION, JH.LOGDATE,
         JH.OLDSTATUS, JH.JOBSTATUS, JH.ASSIGNEDTO

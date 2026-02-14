@@ -36,4 +36,12 @@ class PlannerJobAssignmentFactory extends Factory
             'status' => 'exported',
         ]);
     }
+
+    public function withExportPath(string $path = '/tmp/career/test_export.json'): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'exported',
+            'export_path' => $path,
+        ]);
+    }
 }
