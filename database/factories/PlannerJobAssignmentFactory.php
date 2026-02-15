@@ -15,8 +15,11 @@ class PlannerJobAssignmentFactory extends Factory
      */
     public function definition(): array
     {
+        $username = fake()->userName();
+
         return [
-            'frstr_user' => fake()->userName(),
+            'frstr_user' => 'ASPLUNDH\\'.$username,
+            'normalized_username' => $username,
             'job_guid' => '{'.Str::uuid()->toString().'}',
             'status' => 'discovered',
             'discovered_at' => now(),

@@ -80,7 +80,7 @@ class PlannerCareerEntryFactory extends Factory
     }
 
     /**
-     * @return array<string, array<string, mixed>>
+     * @return list<array<string, mixed>>
      */
     private function generateDailyMetrics(\DateTimeInterface $startDate, int $days): array
     {
@@ -88,12 +88,13 @@ class PlannerCareerEntryFactory extends Factory
         $date = \Carbon\CarbonImmutable::instance($startDate);
 
         for ($i = 0; $i < min($days, 10); $i++) {
-            $key = $date->format('Y-m-d');
-            $metrics[$key] = [
-                'footage_feet' => fake()->randomFloat(1, 500, 3000),
-                'stations_completed' => fake()->numberBetween(3, 20),
-                'work_units' => fake()->numberBetween(5, 25),
-                'nw_units' => fake()->numberBetween(0, 5),
+            $metrics[] = [
+                'completion_date' => $date->format('Y-m-d'),
+                'FRSTR_USER' => 'ASPLUNDH\\'.fake()->userName(),
+                'daily_footage_miles' => fake()->randomFloat(2, 0.5, 8.0),
+                'unit_count' => fake()->numberBetween(5, 50),
+                'station_list' => implode(',', range(10, 10 * fake()->numberBetween(3, 15), 10)),
+                'stations' => [],
             ];
             $date = $date->addDay();
         }

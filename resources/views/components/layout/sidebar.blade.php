@@ -30,6 +30,16 @@
             ],
         ],
         [
+            'section' => 'Planner Metrics',
+            'items' => [
+                [
+                    'label' => 'Overview',
+                    'route' => 'planner-metrics.overview',
+                    'icon' => 'users',
+                ],
+            ],
+        ],
+        [
             'section' => 'Data Management',
             'permission' => 'access-data-management',
             'items' => [

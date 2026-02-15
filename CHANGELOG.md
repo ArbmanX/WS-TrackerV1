@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Planner Metrics Dashboard — Phase 1 Overview Page** (2026-02-15)
+  - New `/planner-metrics` route with Livewire page component showing planner card grid
+  - Quota view: weekly footage progress vs 6.5 mi/week target, streak counting, coaching messages
+  - Health view: assessment staleness, aging units, permission breakdowns per planner
+  - Page-level toggles: view (Quota/Health), period (Week/Month/Year/Scope Year), sort (A-Z/Needs Attention)
+  - `PlannerMetricsService` aggregates data from `planner_career_entries`, `assessment_monitors`, and `planner_job_assignments`
+  - `CoachingMessageGenerator` produces contextual tips for behind-quota planners (nudge/recovery/encouraging/celebration)
+  - New `config/planner_metrics.php` for quota target and staleness thresholds
+  - New `normalized_username` indexed column on `planner_job_assignments` for efficient username bridge
+  - Sidebar navigation entry under "Planner Metrics" section
+  - 36 new tests (13 service, 7 generator, 16 feature)
+
+### Fixed
+- **AssessmentMonitorFactory permission_breakdown values** now match config-driven statuses (Approved, Pending, No Contact, Refused, Deferred, PPL Approved)
+- **PlannerCareerEntryFactory daily_metrics** now produces flat array with correct field names (`completion_date`, `daily_footage_miles`) matching real export format
+- **PlannerJobAssignmentFactory** now generates domain-qualified `frstr_user` and stripped `normalized_username`
+
 ### Fixed
 - **Daily footage command returning incomplete results** (2026-02-14)
   - Removed `edit_date` filter from `getJobGuids()` in `FetchDailyFootage` — `edit_date` reflects sync freshness, not planner activity

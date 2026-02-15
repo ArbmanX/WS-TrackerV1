@@ -14,6 +14,7 @@ class PlannerJobAssignment extends Model
 
     protected $fillable = [
         'frstr_user',
+        'normalized_username',
         'job_guid',
         'status',
         'export_path',
@@ -26,6 +27,12 @@ class PlannerJobAssignment extends Model
         return [
             'discovered_at' => 'datetime',
         ];
+    }
+
+    /** @param Builder<self> $query */
+    public function scopeForNormalizedUser(Builder $query, string $username): void
+    {
+        $query->where('normalized_username', $username);
     }
 
     /** @param Builder<self> $query */

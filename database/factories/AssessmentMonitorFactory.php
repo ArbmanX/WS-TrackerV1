@@ -80,11 +80,12 @@ class AssessmentMonitorFactory extends Factory
 
         return [
             'permission_breakdown' => [
-                'Granted' => fake()->numberBetween(20, 50),
-                'Denied' => fake()->numberBetween(0, 5),
+                'Approved' => fake()->numberBetween(20, 50),
                 'Pending' => fake()->numberBetween(5, 20),
+                'No Contact' => fake()->numberBetween(0, 5),
                 'Refused' => fake()->numberBetween(0, 3),
-                'Not Needed' => fake()->numberBetween(3, 15),
+                'Deferred' => fake()->numberBetween(0, 2),
+                'PPL Approved' => fake()->numberBetween(3, 15),
             ],
             'unit_counts' => [
                 'work_units' => $workUnits,

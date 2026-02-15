@@ -104,10 +104,14 @@ test('summary_totals contains expected metric keys', function () {
     ]);
 });
 
-test('daily_metrics keys are date-formatted strings', function () {
+test('daily_metrics entries contain completion_date and daily_footage_miles', function () {
     $entry = PlannerCareerEntry::factory()->create();
 
-    foreach (array_keys($entry->daily_metrics) as $key) {
-        expect($key)->toMatch('/^\d{4}-\d{2}-\d{2}$/');
+    expect($entry->daily_metrics)->toBeArray()->not->toBeEmpty();
+
+    foreach ($entry->daily_metrics as $metric) {
+        expect($metric)
+            ->toHaveKeys(['completion_date', 'daily_footage_miles', 'unit_count'])
+            ->and($metric['completion_date'])->toMatch('/^\d{4}-\d{2}-\d{2}$/');
     }
 });

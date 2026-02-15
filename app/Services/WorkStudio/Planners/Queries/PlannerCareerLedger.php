@@ -98,6 +98,7 @@ WHERE SS.JOBGUID IN ({$guidsSql})";
 
         $guidsSql = WSHelpers::toSqlInClause($jobGuids);
         $parseAssddate = self::parseMsDateToDate('VU.ASSDDATE');
+        $parseAssddateCorr = self::parseMsDateToDate('VU2.ASSDDATE');
 
         $dateFilter = '';
         if ($dateStart !== null && $dateEnd !== null) {
@@ -161,7 +162,36 @@ OUTER APPLY (
             FU.FRSTR_USER,
             CAST(SUM(ISNULL(ST.SPANLGTH, 0)) / 1609.34 AS DECIMAL(10,2)) AS daily_footage_miles,
             STRING_AGG(CAST(FU.STATNAME AS VARCHAR(MAX)), ',') WITHIN GROUP (ORDER BY FU.STATNAME) AS station_list,
-            SUM(CASE WHEN U.SUMMARYGRP IS NOT NULL AND U.SUMMARYGRP != '' AND U.SUMMARYGRP != 'Summary-NonWork' THEN 1 ELSE 0 END) AS unit_count
+            SUM(CASE WHEN U.SUMMARYGRP IS NOT NULL AND U.SUMMARYGRP != '' AND U.SUMMARYGRP != 'Summary-NonWork' THEN 1 ELSE 0 END) AS unit_count,
+            (SELECT
+                FU2.STATNAME AS statname,
+                CAST(ISNULL(ST2.SPANLGTH, 0) * 3.28084 AS DECIMAL(10,1)) AS span_length_ft,
+                FU2.UNIT AS winning_unit,
+                FU2.ASSLAT AS [coords.lat],
+                FU2.ASSLONG AS [coords.long]
+             FROM (
+                 SELECT
+                     VU2.STATNAME,
+                     VU2.ASSLAT,
+                     VU2.ASSLONG,
+                     VU2.UNIT,
+                     {$parseAssddateCorr} AS completion_date,
+                     VU2.FRSTR_USER,
+                     ROW_NUMBER() OVER (PARTITION BY VU2.STATNAME ORDER BY VU2.ASSDDATE ASC) AS unit_rank
+                 FROM VEGUNIT VU2
+                 WHERE VU2.UNIT IS NOT NULL AND VU2.UNIT != ''
+                   AND VU2.ASSDDATE IS NOT NULL AND VU2.ASSDDATE != ''
+                   AND VU2.JOBGUID = SS.JOBGUID
+             ) FU2
+             JOIN STATIONS ST2
+                 ON ST2.JOBGUID = SS.JOBGUID
+                 AND ST2.STATNAME = FU2.STATNAME
+             WHERE FU2.unit_rank = 1
+               AND FU2.completion_date = FU.completion_date
+               AND FU2.FRSTR_USER = FU.FRSTR_USER
+             ORDER BY FU2.STATNAME
+             FOR JSON PATH
+            ) AS stations
         FROM (
             SELECT
                 VU.STATNAME,
