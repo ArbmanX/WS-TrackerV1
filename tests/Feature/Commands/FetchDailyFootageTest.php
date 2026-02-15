@@ -23,7 +23,7 @@ function fakeDailyFootageResponse(?array $overrideData = null): array
 }
 
 /**
- * Create an SsJob matching the default filters (ACTIV, scope_year, assessment job_type, edit_date in range).
+ * Create an SsJob matching the default filters (ACTIV, scope_year, assessment job_type).
  */
 function createMatchingJob(array $overrides = []): SsJob
 {
@@ -31,7 +31,6 @@ function createMatchingJob(array $overrides = []): SsJob
         'status' => 'ACTIV',
         'scope_year' => config('ws_assessment_query.scope_year'),
         'job_type' => 'Assessment Dx',
-        'edit_date' => Carbon::parse('2026-02-03'), // Tuesday — within WE 02-07-2026 range (Sun Feb 1 - Sat Feb 7)
     ], $overrides));
 }
 
@@ -45,7 +44,7 @@ test('default date resolves to previous complete week when not Saturday', functi
     Carbon::setTestNow(Carbon::parse('2026-02-06'));
     Storage::fake();
 
-    createMatchingJob(['edit_date' => Carbon::parse('2026-01-26')]); // Sunday of Jan 31 week
+    createMatchingJob();
 
     Http::fake(['*/GETQUERY' => Http::response(fakeDailyFootageResponse())]);
 
@@ -64,7 +63,7 @@ test('default date uses current week when today is Saturday', function () {
     Carbon::setTestNow(Carbon::parse('2026-02-07'));
     Storage::fake();
 
-    createMatchingJob(['edit_date' => Carbon::parse('2026-02-03')]); // Tuesday — within this week
+    createMatchingJob();
 
     Http::fake(['*/GETQUERY' => Http::response(fakeDailyFootageResponse())]);
 
@@ -82,8 +81,8 @@ test('default date uses current week when today is Saturday', function () {
 test('year argument triggers Year mode with full year range', function () {
     Storage::fake();
 
-    createMatchingJob(['edit_date' => Carbon::parse('2026-06-15')]); // Mid-year — within range
-    createMatchingJob(['edit_date' => Carbon::parse('2025-12-31')]); // Previous year — excluded
+    createMatchingJob(); // scope_year 2026 — matches
+    createMatchingJob(['scope_year' => '2025']); // Previous year — excluded
 
     Http::fake(['*/GETQUERY' => Http::response(fakeDailyFootageResponse())]);
 
@@ -96,12 +95,10 @@ test('year argument triggers Year mode with full year range', function () {
     expect(Storage::allFiles())->toContain('daily-footage/ASPLUNDH/year01_01_2026_planning_activities.json');
 });
 
-test('Saturday date triggers WE mode with Sun-Sat edit_date range', function () {
+test('Saturday date triggers WE mode', function () {
     Storage::fake();
 
-    // Saturday Feb 7, 2026 → WE range: Sun Feb 1 - Sat Feb 7
-    $jobInRange = createMatchingJob(['edit_date' => Carbon::parse('2026-02-03')]);
-    createMatchingJob(['edit_date' => Carbon::parse('2026-01-30')]); // Before range — excluded
+    createMatchingJob();
 
     Http::fake(['*/GETQUERY' => Http::response(fakeDailyFootageResponse())]);
 
@@ -114,12 +111,10 @@ test('Saturday date triggers WE mode with Sun-Sat edit_date range', function () 
     expect(Storage::allFiles())->toContain('daily-footage/ASPLUNDH/we02_07_2026_planning_activities.json');
 });
 
-test('non-Saturday date triggers Daily mode with single-day edit_date filter', function () {
+test('non-Saturday date triggers Daily mode', function () {
     Storage::fake();
 
-    // Wednesday Feb 4, 2026 → Daily mode: only Feb 4
-    $jobOnDay = createMatchingJob(['edit_date' => Carbon::parse('2026-02-04 14:30:00')]);
-    createMatchingJob(['edit_date' => Carbon::parse('2026-02-03')]); // Different day — excluded
+    createMatchingJob();
 
     Http::fake(['*/GETQUERY' => Http::response(fakeDailyFootageResponse())]);
 
@@ -137,7 +132,7 @@ test('MM-DD format assumes current year', function () {
     Storage::fake();
 
     // 02-07 → Feb 7 of current year (2026) — Saturday → WE mode
-    createMatchingJob(['edit_date' => Carbon::parse('2026-02-03')]);
+    createMatchingJob();
 
     Http::fake(['*/GETQUERY' => Http::response(fakeDailyFootageResponse())]);
 
@@ -157,8 +152,8 @@ test('MM-DD format assumes current year', function () {
 test('filters jobs by status (default ACTIV)', function () {
     Storage::fake();
 
-    createMatchingJob(['status' => 'ACTIV', 'edit_date' => Carbon::parse('2026-02-03')]);
-    createMatchingJob(['status' => 'QC', 'edit_date' => Carbon::parse('2026-02-03')]);
+    createMatchingJob(['status' => 'ACTIV']);
+    createMatchingJob(['status' => 'QC']);
 
     Http::fake(['*/GETQUERY' => Http::response(fakeDailyFootageResponse())]);
 
@@ -170,8 +165,8 @@ test('filters jobs by status (default ACTIV)', function () {
 test('--status overrides default ACTIV filter', function () {
     Storage::fake();
 
-    createMatchingJob(['status' => 'QC', 'edit_date' => Carbon::parse('2026-02-03')]);
-    createMatchingJob(['status' => 'ACTIV', 'edit_date' => Carbon::parse('2026-02-03')]);
+    createMatchingJob(['status' => 'QC']);
+    createMatchingJob(['status' => 'ACTIV']);
 
     Http::fake(['*/GETQUERY' => Http::response(fakeDailyFootageResponse())]);
 
@@ -183,12 +178,11 @@ test('--status overrides default ACTIV filter', function () {
 test('--all-statuses uses all planner_concern statuses', function () {
     Storage::fake();
 
-    // Create one job per planner_concern status, all in edit_date range
-    createMatchingJob(['status' => 'ACTIV', 'edit_date' => Carbon::parse('2026-02-02')]);
-    createMatchingJob(['status' => 'QC', 'edit_date' => Carbon::parse('2026-02-03')]);
-    createMatchingJob(['status' => 'REWRK', 'edit_date' => Carbon::parse('2026-02-04')]);
-    createMatchingJob(['status' => 'CLOSE', 'edit_date' => Carbon::parse('2026-02-05')]);
-    createMatchingJob(['status' => 'SA', 'edit_date' => Carbon::parse('2026-02-03')]); // Not in planner_concern
+    createMatchingJob(['status' => 'ACTIV']);
+    createMatchingJob(['status' => 'QC']);
+    createMatchingJob(['status' => 'REWRK']);
+    createMatchingJob(['status' => 'CLOSE']);
+    createMatchingJob(['status' => 'SA']); // Not in planner_concern
 
     Http::fake(['*/GETQUERY' => Http::response(fakeDailyFootageResponse())]);
 
@@ -200,9 +194,9 @@ test('--all-statuses uses all planner_concern statuses', function () {
 test('filters jobs by assessment job_type from config', function () {
     Storage::fake();
 
-    createMatchingJob(['job_type' => 'Assessment Dx', 'edit_date' => Carbon::parse('2026-02-03')]);
-    createMatchingJob(['job_type' => 'Split_Assessment', 'edit_date' => Carbon::parse('2026-02-03')]);
-    createMatchingJob(['job_type' => 'Work Dx', 'edit_date' => Carbon::parse('2026-02-03')]); // Not an assessment type
+    createMatchingJob(['job_type' => 'Assessment Dx']);
+    createMatchingJob(['job_type' => 'Split_Assessment']);
+    createMatchingJob(['job_type' => 'Work Dx']); // Not an assessment type
 
     Http::fake(['*/GETQUERY' => Http::response(fakeDailyFootageResponse())]);
 
@@ -235,7 +229,7 @@ test('--jobguid bypasses ss_jobs lookup', function () {
 test('enriched JSON records have correct shape', function () {
     Storage::fake();
 
-    createMatchingJob(['edit_date' => Carbon::parse('2026-02-03')]);
+    createMatchingJob();
 
     Http::fake(['*/GETQUERY' => Http::response(fakeDailyFootageResponse([
         ['{abc-111}', '01-15-2026', 'ASPLUNDH\\tgibson', '1523.7', '0,1,5', '3'],
@@ -258,7 +252,7 @@ test('enriched JSON records have correct shape', function () {
 test('station_list is split into array', function () {
     Storage::fake();
 
-    createMatchingJob(['edit_date' => Carbon::parse('2026-02-03')]);
+    createMatchingJob();
 
     Http::fake(['*/GETQUERY' => Http::response(fakeDailyFootageResponse([
         ['{abc-111}', '01-15-2026', 'ASPLUNDH\\tgibson', '500.0', '0,1,5,10', '4'],
@@ -274,7 +268,7 @@ test('station_list is split into array', function () {
 test('empty station_list produces empty array', function () {
     Storage::fake();
 
-    createMatchingJob(['edit_date' => Carbon::parse('2026-02-03')]);
+    createMatchingJob();
 
     Http::fake(['*/GETQUERY' => Http::response(fakeDailyFootageResponse([
         ['{abc-111}', '01-15-2026', 'ASPLUNDH\\tgibson', '500.0', '', '0'],
@@ -290,7 +284,7 @@ test('empty station_list produces empty array', function () {
 test('completion_date MM-DD-YYYY is converted to datepop YYYY-MM-DD', function () {
     Storage::fake();
 
-    createMatchingJob(['edit_date' => Carbon::parse('2026-02-03')]);
+    createMatchingJob();
 
     Http::fake(['*/GETQUERY' => Http::response(fakeDailyFootageResponse([
         ['{abc-111}', '01-15-2026', 'ASPLUNDH\\tgibson', '1523.7', '0', '1'],
@@ -307,7 +301,7 @@ test('completion_date MM-DD-YYYY is converted to datepop YYYY-MM-DD', function (
 test('multiple domains produce separate JSON files', function () {
     Storage::fake();
 
-    createMatchingJob(['edit_date' => Carbon::parse('2026-02-03')]);
+    createMatchingJob();
 
     Http::fake(['*/GETQUERY' => Http::response(fakeDailyFootageResponse())]);
 
@@ -326,7 +320,7 @@ test('multiple domains produce separate JSON files', function () {
 test('no .manifest file is written', function () {
     Storage::fake();
 
-    createMatchingJob(['edit_date' => Carbon::parse('2026-02-03')]);
+    createMatchingJob();
 
     Http::fake(['*/GETQUERY' => Http::response(fakeDailyFootageResponse())]);
 
@@ -406,7 +400,7 @@ test('DailyFootageQuery joins UNITS table and counts working units', function ()
 test('unit_count is cast to integer in enriched output', function () {
     Storage::fake();
 
-    createMatchingJob(['edit_date' => Carbon::parse('2026-02-03')]);
+    createMatchingJob();
 
     Http::fake(['*/GETQUERY' => Http::response(fakeDailyFootageResponse([
         ['{abc-111}', '01-15-2026', 'ASPLUNDH\\tgibson', '1523.7', '0,1,5', '3'],
@@ -425,7 +419,7 @@ test('unit_count is cast to integer in enriched output', function () {
 // ──────────────────────────────────────────────────
 
 test('dry-run shows jobs without calling API', function () {
-    createMatchingJob(['edit_date' => Carbon::parse('2026-02-03')]);
+    createMatchingJob();
 
     Http::fake();
 
@@ -444,7 +438,7 @@ test('handles no matching jobs gracefully', function () {
 });
 
 test('handles API error response', function () {
-    createMatchingJob(['edit_date' => Carbon::parse('2026-02-03')]);
+    createMatchingJob();
 
     Http::fake(['*/GETQUERY' => Http::response([
         'protocol' => 'ERROR',
@@ -458,7 +452,7 @@ test('handles API error response', function () {
 test('handles empty API data set', function () {
     Storage::fake();
 
-    createMatchingJob(['edit_date' => Carbon::parse('2026-02-03')]);
+    createMatchingJob();
 
     Http::fake(['*/GETQUERY' => Http::response([
         'Protocol' => 'QUERYRESULT',
@@ -474,7 +468,7 @@ test('chunks large JOBGUID lists into multiple API calls', function () {
 
     // Create 5 matching jobs
     for ($i = 0; $i < 5; $i++) {
-        createMatchingJob(['edit_date' => Carbon::parse('2026-02-03')]);
+        createMatchingJob();
     }
 
     Http::fake(['*/GETQUERY' => Http::response(fakeDailyFootageResponse())]);

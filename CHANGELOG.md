@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Daily footage command returning incomplete results** (2026-02-14)
+  - Removed `edit_date` filter from `getJobGuids()` in `FetchDailyFootage` — `edit_date` reflects sync freshness, not planner activity
+  - All active assessments for the scope year are now sent to the API; the SQL `completion_date BETWEEN` filter handles temporal narrowing
+  - Previously only ~5 of 136 assessments were queried, silently dropping most planners
+
 ### Changed
 - **Refactored fetch commands into Commands/Fetch/ subfolder** (2026-02-14)
   - Moved 6 fetch commands to `app/Console/Commands/Fetch/` with `App\Console\Commands\Fetch` namespace

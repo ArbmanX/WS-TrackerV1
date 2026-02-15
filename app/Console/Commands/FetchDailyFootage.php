@@ -210,8 +210,7 @@ class FetchDailyFootage extends Command
 
         $query = SsJob::query()
             ->where('scope_year', $scopeYear)
-            ->whereIn('job_type', $jobTypes)
-            ->whereBetween('edit_date', [$this->editDateStart, $this->editDateEnd]);
+            ->whereIn('job_type', $jobTypes);
 
         if ($this->option('all-statuses')) {
             $statuses = config('ws_assessment_query.statuses.planner_concern');
