@@ -9,13 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Refactored PlannerMetricsService to read from career JSON files** (2026-02-15)
+  - `PlannerMetricsService` now reads career data from JSON files produced by `PlannerCareerLedgerService` instead of querying `planner_career_entries` table
+  - Removed `CareerLedgerService`, `CareerLedgerQueries`, `PlannerCareerEntry` model, factory, and migration (10 files deleted)
+  - Removed `ws:import-career-ledger` and `ws:export-career-ledger` commands
+  - Removed `CareerLedgerService` singleton from `WorkStudioServiceProvider`
+  - `ProcessAssessmentClose` listener no longer appends to career ledger on assessment close
+  - New config key: `planner_metrics.career_json_path`
+  - Dropped `planner_career_entries` table
+  - Removed `career_ledger` key from `config/ws_data_collection.php`
+
 ### Added
 - **Planner Metrics Dashboard — Phase 1 Overview Page** (2026-02-15)
   - New `/planner-metrics` route with Livewire page component showing planner card grid
   - Quota view: weekly footage progress vs 6.5 mi/week target, streak counting, coaching messages
   - Health view: assessment staleness, aging units, permission breakdowns per planner
   - Page-level toggles: view (Quota/Health), period (Week/Month/Year/Scope Year), sort (A-Z/Needs Attention)
-  - `PlannerMetricsService` aggregates data from `planner_career_entries`, `assessment_monitors`, and `planner_job_assignments`
+  - `PlannerMetricsService` aggregates data from career JSON files, `assessment_monitors`, and `planner_job_assignments`
   - `CoachingMessageGenerator` produces contextual tips for behind-quota planners (nudge/recovery/encouraging/celebration)
   - New `config/planner_metrics.php` for quota target and staleness thresholds
   - New `normalized_username` indexed column on `planner_job_assignments` for efficient username bridge
@@ -24,7 +35,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **AssessmentMonitorFactory permission_breakdown values** now match config-driven statuses (Approved, Pending, No Contact, Refused, Deferred, PPL Approved)
-- **PlannerCareerEntryFactory daily_metrics** now produces flat array with correct field names (`completion_date`, `daily_footage_miles`) matching real export format
 - **PlannerJobAssignmentFactory** now generates domain-qualified `frstr_user` and stripped `normalized_username`
 
 ### Fixed

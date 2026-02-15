@@ -1,10 +1,6 @@
 <?php
 
 return [
-    'career_ledger' => [
-        'bootstrap_path' => storage_path('app/career-ledger-bootstrap.json'),
-    ],
-
     'live_monitor' => [
         'enabled' => (bool) env('WS_LIVE_MONITOR_ENABLED', true),
         'schedule' => 'daily',

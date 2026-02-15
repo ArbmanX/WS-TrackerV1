@@ -39,4 +39,15 @@ return [
     */
     'default_card_view' => 'quota',
 
+    /*
+    |--------------------------------------------------------------------------
+    | Career JSON Path
+    |--------------------------------------------------------------------------
+    |
+    | Directory containing career JSON files produced by PlannerCareerLedgerService.
+    | Files follow the naming convention: {username}_{date}.json
+    |
+    */
+    'career_json_path' => storage_path('app/asplundh/planners/career'),
+
 ];

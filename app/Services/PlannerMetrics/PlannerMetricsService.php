@@ -3,28 +3,29 @@
 namespace App\Services\PlannerMetrics;
 
 use App\Models\AssessmentMonitor;
-use App\Models\PlannerCareerEntry;
 use App\Models\PlannerJobAssignment;
 use App\Services\PlannerMetrics\Contracts\PlannerMetricsServiceInterface;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Log;
 
 class PlannerMetricsService implements PlannerMetricsServiceInterface
 {
     public function getQuotaMetrics(string $period = 'week'): array
     {
-        $planners = $this->getDistinctPlanners();
+        $careerData = $this->loadAllCareerData();
+        $planners = $this->buildPlannerList($careerData);
         $quota = (float) config('planner_metrics.quota_miles_per_week');
         $gapThreshold = (float) config('planner_metrics.gap_warning_threshold', 3.0);
         $results = [];
 
         foreach ($planners as $planner) {
-            $entries = PlannerCareerEntry::forPlanner($planner['username'])->get();
-            $periodMiles = $this->calculatePeriodMiles($entries, $period);
+            $assessments = $careerData[$planner['username']]['assessments'] ?? [];
+            $periodMiles = $this->calculatePeriodMiles($assessments, $period);
             $quotaTarget = $this->calculateQuotaTarget($period, $quota);
             $percentComplete = $quotaTarget > 0 ? round(($periodMiles / $quotaTarget) * 100, 1) : 0;
             $gapMiles = max(0, round($quotaTarget - $periodMiles, 1));
-            $streakWeeks = $this->calculateStreak($entries, $quota);
-            $lastWeekMiles = $this->calculateLastWeekMiles($entries);
+            $streakWeeks = $this->calculateStreak($assessments, $quota);
+            $lastWeekMiles = $this->calculateLastWeekMiles($assessments);
             $healthSignal = $this->resolveHealthSignal($planner['username']);
 
             $status = match (true) {
@@ -53,7 +54,7 @@ class PlannerMetricsService implements PlannerMetricsServiceInterface
 
     public function getHealthMetrics(): array
     {
-        $planners = $this->getDistinctPlanners();
+        $planners = $this->buildPlannerList($this->loadAllCareerData());
         $warningDays = (int) config('planner_metrics.staleness_warning_days');
         $criticalDays = (int) config('planner_metrics.staleness_critical_days');
         $results = [];
@@ -87,16 +88,86 @@ class PlannerMetricsService implements PlannerMetricsServiceInterface
 
     public function getDistinctPlanners(): array
     {
-        return PlannerCareerEntry::query()
-            ->select('planner_username', 'planner_display_name')
-            ->groupBy('planner_username', 'planner_display_name')
-            ->get()
-            ->map(fn ($entry) => [
-                'username' => $entry->planner_username,
-                'display_name' => $entry->planner_display_name,
-            ])
-            ->values()
-            ->all();
+        return $this->buildPlannerList($this->loadAllCareerData());
+    }
+
+    private function buildPlannerList(array $careerData): array
+    {
+        return collect($careerData)->map(function (array $data, string $username) {
+            $firstAssessment = $data['assessments'][0] ?? null;
+            $displayName = $username;
+
+            if ($firstAssessment && isset($firstAssessment['planner_username'])) {
+                $displayName = str_contains($firstAssessment['planner_username'], '\\')
+                    ? substr($firstAssessment['planner_username'], strrpos($firstAssessment['planner_username'], '\\') + 1)
+                    : $firstAssessment['planner_username'];
+            }
+
+            return [
+                'username' => $username,
+                'display_name' => $displayName,
+            ];
+        })->values()->all();
+    }
+
+    /**
+     * Load all career JSON files, returning the most recent per planner.
+     *
+     * @return array<string, array{assessments: array, ...}>
+     */
+    private function loadAllCareerData(): array
+    {
+        $path = config('planner_metrics.career_json_path');
+
+        if (! $path || ! is_dir($path)) {
+            return [];
+        }
+
+        $files = glob($path.'/*.json');
+
+        if (! is_array($files) || empty($files)) {
+            return [];
+        }
+
+        sort($files);
+
+        // Group by username, keeping the most recent file per planner.
+        // Filename format: {username}_{YYYY-MM-DD}.json — regex anchors on fixed date suffix.
+        $grouped = [];
+        foreach ($files as $file) {
+            $basename = pathinfo($file, PATHINFO_FILENAME);
+
+            if (! preg_match('/^(.+)_(\d{4}-\d{2}-\d{2})$/', $basename, $matches)) {
+                continue;
+            }
+
+            $grouped[$matches[1]] = $file;
+        }
+
+        $result = [];
+        foreach ($grouped as $username => $file) {
+            $content = file_get_contents($file);
+
+            if ($content === false) {
+                Log::warning('Failed to read career JSON file', ['path' => $file]);
+
+                continue;
+            }
+
+            $decoded = json_decode($content, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                Log::error('Malformed career JSON', ['path' => $file, 'error' => json_last_error_msg()]);
+
+                continue;
+            }
+
+            if (is_array($decoded)) {
+                $result[$username] = $decoded;
+            }
+        }
+
+        return $result;
     }
 
     /**
@@ -163,20 +234,18 @@ class PlannerMetricsService implements PlannerMetricsServiceInterface
     }
 
     /**
-     * Sum daily_footage_miles across all entries for a planner within the date window.
-     *
-     * @param  \Illuminate\Database\Eloquent\Collection<int, PlannerCareerEntry>  $entries
+     * Sum daily_footage_miles across all assessments for a planner within the date window.
      */
-    private function calculatePeriodMiles($entries, string $period): float
+    private function calculatePeriodMiles(array $assessments, string $period): float
     {
         $now = CarbonImmutable::now();
 
         if ($period === 'scope-year') {
-            $currentScopeYear = (string) $now->year;
+            $currentScopeYear = (int) $now->year;
 
-            return $entries
+            return collect($assessments)
                 ->where('scope_year', $currentScopeYear)
-                ->sum(fn (PlannerCareerEntry $entry) => collect($entry->daily_metrics)
+                ->sum(fn (array $assessment) => collect($assessment['daily_metrics'] ?? [])
                     ->sum(fn (array $metric) => (float) ($metric['daily_footage_miles'] ?? 0))
                 );
         }
@@ -184,8 +253,8 @@ class PlannerMetricsService implements PlannerMetricsServiceInterface
         [$start, $end] = $this->getDateWindow($period, $now);
 
         $total = 0;
-        foreach ($entries as $entry) {
-            foreach ($entry->daily_metrics as $metric) {
+        foreach ($assessments as $assessment) {
+            foreach ($assessment['daily_metrics'] ?? [] as $metric) {
                 $date = $metric['completion_date'] ?? null;
                 if ($date && $date >= $start && $date <= $end) {
                     $total += (float) ($metric['daily_footage_miles'] ?? 0);
@@ -211,10 +280,8 @@ class PlannerMetricsService implements PlannerMetricsServiceInterface
 
     /**
      * Count consecutive prior weeks where the planner met quota.
-     *
-     * @param  \Illuminate\Database\Eloquent\Collection<int, PlannerCareerEntry>  $entries
      */
-    private function calculateStreak($entries, float $weeklyQuota): int
+    private function calculateStreak(array $assessments, float $weeklyQuota): int
     {
         $streak = 0;
         $now = CarbonImmutable::now();
@@ -225,8 +292,8 @@ class PlannerMetricsService implements PlannerMetricsServiceInterface
             $weekEnd = $checkMonday->addDays(6)->format('Y-m-d');
 
             $weekMiles = 0;
-            foreach ($entries as $entry) {
-                foreach ($entry->daily_metrics as $metric) {
+            foreach ($assessments as $assessment) {
+                foreach ($assessment['daily_metrics'] ?? [] as $metric) {
                     $date = $metric['completion_date'] ?? null;
                     if ($date && $date >= $weekStart && $date <= $weekEnd) {
                         $weekMiles += (float) ($metric['daily_footage_miles'] ?? 0);
@@ -247,10 +314,8 @@ class PlannerMetricsService implements PlannerMetricsServiceInterface
 
     /**
      * Get the total miles for the prior completed week (Monday-Sunday before current week).
-     *
-     * @param  \Illuminate\Database\Eloquent\Collection<int, PlannerCareerEntry>  $entries
      */
-    private function calculateLastWeekMiles($entries): float
+    private function calculateLastWeekMiles(array $assessments): float
     {
         $now = CarbonImmutable::now();
         $lastMonday = $now->startOfWeek()->subWeek();
@@ -260,8 +325,8 @@ class PlannerMetricsService implements PlannerMetricsServiceInterface
         $end = $lastSunday->format('Y-m-d');
 
         $total = 0;
-        foreach ($entries as $entry) {
-            foreach ($entry->daily_metrics as $metric) {
+        foreach ($assessments as $assessment) {
+            foreach ($assessment['daily_metrics'] ?? [] as $metric) {
                 $date = $metric['completion_date'] ?? null;
                 if ($date && $date >= $start && $date <= $end) {
                     $total += (float) ($metric['daily_footage_miles'] ?? 0);
