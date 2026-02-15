@@ -9,9 +9,8 @@ class ExportPlannerCareer extends Command
 {
     protected $signature = 'ws:export-planner-career
         {users?* : One or more FRSTR_USER usernames}
-        {--output= : Output directory (default: storage/app/career)}
-        {--current : Export active/QC/rework assessments instead of closed}
-        {--all-years : Discover assessments across all years (default: scoped to config scope_year)}';
+        {--output= : Output directory (default: storage/app/{domain}/planners/career)}
+        {--scope-year : Constrain discovery to configured scope year (default: all years)}';
 
     protected $description = 'Export per-planner career data from assessments';
 
@@ -25,24 +24,25 @@ class ExportPlannerCareer extends Command
             return self::FAILURE;
         }
 
-        $current = $this->option('current');
-        $allYears = $this->option('all-years');
-        $subDir = $current ? 'current' : 'closed';
+        $scopeYear = null;
+        if ($this->option('scope-year')) {
+            $scopeYear = (int) (config('ws_assessment_query.scope_year') ?: date('Y'));
+        }
+
         $domain = strtolower($this->extractDomain($users[0]));
-        $outputDir = $this->option('output') ?: storage_path("app/{$domain}/planners/{$subDir}");
+        $outputDir = $this->option('output') ?: storage_path("app/{$domain}/planners/career");
 
         if (! is_dir($outputDir)) {
             mkdir($outputDir, 0755, true);
         }
 
-        $mode = $current ? 'current (active/QC/rework)' : 'closed';
-        $yearScope = $allYears ? 'all years' : 'scope year '.config('ws_assessment_query.scope_year');
-        $this->info("Discovering {$mode} job assignments ({$yearScope}) for: ".implode(', ', $users));
+        $yearScope = $scopeYear !== null ? "scope year {$scopeYear}" : 'all years';
+        $this->info("Discovering job assignments ({$yearScope}) for: ".implode(', ', $users));
         $this->info('Incremental mode: previously exported data will be updated if stale.');
         $this->warn('This makes API calls and may take a while.');
 
         try {
-            $discovered = $service->discoverJobGuids($users, $current, $allYears);
+            $discovered = $service->discoverJobGuids($users, $scopeYear);
             $this->info("Discovered {$discovered->count()} job assignment(s).");
         } catch (\Throwable $e) {
             $this->error("Discovery failed: {$e->getMessage()}");
@@ -52,7 +52,7 @@ class ExportPlannerCareer extends Command
 
         $this->info('Exporting career data...');
 
-        $results = $service->exportForUsers($users, $outputDir, $current);
+        $results = $service->exportForUsers($users, $outputDir);
 
         foreach ($results as $user => $path) {
             if (str_starts_with($path, 'ERROR:')) {

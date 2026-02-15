@@ -21,7 +21,7 @@ const PLANNER_TEST_GUID_2 = '{B2C3D4E5-F6A7-8901-BCDE-F12345678901}';
 
 // ─── getDistinctJobGuids ─────────────────────────────────────────────────────
 
-test('getDistinctJobGuids queries VEGUNIT joined with SS for closed parent assessments', function () {
+test('getDistinctJobGuids queries VEGUNIT joined with SS for parent assessments', function () {
     $queries = new PlannerCareerLedger(makePlannerContext());
     $sql = $queries->getDistinctJobGuids('jsmith');
 
@@ -29,36 +29,34 @@ test('getDistinctJobGuids queries VEGUNIT joined with SS for closed parent asses
         ->toContain('SELECT DISTINCT VU.FRSTR_USER, VU.JOBGUID')
         ->toContain('FROM VEGUNIT VU')
         ->toContain('INNER JOIN SS ON SS.JOBGUID = VU.JOBGUID')
-        ->toContain("SS.STATUS = 'CLOSE'")
         ->toContain("SS.EXT = '@'")
         ->toContain('VU.ASSDDATE IS NOT NULL');
 });
 
-test('getDistinctJobGuids defaults to scope year filter via xref join', function () {
+test('getDistinctJobGuids has no status filter', function () {
     $queries = new PlannerCareerLedger(makePlannerContext());
     $sql = $queries->getDistinctJobGuids('jsmith');
 
     expect($sql)
+        ->not->toContain('SS.STATUS');
+});
+
+test('getDistinctJobGuids defaults to all years with no xref join', function () {
+    $queries = new PlannerCareerLedger(makePlannerContext());
+    $sql = $queries->getDistinctJobGuids('jsmith');
+
+    expect($sql)
+        ->not->toContain('WPStartDate_Assessment_Xrefs')
+        ->not->toContain('WP_STARTDATE');
+});
+
+test('getDistinctJobGuids with scopeYear adds xref join and year filter', function () {
+    $queries = new PlannerCareerLedger(makePlannerContext());
+    $sql = $queries->getDistinctJobGuids('jsmith', scopeYear: 2026);
+
+    expect($sql)
         ->toContain('WPStartDate_Assessment_Xrefs')
-        ->toContain('WP_STARTDATE LIKE');
-});
-
-test('getDistinctJobGuids with allYears skips xref join and year filter', function () {
-    $queries = new PlannerCareerLedger(makePlannerContext());
-    $sql = $queries->getDistinctJobGuids('jsmith', allYears: true);
-
-    expect($sql)
-        ->not->toContain('WPStartDate_Assessment_Xrefs')
-        ->not->toContain('WP_STARTDATE');
-});
-
-test('getDistinctJobGuids current mode skips year filter regardless of allYears', function () {
-    $queries = new PlannerCareerLedger(makePlannerContext());
-    $sql = $queries->getDistinctJobGuids('jsmith', current: true, allYears: false);
-
-    expect($sql)
-        ->not->toContain('WPStartDate_Assessment_Xrefs')
-        ->not->toContain('WP_STARTDATE');
+        ->toContain("WP_STARTDATE LIKE '%2026%'");
 });
 
 test('getDistinctJobGuids accepts single user string', function () {
@@ -83,35 +81,6 @@ test('getDistinctJobGuids uses no CTEs', function () {
     $sql = $queries->getDistinctJobGuids('jsmith');
 
     expect($sql)->not->toMatch('/\bWITH\b(?!IN)/');
-});
-
-// ─── getDistinctJobGuids — current mode ─────────────────────────────────────
-
-test('getDistinctJobGuids with current flag queries active statuses', function () {
-    $queries = new PlannerCareerLedger(makePlannerContext());
-    $sql = $queries->getDistinctJobGuids('jsmith', current: true);
-
-    expect($sql)
-        ->toContain("SS.STATUS IN ('ACTIV', 'QC', 'REWRK')")
-        ->not->toContain("SS.STATUS = 'CLOSE'");
-});
-
-test('getDistinctJobGuids without current flag queries closed status', function () {
-    $queries = new PlannerCareerLedger(makePlannerContext());
-    $sql = $queries->getDistinctJobGuids('jsmith', current: false);
-
-    expect($sql)
-        ->toContain("SS.STATUS = 'CLOSE'")
-        ->not->toContain("'ACTIV'");
-});
-
-test('getDistinctJobGuids current mode still requires parent assessments and ASSDDATE', function () {
-    $queries = new PlannerCareerLedger(makePlannerContext());
-    $sql = $queries->getDistinctJobGuids('jsmith', current: true);
-
-    expect($sql)
-        ->toContain("SS.EXT = '@'")
-        ->toContain('VU.ASSDDATE IS NOT NULL');
 });
 
 // ─── getFullCareerData — Metadata (flat columns) ────────────────────────────

@@ -31,7 +31,7 @@ test('command accepts user arguments and creates output directory', function () 
     rmdir($outputDir);
 });
 
-test('command outputs discovery and export info', function () {
+test('command outputs discovery info for all years by default', function () {
     $mockQS = Mockery::mock(GetQueryService::class);
     $mockQS->shouldReceive('executeAndHandle')
         ->andReturn(collect());
@@ -44,7 +44,7 @@ test('command outputs discovery and export info', function () {
         'users' => ['jsmith'],
         '--output' => $outputDir,
     ])
-        ->expectsOutputToContain('Discovering closed job assignments (scope year')
+        ->expectsOutputToContain('Discovering job assignments (all years)')
         ->expectsOutputToContain('Discovered 0 job assignment(s)')
         ->assertExitCode(0);
 
@@ -52,7 +52,7 @@ test('command outputs discovery and export info', function () {
     rmdir($outputDir);
 });
 
-test('command with --current flag outputs current mode info', function () {
+test('command with --scope-year flag outputs scoped year info', function () {
     $mockQS = Mockery::mock(GetQueryService::class);
     $mockQS->shouldReceive('executeAndHandle')
         ->andReturn(collect());
@@ -64,9 +64,9 @@ test('command with --current flag outputs current mode info', function () {
     $this->artisan('ws:export-planner-career', [
         'users' => ['jsmith'],
         '--output' => $outputDir,
-        '--current' => true,
+        '--scope-year' => true,
     ])
-        ->expectsOutputToContain('Discovering current (active/QC/rework) job assignments')
+        ->expectsOutputToContain('Discovering job assignments (scope year')
         ->assertExitCode(0);
 
     array_map('unlink', glob($outputDir.'/*'));

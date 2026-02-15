@@ -24,14 +24,14 @@ class PlannerCareerLedgerService
      * Discover JOBGUIDs for given FRSTR_USERs and upsert to planner_job_assignments.
      *
      * @param  string|array<int, string>  $frstrUsers
-     * @param  bool  $current  When true, discover active/QC/rework assessments instead of closed
+     * @param  int|null  $scopeYear  Constrain to a specific scope year, or null for all years
      * @return Collection<int, PlannerJobAssignment>
      */
-    public function discoverJobGuids(string|array $frstrUsers, bool $current = false, bool $allYears = false): Collection
+    public function discoverJobGuids(string|array $frstrUsers, ?int $scopeYear = null): Collection
     {
         $users = is_array($frstrUsers) ? $frstrUsers : [$frstrUsers];
 
-        $sql = $this->queries->getDistinctJobGuids($users, $current, $allYears);
+        $sql = $this->queries->getDistinctJobGuids($users, $scopeYear);
         $results = $this->queryService->executeAndHandle($sql);
 
         $assignments = collect();
@@ -62,10 +62,9 @@ class PlannerCareerLedgerService
      * staleness (EDITDATE > updated_at) and only new daily metrics are fetched.
      * Metadata fields are always refreshed for stale assessments.
      *
-     * @param  bool  $current  When true, export active/QC/rework assessments instead of closed
      * @return string File path of the exported JSON
      */
-    public function exportForUser(string $frstrUser, string $outputDir, bool $current = false): string
+    public function exportForUser(string $frstrUser, string $outputDir): string
     {
         $allAssignments = PlannerJobAssignment::forUser($frstrUser)->get();
 
@@ -188,16 +187,15 @@ class PlannerCareerLedgerService
      * Batch export career data for multiple users.
      *
      * @param  array<int, string>  $frstrUsers
-     * @param  bool  $current  When true, export active/QC/rework assessments instead of closed
      * @return array<string, string> Map of username => file path
      */
-    public function exportForUsers(array $frstrUsers, string $outputDir, bool $current = false): array
+    public function exportForUsers(array $frstrUsers, string $outputDir): array
     {
         $results = [];
 
         foreach ($frstrUsers as $user) {
             try {
-                $results[$user] = $this->exportForUser($user, $outputDir, $current);
+                $results[$user] = $this->exportForUser($user, $outputDir);
             } catch (\Throwable $e) {
                 Log::warning('Planner career export failed', [
                     'user' => $user,

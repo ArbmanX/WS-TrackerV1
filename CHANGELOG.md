@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Simplified PlannerCareerLedger to all-status discovery** (2026-02-14)
+  - `getDistinctJobGuids()` no longer filters by `SS.STATUS` — fetches all statuses (ACTIV, QC, REWRK, CLOSE) in a single pass
+  - Replaced `$current` + `$allYears` boolean params with `?int $scopeYear` — `null` = all years, integer = filter to that year
+  - Removed dead `$current` param from `exportForUser()` and `exportForUsers()` (was never referenced in method body)
+  - Artisan command `ws:export-planner-career` replaces `--current` and `--all-years` flags with `--scope-year`
+  - Output directory simplified from `{domain}/planners/{current|closed}` to `{domain}/planners/career`
+  - Updated 6 test files: removed 5 obsolete tests, rewrote 5 tests, added 2 new tests
+
 ### Added
 - **Planner Contribution Fields & Metadata Envelope** (2026-02-14)
   - **Contribution tracking:** `computeContributions()` sums `daily_footage_miles` per user — `total_contribution` for queried planner, `others_total_contribution` keyed by stripped username

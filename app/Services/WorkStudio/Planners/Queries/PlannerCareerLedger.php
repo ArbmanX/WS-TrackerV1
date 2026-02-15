@@ -13,26 +13,23 @@ class PlannerCareerLedger extends AbstractQueryBuilder
      * Joins VEGUNIT → SS to find assessments where the user performed
      * field work (has ASSDDATE). Only includes parent assessments (EXT = '@').
      *
-     * When $current is true, returns active assessments (ACTIV, QC, REWRK).
-     * When false (default), returns closed assessments only.
+     * Fetches ALL statuses. When $scopeYear is provided, constrains to that
+     * year via WPStartDate_Assessment_Xrefs join.
      *
      * @param  string|array<int, string>  $frstrUsers
+     * @param  int|null  $scopeYear  Constrain to a specific scope year, or null for all years
      */
-    public function getDistinctJobGuids(string|array $frstrUsers, bool $current = false, bool $allYears = false): string
+    public function getDistinctJobGuids(string|array $frstrUsers, ?int $scopeYear = null): string
     {
         $users = is_array($frstrUsers) ? $frstrUsers : [$frstrUsers];
         $usersSql = WSHelpers::toSqlInClause($users);
 
-        $statusFilter = $current
-            ? "SS.STATUS IN ('ACTIV', 'QC', 'REWRK')"
-            : "SS.STATUS = 'CLOSE'";
-
         $xrefJoin = '';
         $yearFilter = '';
 
-        if (! $allYears && ! $current) {
+        if ($scopeYear !== null) {
             $xrefJoin = 'INNER JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID';
-            $yearFilter = "AND WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$this->scopeYear}%'";
+            $yearFilter = "AND WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$scopeYear}%'";
         }
 
         return "SELECT DISTINCT VU.FRSTR_USER, VU.JOBGUID
@@ -40,7 +37,6 @@ FROM VEGUNIT VU
 INNER JOIN SS ON SS.JOBGUID = VU.JOBGUID
 {$xrefJoin}
 WHERE VU.FRSTR_USER IN ({$usersSql})
-    AND {$statusFilter}
     AND SS.EXT = '@'
     AND VU.ASSDDATE IS NOT NULL
     AND VU.ASSDDATE != ''

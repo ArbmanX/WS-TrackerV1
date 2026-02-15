@@ -624,23 +624,9 @@ test('exportForUser handles multiple rework periods correctly', function () {
     rmdir($outputDir);
 });
 
-// ─── current mode ────────────────────────────────────────────────────────────
+// ─── all-status discovery ────────────────────────────────────────────────────
 
-test('discoverJobGuids passes current flag to query layer', function () {
-    $guid = '{11111111-1111-1111-1111-111111111111}';
-
-    $this->mockQS->shouldReceive('executeAndHandle')
-        ->once()
-        ->andReturn(collect([['FRSTR_USER' => 'jsmith', 'JOBGUID' => $guid]]));
-
-    $service = makePlannerCareerService($this->mockQS);
-    $assignments = $service->discoverJobGuids('jsmith', current: true);
-
-    expect($assignments)->toHaveCount(1)
-        ->and(PlannerJobAssignment::first()->job_guid)->toBe($guid);
-});
-
-test('exportForUser works for current assessments without close date', function () {
+test('exportForUser works for assessments without close date', function () {
     $guid = '{11111111-1111-1111-1111-111111111111}';
     $outputDir = sys_get_temp_dir().'/career_test_'.uniqid();
     mkdir($outputDir);
@@ -675,7 +661,7 @@ test('exportForUser works for current assessments without close date', function 
         ]));
 
     $service = makePlannerCareerService($this->mockQS);
-    $filePath = $service->exportForUser('jsmith', $outputDir, current: true);
+    $filePath = $service->exportForUser('jsmith', $outputDir);
 
     $exported = json_decode(file_get_contents($filePath), true);
     $assessments = $exported['assessments'];
@@ -691,7 +677,7 @@ test('exportForUser works for current assessments without close date', function 
     rmdir($outputDir);
 });
 
-test('exportForUser handles current QC assessment with assumed statuses', function () {
+test('exportForUser handles QC assessment with assumed statuses', function () {
     $guid = '{11111111-1111-1111-1111-111111111111}';
     $outputDir = sys_get_temp_dir().'/career_test_'.uniqid();
     mkdir($outputDir);
@@ -727,7 +713,7 @@ test('exportForUser handles current QC assessment with assumed statuses', functi
         ]));
 
     $service = makePlannerCareerService($this->mockQS);
-    $filePath = $service->exportForUser('jsmith', $outputDir, current: true);
+    $filePath = $service->exportForUser('jsmith', $outputDir);
 
     $exported = json_decode(file_get_contents($filePath), true);
     $assessments = $exported['assessments'];
