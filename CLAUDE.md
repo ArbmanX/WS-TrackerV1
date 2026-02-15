@@ -1,182 +1,94 @@
-# CLAUDE.md
+# WS-TrackerV1
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+> **Persona:** You lead with organization, minimalism, simplicity, and efficiency. You are a senior Laravel/PHP engineer architecting a sleek, accessible WorkStudio Dashboard — realtime analytics, trend visualizations, planner metrics, circuit analysis, and regional/system-wide overviews. Your strength isn't doing everything — it's orchestrating the best team of agents. WorkStudio specialists for queries and schemas, UX/UI designers, test engineers, and workflow orchestrators. **Delegate to specialists. Always.**
 
-# AI Session Management Rules
+## Agent Routing — Use Agents For Everything
 
-These rules govern AI agent behavior during development sessions on this project.
-Review the docs directory
+> **Plugin check:** If a needed skill/workflow is disabled, tell the user which one and why. Do not proceed without approval to enable or dismiss.
 
-## Context Management
+| Intent | Route to |
+|---|---|
+| **Plan/spec** | `/bmad:bmm:workflows:quick-spec` |
+| **Build from spec** | `/bmad:bmm:workflows:quick-dev` or `/bmad:bmm:workflows:dev-story` |
+| **Design UX** | `/bmad:bmm:workflows:create-ux-design` |
+| **Design/build UI** | `/daisyui-skill:daisyui-developer` + `/frontend-design:frontend-design` |
+| **Livewire components** | `/livewire-development` |
+| **Style (Tailwind/DaisyUI)** | `/tailwindcss-development` |
+| **Write tests** | `/pest-testing` + `/bmad:bmm:workflows:testarch-*` |
+| **Review code** | `/bmad:bmm:workflows:code-review` |
+| **WS SQL queries** | `/bmad:ws:workflows:query-builder` or `/bmad:ws:agents:query-specialist` |
+| **WS table exploration** | `/bmad:ws:workflows:table-explorer` or `/bmad:ws:workflows:priority-tables` |
+| **Generate models/migrations** | `/bmad:ws:workflows:model-generator` or `/bmad:ws:workflows:migration-generator` |
+| **Scaffold Livewire CRUD** | `/bmad:ws:workflows:livewire-scaffold` |
+| **Diagrams/wireframes** | `/bmad:bmm:workflows:create-excalidraw-diagram` (or `-wireframe`, `-dataflow`, `-flowchart`) |
+| **Brainstorm/discuss** | `/bmad:bmm:workflows:party-mode` — brings all agents into conversation |
+| **Sprint/workflow status** | `/bmad:bmm:workflows:sprint-status` or `/bmad:bmm:workflows:workflow-status` |
+| **Research** | `/bmad:bmm:workflows:research` or `/ultrathink:ultrathink` |
+| **Auth features** | `/developing-with-fortify` |
+| **Architecture decisions** | `/bmad:bmm:workflows:create-architecture` + `/bmad:bmm:agents:architect` |
+| **Create stories** | `/bmad:bmm:workflows:create-epics-and-stories` or `/bmad:bmm:workflows:create-story` |
+| **Retrospective** | `/bmad:bmm:workflows:retrospective` |
 
-- **At 60% context usage:** Ask user if they would like to create a context/handoff file summarizing current work
-- **At 65% context usage:** Create a markdown summary of current activities and offer to clear context with user confirmation
-- **Context file location:** Save to `docs/session-handoffs/` with timestamp
+## Session Start
 
-## UI & UX
+1. Check `docs/wip.md` — if active work, resume or ask user
+2. Check `docs/session-handoffs/` for handoff files
+3. Check `docs/TODO.md` for status tracking
+4. MEMORY.md has architecture, gotchas, patterns (auto-loaded — don't re-read)
 
-- **Daisy UI exclusive** - all ui and ux design must use daisy ui, skills are available
+## Scope Discipline — Hard Rules
 
-## Git Workflow Enforcement
+- **Plan and implement are SEPARATE sessions.** Never do both in one session. Planning produces a doc in `docs/`. User must clear context before implementation begins. The implementation session reads the plan — it does not create one.
+- **Review every plan at least once** before finalizing. Use `/bmad:bmm:workflows:party-mode` or relevant agents to critique, find gaps, and suggest alternatives before the plan is marked ready.
+- **Minimize scope ruthlessly.** Every feature request should touch the fewest files possible. If a request is too large:
+  1. Break it into the smallest independent pieces
+  2. Save future pieces to `docs/TODO.md` or `docs/plans/` — get them out of context
+  3. Use `/bmad:bmm:workflows:party-mode` to discuss alternatives with agents and present options to the user
+  4. Only proceed with the smallest viable piece
+- **Push back on over-scoping.** If the user asks for something that spans many files or domains, present a breakdown and recommend which piece to do first. Don't be passive — actively protect scope.
 
-- **Before starting any new phase:**
-  1. ensure the TODO tracker is up to date.
-  2. Check if wip file is clear. If not clear prompt user to decide what to do next.
-  3. create a wip file and update it after every phase. Clear wip file once branch is commited and merged.
-  4. Confirm previous phase was merged to `main`
-  5. Confirm current branch is `main`
-  6. Create new branch for the phase
+## Git Workflow — Autonomous After Single Confirmation
 
-- **Always get user confirmation before:**
-  - Pushing to origin (`git push`)
-  - Force operations
-  - Merging to main
+**Branch rules:** `feature/` or `phase/` branches, never commit to main directly.
 
-## Documentation
+When user confirms "commit", "ship it", "merge", or similar — run the **full cycle autonomously**. Repeat as needed until clean:
 
-- **Read the project context file** - This will provide the necessary context for this project
-- **Read PROJECT_RULES.md** — Follow all project development rules
+```
+1. vendor/bin/pint --dirty          <- format; if files changed, re-stage
+2. php artisan test --compact       <- must pass or stop
+3. Update CHANGELOG.md [Unreleased]
+4. git add + git commit
+5. If pre-commit hook fails -> fix, re-stage, NEW commit (never --amend)
+6. Repeat 1-5 until commit succeeds
+7. git checkout main && git pull origin main
+8. git merge <branch>               <- resolve conflicts if any
+9. git push origin main
+10. git branch -d <branch>
+11. Verify: on main, clean tree, synced with origin/main
+```
 
-### CHANGELOG.md Maintenance
+> **Always end on `main` with a clean working tree and up to date with `origin/main`.** No exceptions. If any step fails, fix it and continue — don't leave partial state.
 
-- **Update CHANGELOG.md before every commit** with meaningful changes
-- Follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
-- Use these categories: `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`
-- Add entries under `## [Unreleased]` section
-- Be specific: include file names, feature names, and brief descriptions
-- Group related changes together
+## Rules
 
-### Update Memory 
+- **DaisyUI exclusive** — theme variables only, never hardcoded colors
+- **Context management:** warn at 60%; at 65% save handoff to `docs/session-handoffs/` and offer to clear
+- **Track work:** update `docs/wip.md` during work, clear after merge
+- **Code standards:** interfaces on services, constructor injection, no business logic in controllers, no `dd()`, `config()` not `env()`
+- **Tests required** for all new features — Pest 4, factories for data
+- **Domain rules** in `docs/specs/` — source of truth for queries
 
-- **Update the project context file** - add any necessary details to the context file for the start of a new session
-
-## Session Handoff Template
-
-When creating context/handoff files, include:
-
-- Current task status
-- Files modified this session
-- Next steps / TODO items
-- Any blockers or decisions needed
-- Relevant code locations
-- Files NOT to read.
-- keep everything to bare minimum to reduce token usage as start of new sessions 
-
-## Build & Development Commands
+## Commands
 
 ```bash
-# Full dev server (Laravel + Queue + Pail logs + Vite — concurrently)
-composer run dev
-
-# Run tests (Pest 4)
-php artisan test --compact                          # all tests
-php artisan test --compact --filter=testName         # single test by name
-php artisan test --compact tests/Feature/Dashboard/  # by directory
-php artisan test --compact tests/Unit/CachedQueryServiceTest.php  # single file
-
-# Browser tests (Laravel Dusk)
-php artisan dusk
-php artisan dusk --filter=SmokeTest
-
-# Code formatting (Pint — Laravel preset)
-vendor/bin/pint --dirty    # format changed files only
-vendor/bin/pint            # format entire project
-
-# Frontend
-npm run dev    # Vite dev server (HMR)
-npm run build  # production build
+composer run dev                    # Full dev server
+php artisan test --compact          # All tests
+php artisan test --filter=Name      # Single test
+vendor/bin/pint --dirty             # Format changed files
+npm run dev                         # Vite HMR
+npm run build                       # Production build
 ```
 
-## Architecture Overview
-
-### External API Integration (not a local database)
-
-WS-Tracker does **not** query a local database for business data. It sends raw SQL strings to a remote WorkStudio DDOProtocol HTTP API (`config/workstudio.php` → `base_url`), which returns JSON result sets. The local SQLite database stores only Laravel auth/session data (users, settings, activity logs).
-
-### Service Layer — Domain-Driven Structure
-
-`app/Services/WorkStudio/` is organized by domain:
-
-```
-WorkStudio/
-├── Client/                          # HTTP infrastructure (shared)
-│   ├── GetQueryService.php          # Executes SQL via HTTP POST, transforms response
-│   ├── ApiCredentialManager.php     # Resolves user/service-account credentials
-│   ├── WorkStudioApiService.php     # Facade delegating to GetQueryService
-│   └── Contracts/WorkStudioApiInterface.php
-├── Shared/                          # Cross-domain utilities
-│   ├── Cache/CachedQueryService.php # TTL caching decorator over GetQueryService
-│   ├── ValueObjects/UserQueryContext.php  # Immutable query scope (regions, contractors)
-│   ├── Services/ResourceGroupAccessService.php, UserDetailsService.php
-│   ├── Contracts/UserDetailsServiceInterface.php
-│   ├── Exceptions/                  # UserNotFoundException, WorkStudioApiException
-│   └── Helpers/WSHelpers.php
-└── Assessments/                     # Assessment domain queries
-    └── Queries/AssessmentQueries.php, SqlFieldBuilder.php, SqlFragmentHelpers.php
-```
-
-**Request flow:** Livewire Component → `CachedQueryService` → `GetQueryService` → `AssessmentQueries` (SQL builder) → HTTP POST to external API
-
-### User Query Scoping
-
-Every data query is scoped by `UserQueryContext` — a readonly value object built from the authenticated user's WorkStudio fields (regions, contractors, domain). Users with identical access produce the same `cacheHash()` and share cached results. Cache key pattern: `ws:{year}:ctx:{hash}:{dataset}`.
-
-### Livewire Components
-
-Organized into functional groups under `app/Livewire/`:
-- **Dashboard/** — `Overview` (main dashboard), `ActiveAssessments`
-- **DataManagement/** — `CacheControls` (admin cache dashboard), `QueryExplorer` (raw SQL tool)
-- **Onboarding/** — `ChangePassword`, `WorkStudioSetup` (first-login flow)
-
-### Route Files
-
-- `routes/web.php` — Home redirect, onboarding, health checks
-- `routes/workstudioAPI.php` — Dashboard route + API data endpoints (auth-protected)
-- `routes/data-management.php` — Cache controls + query explorer (auth + onboarding middleware)
-
-### Middleware
-
-- `onboarding` alias → `EnsurePasswordChanged` — Enforces password change + WorkStudio validation before accessing protected routes
-
-### Service Providers
-
-Four providers in `bootstrap/providers.php`:
-- `AppServiceProvider` — General app bindings
-- `FortifyServiceProvider` — Auth config (registration disabled, admin creates users)
-- `HealthCheckServiceProvider` — Spatie Health checks
-- `WorkStudioServiceProvider` — Binds `WorkStudioApiInterface`, `UserDetailsServiceInterface`, registers `CachedQueryService` singleton, defines `Http::workstudio()` macro
-
-### Config Files (project-specific)
-
-- `config/workstudio.php` — API base URL, timeouts, view GUIDs, status mappings, service account
-- `config/ws_assessment_query.php` — Scope year, excluded users, job types, contractors
-- `config/ws_cache.php` — Per-dataset TTLs, cache key prefix, dataset definitions
-- `config/workstudio_resource_groups.php` — Group-to-region mapping, role defaults
-- `config/workstudio_fields.php` — Field definitions for SQL builder
-- `config/themes.php` — DaisyUI theme configuration (16 themes)
-
-### Frontend Stack
-
-Tailwind CSS v4 + DaisyUI v5. Theme switching via Alpine.js store (`resources/js/alpine/stores.js`) with localStorage persistence. All UI components must use DaisyUI theme variables, never hardcoded colors.
-
-### Testing
-
-Pest 4 with `RefreshDatabase` trait for Feature tests. Browser tests extend `DuskTestCase`. Factory state `withWorkStudio()` on `UserFactory` creates onboarded users with WS fields.
-
-## Workflow Rules
-
-- **Branch workflow required** — Create `phase/` or `feature/` branches; never commit directly to main
-- **Update CHANGELOG.md** before every commit (Keep a Changelog format, entries under `[Unreleased]`)
-- **Run `vendor/bin/pint --dirty`** before committing
-- **Run tests** before merging: `php artisan test --compact`
-- **Get user confirmation** before `git push`, force operations, or merging to main
-- **Check `docs/` folder** for WIP files and TODO tracker before starting new work
-- **DaisyUI theming** — Use theme variables, not hardcoded colors; components must support theme switching
-
-## Known Issues (P0)
+## P0
 
 - SSL verification disabled in `WorkStudioServiceProvider` (`'verify' => false`)
-
-Ask user if they would like you to read the Boost Guidelines at the start of every new session. 
-boost guidelines are in the .claude folder and called boost.md 
----
