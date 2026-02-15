@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Console\Commands;
+namespace App\Console\Commands\Fetch;
 
 use App\Models\Circuit;
 use App\Models\SsJob;
@@ -16,16 +16,16 @@ use Illuminate\Support\Facades\Http;
 class FetchSsJobs extends Command
 {
     protected $signature = 'ws:fetch-jobs
-        {--dry-run : Show what would happen without changes}
-        {--year= : Override scope year (default from config)}';
+        {--seed : Upsert results into ss_jobs table}
+        {--year= : Scope to a specific year (omit for all years)}';
 
     protected $description = 'Fetch SS jobs from WorkStudio API and upsert into ss_jobs table';
 
     public function handle(): int
     {
-        $year = $this->option('year') ?? config('ws_assessment_query.scope_year');
+        $year = $this->option('year');
 
-        $this->info("Fetching SS jobs for year: {$year}");
+        $this->info($year ? "Fetching SS jobs for year: {$year}" : 'Fetching all SS jobs (no year filter)');
 
         $rows = $this->fetchFromApi($year);
 
@@ -44,7 +44,10 @@ class FetchSsJobs extends Command
         $grouped = $this->groupByJobGuid($rows);
         $this->info("Grouped into {$grouped->count()} unique jobs.");
 
-        if ($this->option('dry-run')) {
+        if ($this->option('seed')) {
+            $seedYear = $year ?? config('ws_assessment_query.scope_year');
+            $this->upsertJobs($grouped, $seedYear);
+        } else {
             $preview = $grouped->take(20)->map(fn (array $job) => [
                 $job['job_guid'],
                 $job['work_order'],
@@ -54,12 +57,11 @@ class FetchSsJobs extends Command
                 count($job['extensions']),
             ]);
             $this->table(['job_guid', 'work_order', 'job_type', 'status', 'title', 'ext_count'], $preview->toArray());
-            $this->warn('Dry run — no changes made. Showing first 20 of '.$grouped->count());
 
-            return self::SUCCESS;
+            if ($grouped->count() > 20) {
+                $this->info('Showing first 20 of '.$grouped->count().' jobs.');
+            }
         }
-
-        $this->upsertJobs($grouped, $year);
 
         return self::SUCCESS;
     }
@@ -67,7 +69,7 @@ class FetchSsJobs extends Command
     /**
      * @return Collection<int, array<string, mixed>>|null
      */
-    private function fetchFromApi(string $year): ?Collection
+    private function fetchFromApi(?string $year): ?Collection
     {
         $credentials = app(ApiCredentialManager::class)->getServiceAccountCredentials();
         $jobTypes = WSHelpers::toSqlInClause(config('ws_assessment_query.job_types.assessments'));
@@ -79,11 +81,17 @@ class FetchSsJobs extends Command
             .'SS.TAKEN, SS.TAKENBY, SS.MODIFIEDBY, SS.VERSION, SS.SYNCHVERSN, '
             .'SS.ASSIGNEDTO, SS.TITLE, SS.PJOBGUID, '
             ."{$editDateSql} AS EDITDATE "
-            .'FROM SS '
-            .'INNER JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID '
-            ."WHERE WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$year}%' "
-            ."AND SS.JOBTYPE IN ({$jobTypes}) "
-            .'ORDER BY SS.JOBGUID, SS.EXT';
+            .'FROM SS ';
+
+        if ($year) {
+            $sql .= 'INNER JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID '
+                ."WHERE WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$year}%' "
+                ."AND SS.JOBTYPE IN ({$jobTypes}) ";
+        } else {
+            $sql .= "WHERE SS.JOBTYPE IN ({$jobTypes}) ";
+        }
+
+        $sql .= 'ORDER BY SS.JOBGUID, SS.EXT';
 
         $payload = [
             'Protocol' => 'GETQUERY',
@@ -92,7 +100,7 @@ class FetchSsJobs extends Command
         ];
 
         try {
-            /** @var \Iluminate\Http\Client\Response $response */
+            /** @var \Illuminate\Http\Client\Response $response */
             $response = Http::withBasicAuth($credentials['username'], $credentials['password'])
                 ->timeout(180)
                 ->connectTimeout(30)
@@ -278,7 +286,7 @@ class FetchSsJobs extends Command
         $updatedCount = 0;
 
         foreach ($jobsByCircuit as $circuitId => $jobs) {
-            /** @var \app\Models\Circuit $circuit */
+            /** @var \App\Models\Circuit $circuit */
             $circuit = Circuit::find($circuitId);
 
             if (! $circuit) {

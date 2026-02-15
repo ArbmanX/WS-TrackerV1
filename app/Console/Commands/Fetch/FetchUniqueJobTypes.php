@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Console\Commands;
+namespace App\Console\Commands\Fetch;
 
 use App\Services\WorkStudio\Client\ApiCredentialManager;
 use Illuminate\Console\Command;
@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Http;
 class FetchUniqueJobTypes extends Command
 {
     protected $signature = 'ws:fetch-job-types
-        {--dry-run : Show results without saving to file}';
+        {--save : Save results to database/data/job_types.php}';
 
     protected $description = 'Fetch all unique job types from the WorkStudio API';
 
@@ -33,13 +33,9 @@ class FetchUniqueJobTypes extends Command
 
         $this->table(['job_type'], $rows->map(fn (string $type) => ['job_type' => $type])->toArray());
 
-        if ($this->option('dry-run')) {
-            $this->warn('Dry run — no file saved.');
-
-            return self::SUCCESS;
+        if ($this->option('save')) {
+            $this->saveDataFile($rows->values()->toArray());
         }
-
-        $this->saveDataFile($rows->values()->toArray());
 
         return self::SUCCESS;
     }

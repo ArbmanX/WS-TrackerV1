@@ -25,19 +25,19 @@ function fakeSsJobsResponse(): array
     ];
 }
 
-test('dry-run does not modify database', function () {
+test('default display does not modify database', function () {
     Http::fake(['*/GETQUERY' => Http::response(fakeSsJobsResponse())]);
 
-    $this->artisan('ws:fetch-jobs --dry-run')
+    $this->artisan('ws:fetch-jobs')
         ->assertSuccessful();
 
     expect(SsJob::count())->toBe(0);
 });
 
-test('creates ss_job records from API response', function () {
+test('seed creates ss_job records from API response', function () {
     Http::fake(['*/GETQUERY' => Http::response(fakeSsJobsResponse())]);
 
-    $this->artisan('ws:fetch-jobs')
+    $this->artisan('ws:fetch-jobs --seed')
         ->assertSuccessful();
 
     // 4 raw rows → 3 unique JOBGUIDs
@@ -47,7 +47,7 @@ test('creates ss_job records from API response', function () {
 test('groups extensions by job guid', function () {
     Http::fake(['*/GETQUERY' => Http::response(fakeSsJobsResponse())]);
 
-    $this->artisan('ws:fetch-jobs')->assertSuccessful();
+    $this->artisan('ws:fetch-jobs --seed')->assertSuccessful();
 
     $job = SsJob::find('{abc-111}');
     expect($job->extensions)->toContain('EXT-A')
@@ -63,7 +63,7 @@ test('resolves circuit id from raw title', function () {
 
     Http::fake(['*/GETQUERY' => Http::response(fakeSsJobsResponse())]);
 
-    $this->artisan('ws:fetch-jobs')->assertSuccessful();
+    $this->artisan('ws:fetch-jobs --seed')->assertSuccessful();
 
     $job = SsJob::find('{abc-111}');
     expect($job->circuit_id)->toBe($circuit->id);
@@ -79,7 +79,7 @@ test('resolves taken_by and modified_by from ws_users', function () {
 
     Http::fake(['*/GETQUERY' => Http::response(fakeSsJobsResponse())]);
 
-    $this->artisan('ws:fetch-jobs')->assertSuccessful();
+    $this->artisan('ws:fetch-jobs --seed')->assertSuccessful();
 
     $job = SsJob::find('{abc-111}');
     expect($job->taken_by_id)->toBe($jsmith->id)
@@ -90,7 +90,7 @@ test('resolves taken_by and modified_by from ws_users', function () {
 test('sets parent job guid for child jobs', function () {
     Http::fake(['*/GETQUERY' => Http::response(fakeSsJobsResponse())]);
 
-    $this->artisan('ws:fetch-jobs')->assertSuccessful();
+    $this->artisan('ws:fetch-jobs --seed')->assertSuccessful();
 
     $child = SsJob::find('{abc-222}');
     expect($child->parent_job_guid)->toBe('{abc-111}')
@@ -100,7 +100,7 @@ test('sets parent job guid for child jobs', function () {
 test('parses edit date correctly', function () {
     Http::fake(['*/GETQUERY' => Http::response(fakeSsJobsResponse())]);
 
-    $this->artisan('ws:fetch-jobs')->assertSuccessful();
+    $this->artisan('ws:fetch-jobs --seed')->assertSuccessful();
 
     $job = SsJob::find('{abc-111}');
     expect($job->edit_date)->toBeInstanceOf(\Carbon\CarbonImmutable::class)
@@ -130,7 +130,7 @@ test('updates existing jobs on re-run', function () {
 
     Http::fake(['*/GETQUERY' => Http::response($response)]);
 
-    $this->artisan('ws:fetch-jobs')->assertSuccessful();
+    $this->artisan('ws:fetch-jobs --seed')->assertSuccessful();
 
     // Should have 3 total (1 updated + 2 created)
     expect(SsJob::count())->toBe(3);
@@ -147,7 +147,7 @@ test('updates circuit properties with jobguids', function () {
 
     Http::fake(['*/GETQUERY' => Http::response(fakeSsJobsResponse())]);
 
-    $this->artisan('ws:fetch-jobs --year=2026')->assertSuccessful();
+    $this->artisan('ws:fetch-jobs --seed --year=2026')->assertSuccessful();
 
     $circuit->refresh();
     $yearData = $circuit->properties['2026'];
@@ -182,7 +182,7 @@ test('handles empty data set gracefully', function () {
 test('filters empty extensions from extensions array', function () {
     Http::fake(['*/GETQUERY' => Http::response(fakeSsJobsResponse())]);
 
-    $this->artisan('ws:fetch-jobs')->assertSuccessful();
+    $this->artisan('ws:fetch-jobs --seed')->assertSuccessful();
 
     // Job 3 has empty EXT
     $job3 = SsJob::find('{abc-333}');

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Console\Commands;
+namespace App\Console\Commands\Fetch;
 
 use App\Models\WsUser;
 use App\Services\WorkStudio\Client\ApiCredentialManager;
@@ -13,17 +13,18 @@ use Illuminate\Support\Facades\Http;
 class FetchWsUsers extends Command
 {
     protected $signature = 'ws:fetch-users
-        {--dry-run : Show what would happen without changes}
-        {--enrich : Enrich users with details from GETUSERDETAILS}
-        {--year= : Override scope year (default from config)}';
+        {--seed : Upsert usernames and enrich via GETUSERDETAILS}
+        {--year= : Scope to a specific year (omit for all years)}';
 
-    protected $description = 'Fetch distinct WS usernames from SS and VEGJOB tables and optionally enrich via GETUSERDETAILS';
+    protected $description = 'Fetch distinct WS usernames from SS and VEGJOB tables';
 
     public function handle(UserDetailsServiceInterface $userDetailsService): int
     {
-        $year = $this->option('year') ?? config('ws_assessment_query.scope_year');
+        $year = $this->option('year');
 
-        $this->info("Fetching distinct users from SS and VEGJOB tables for year: {$year}");
+        $this->info($year
+            ? "Fetching distinct users for year: {$year}"
+            : 'Fetching all distinct users (no year filter)');
 
         $usernames = $this->fetchDistinctUsernames($year);
 
@@ -39,41 +40,35 @@ class FetchWsUsers extends Command
             return self::SUCCESS;
         }
 
-        if ($this->option('dry-run')) {
-            $this->table(['username'], $usernames->map(fn (string $u) => [$u])->toArray());
-            $this->warn('Dry run — no changes made.');
-
-            return self::SUCCESS;
-        }
-
-        $this->upsertUsernames($usernames->all());
-
-        if ($this->option('enrich')) {
+        if ($this->option('seed')) {
+            $this->upsertUsernames($usernames->all());
             $this->enrichUsers($userDetailsService);
+        } else {
+            $this->table(['username'], $usernames->map(fn (string $u) => [$u])->toArray());
         }
 
         return self::SUCCESS;
     }
 
-    // TODO need to change the ASPLUDH hard coded to the users domain.
-    // the regular user will only need to see thier domain / contractor and groups
-    // the user name and password need to come from the signed in user
-    // LIKE 'ASPLUNDH%' added to Taken by and modified by for regular users
-
     /**
      * @return \Illuminate\Support\Collection<int, string>|null
      */
-    private function fetchDistinctUsernames(string $year): ?\Illuminate\Support\Collection
+    private function fetchDistinctUsernames(?string $year): ?\Illuminate\Support\Collection
     {
         $credentials = app(ApiCredentialManager::class)->getServiceAccountCredentials();
         $baseUrl = rtrim((string) config('workstudio.base_url'), '/');
 
-        $yearJoin = 'INNER JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID '
-            ."WHERE WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$year}%' ";
+        if ($year) {
+            $yearJoin = 'INNER JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID '
+                ."WHERE WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$year}%' ";
 
-        $vegJoin = 'INNER JOIN SS ON VEGJOB.JOBGUID = SS.JOBGUID '
-            .'INNER JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID '
-            ."WHERE WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$year}%' ";
+            $vegJoin = 'INNER JOIN SS ON VEGJOB.JOBGUID = SS.JOBGUID '
+                .'INNER JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID '
+                ."WHERE WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$year}%' ";
+        } else {
+            $yearJoin = 'WHERE 1=1 ';
+            $vegJoin = 'INNER JOIN SS ON VEGJOB.JOBGUID = SS.JOBGUID WHERE 1=1 ';
+        }
 
         $sql = 'SELECT DISTINCT TAKENBY AS username FROM SS '
             .$yearJoin

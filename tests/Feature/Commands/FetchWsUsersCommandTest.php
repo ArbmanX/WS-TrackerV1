@@ -31,47 +31,42 @@ function fakeUserDetailsResponse(string $fullName = 'John Smith', string $email 
     ];
 }
 
-test('dry-run does not modify database', function () {
+test('default display does not modify database', function () {
     Http::fake(['*/GETQUERY' => Http::response(fakeUserListResponse())]);
 
-    $this->artisan('ws:fetch-users --dry-run')
+    $this->artisan('ws:fetch-users')
         ->assertSuccessful();
 
     expect(WsUser::count())->toBe(0);
 });
 
-test('creates ws_user records from API response', function () {
-    Http::fake(['*/GETQUERY' => Http::response(fakeUserListResponse())]);
+test('seed creates ws_user records from API response', function () {
+    Http::fake([
+        '*/GETQUERY' => Http::response(fakeUserListResponse()),
+        '*/GETUSERDETAILS' => Http::response(fakeUserDetailsResponse()),
+    ]);
 
-    $this->artisan('ws:fetch-users')
+    $this->artisan('ws:fetch-users --seed')
         ->assertSuccessful();
 
     expect(WsUser::count())->toBe(3);
 
     $jsmith = WsUser::where('username', 'ASPLUNDH\\jsmith')->first();
     expect($jsmith->domain)->toBe('ASPLUNDH')
-        ->and($jsmith->last_synced_at)->toBeNull();
+        ->and($jsmith->last_synced_at)->not->toBeNull();
 
+    // bwilson exists — domain may be overwritten by enrichment
     $bwilson = WsUser::where('username', 'OTHERDOMAIN\\bwilson')->first();
-    expect($bwilson->domain)->toBe('OTHERDOMAIN');
+    expect($bwilson)->not->toBeNull();
 });
 
-test('does not duplicate users on re-run', function () {
-    Http::fake(['*/GETQUERY' => Http::response(fakeUserListResponse())]);
-
-    $this->artisan('ws:fetch-users')->assertSuccessful();
-    $this->artisan('ws:fetch-users')->assertSuccessful();
-
-    expect(WsUser::count())->toBe(3);
-});
-
-test('enrich flag enriches unenriched users', function () {
+test('seed also enriches unenriched users', function () {
     Http::fake([
         '*/GETQUERY' => Http::response(fakeUserListResponse()),
         '*/GETUSERDETAILS' => Http::response(fakeUserDetailsResponse()),
     ]);
 
-    $this->artisan('ws:fetch-users --enrich')
+    $this->artisan('ws:fetch-users --seed')
         ->assertSuccessful();
 
     expect(WsUser::count())->toBe(3);
@@ -80,13 +75,25 @@ test('enrich flag enriches unenriched users', function () {
     expect($enriched)->toBe(3);
 });
 
+test('does not duplicate users on seed re-run', function () {
+    Http::fake([
+        '*/GETQUERY' => Http::response(fakeUserListResponse()),
+        '*/GETUSERDETAILS' => Http::response(fakeUserDetailsResponse()),
+    ]);
+
+    $this->artisan('ws:fetch-users --seed')->assertSuccessful();
+    $this->artisan('ws:fetch-users --seed')->assertSuccessful();
+
+    expect(WsUser::count())->toBe(3);
+});
+
 test('handles API error response gracefully', function () {
     Http::fake(['*/GETQUERY' => Http::response([
         'protocol' => 'ERROR',
         'errorMessage' => 'Test error',
     ])]);
 
-    $this->artisan('ws:fetch-users --dry-run')
+    $this->artisan('ws:fetch-users')
         ->assertFailed();
 });
 
@@ -97,7 +104,7 @@ test('handles empty API response gracefully', function () {
         ->assertFailed();
 });
 
-test('vegjob-sourced users are created and enriched', function () {
+test('vegjob-sourced users are created and enriched via seed', function () {
     $response = [
         'Heading' => ['username'],
         'Data' => [
@@ -112,7 +119,7 @@ test('vegjob-sourced users are created and enriched', function () {
         '*/GETUSERDETAILS' => Http::response(fakeUserDetailsResponse('Auditor User', 'auditor@test.com')),
     ]);
 
-    $this->artisan('ws:fetch-users --enrich')
+    $this->artisan('ws:fetch-users --seed')
         ->assertSuccessful();
 
     expect(WsUser::count())->toBe(3);

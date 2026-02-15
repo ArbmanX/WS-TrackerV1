@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Refactored fetch commands into Commands/Fetch/ subfolder** (2026-02-14)
+  - Moved 6 fetch commands to `app/Console/Commands/Fetch/` with `App\Console\Commands\Fetch` namespace
+  - Standardized flags: default is display-only, `--seed` to persist to DB, `--save` to write data files, `--year=` to scope by year
+  - Removed `--dry-run` from all commands (default behavior is now display-only)
+  - Rolled `--enrich` into `--seed` on `ws:fetch-users` (seed now upserts + enriches in one step)
+  - Made year optional on circuits/users/jobs — omitting `--year` fetches all years
+  - Added `ws:sync-all-fetchers` orchestrator: runs all 6 fetch commands in dependency order with `--seed`/`--save`
+  - Updated `ApiCredentialManagerTest` file paths for new directory structure
 - **Simplified PlannerCareerLedger to all-status discovery** (2026-02-14)
   - `getDistinctJobGuids()` no longer filters by `SS.STATUS` — fetches all statuses (ACTIV, QC, REWRK, CLOSE) in a single pass
   - Replaced `$current` + `$allYears` boolean params with `?int $scopeYear` — `null` = all years, integer = filter to that year

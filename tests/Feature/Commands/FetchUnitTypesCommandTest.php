@@ -16,10 +16,19 @@ function fakeUnitTypesResponse(?array $overrideData = null): array
     ];
 }
 
-test('creates unit_type records from API response', function () {
+test('default display does not modify database', function () {
     Http::fake(['*/GETQUERY' => Http::response(fakeUnitTypesResponse())]);
 
     $this->artisan('ws:fetch-unit-types')
+        ->assertSuccessful();
+
+    expect(UnitType::count())->toBe(0);
+});
+
+test('seed creates unit_type records from API response', function () {
+    Http::fake(['*/GETQUERY' => Http::response(fakeUnitTypesResponse())]);
+
+    $this->artisan('ws:fetch-unit-types --seed')
         ->assertSuccessful();
 
     expect(UnitType::count())->toBe(4);
@@ -28,7 +37,7 @@ test('creates unit_type records from API response', function () {
 test('derives work_unit correctly from summarygrp', function () {
     Http::fake(['*/GETQUERY' => Http::response(fakeUnitTypesResponse())]);
 
-    $this->artisan('ws:fetch-unit-types')->assertSuccessful();
+    $this->artisan('ws:fetch-unit-types --seed')->assertSuccessful();
 
     // Summary-TRIM → work unit
     expect(UnitType::where('unit', '1BRKR')->first()->work_unit)->toBeTrue();
@@ -48,7 +57,7 @@ test('null summarygrp is treated as non-work unit', function () {
         ['BRIDGE', 'Bridge Crossing', 'GENERAL', null, 'Infrastructure'],
     ]))]);
 
-    $this->artisan('ws:fetch-unit-types')->assertSuccessful();
+    $this->artisan('ws:fetch-unit-types --seed')->assertSuccessful();
 
     expect(UnitType::where('unit', 'BRIDGE')->first()->work_unit)->toBeFalse();
 });
@@ -65,23 +74,13 @@ test('upserts existing records on re-run', function () {
 
     Http::fake(['*/GETQUERY' => Http::response(fakeUnitTypesResponse())]);
 
-    $this->artisan('ws:fetch-unit-types')->assertSuccessful();
+    $this->artisan('ws:fetch-unit-types --seed')->assertSuccessful();
 
     // 1 updated + 3 created = 4 total
     expect(UnitType::count())->toBe(4);
 
     $updated = UnitType::where('unit', '1BRKR')->first();
     expect($updated->unitssname)->toBe('Breaker');
-});
-
-test('dry-run does not modify database', function () {
-    Http::fake(['*/GETQUERY' => Http::response(fakeUnitTypesResponse())]);
-
-    $this->artisan('ws:fetch-unit-types --dry-run')
-        ->expectsOutputToContain('Dry run')
-        ->assertSuccessful();
-
-    expect(UnitType::count())->toBe(0);
 });
 
 test('handles API error response', function () {
@@ -113,7 +112,7 @@ test('sets last_synced_at on created records', function () {
         ['1BRKR', 'Breaker', 'VEG', 'Summary-TRIM', 'TreeWork'],
     ]))]);
 
-    $this->artisan('ws:fetch-unit-types')->assertSuccessful();
+    $this->artisan('ws:fetch-unit-types --seed')->assertSuccessful();
 
     $unit = UnitType::where('unit', '1BRKR')->first();
     expect($unit->last_synced_at)->not->toBeNull();
@@ -124,7 +123,7 @@ test('stores all fields from API response', function () {
         ['1BRKR', 'Breaker', 'VEG', 'Summary-TRIM', 'TreeWork'],
     ]))]);
 
-    $this->artisan('ws:fetch-unit-types')->assertSuccessful();
+    $this->artisan('ws:fetch-unit-types --seed')->assertSuccessful();
 
     $unit = UnitType::where('unit', '1BRKR')->first();
     expect($unit->unit)->toBe('1BRKR')

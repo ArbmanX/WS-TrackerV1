@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Console\Commands;
+namespace App\Console\Commands\Fetch;
 
 use App\Models\Circuit;
 use App\Models\Region;
@@ -14,16 +14,15 @@ class FetchCircuits extends Command
     protected $signature = 'ws:fetch-circuits
         {--save : Save results to database/data/circuits.php}
         {--seed : Seed results directly into circuits table}
-        {--dry-run : Show what would happen without changes}
-        {--year= : Override scope year (default from config)}';
+        {--year= : Scope to a specific year (omit for all years)}';
 
     protected $description = 'Fetch distinct circuit line names and regions from WorkStudio API';
 
     public function handle(): int
     {
-        $year = $this->option('year') ?? config('ws_assessment_query.scope_year');
+        $year = $this->option('year');
 
-        $this->info("Fetching circuits for year: {$year}");
+        $this->info($year ? "Fetching circuits for year: {$year}" : 'Fetching all circuits (no year filter)');
 
         $rows = $this->fetchFromApi($year);
 
@@ -39,23 +38,17 @@ class FetchCircuits extends Command
             return self::SUCCESS;
         }
 
-        if ($this->option('dry-run')) {
-            $this->table(['line_name', 'region', 'total_mile', 'raw_line_name'], $rows->toArray());
-            $this->warn('Dry run — no changes made.');
-
-            return self::SUCCESS;
-        }
-
         if ($this->option('save')) {
             $this->saveDataFile($rows->toArray());
         }
 
         if ($this->option('seed')) {
-            $this->seedCircuits($rows->toArray(), $year);
+            $seedYear = $year ?? config('ws_assessment_query.scope_year');
+            $this->seedCircuits($rows->toArray(), $seedYear);
         }
 
         if (! $this->option('save') && ! $this->option('seed')) {
-            $this->table(['line_name', 'region', 'total_mile', 'raw_line_name'], $rows->toArray());
+            $this->table(['line_name', 'region', 'total_miles', 'raw_line_name'], $rows->toArray());
         }
 
         return self::SUCCESS;
@@ -64,7 +57,7 @@ class FetchCircuits extends Command
     /**
      * @return \Illuminate\Support\Collection<int, array{line_name: string, raw_line_name: string, region: string}>|null
      */
-    private function fetchFromApi(string $year): ?\Illuminate\Support\Collection
+    private function fetchFromApi(?string $year): ?\Illuminate\Support\Collection
     {
         $credentials = app(ApiCredentialManager::class)->getServiceAccountCredentials();
         $jobTypes = WSHelpers::toSqlInClause(config('ws_assessment_query.job_types.assessments'));
@@ -72,11 +65,17 @@ class FetchCircuits extends Command
 
         $sql = 'SELECT DISTINCT VEGJOB.LINENAME AS line_name, VEGJOB.REGION AS region, VEGJOB.LENGTH as total_miles '
             .'FROM SS '
-            .'INNER JOIN VEGJOB ON SS.JOBGUID = VEGJOB.JOBGUID '
-            .'LEFT JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID '
-            ."WHERE WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$year}%' "
-            ."AND VEGJOB.LINENAME IS NOT NULL AND VEGJOB.LINENAME != '' AND SS.JOBTYPE IN ({$jobTypes}) "
-            .'ORDER BY VEGJOB.LINENAME ASC';
+            .'INNER JOIN VEGJOB ON SS.JOBGUID = VEGJOB.JOBGUID ';
+
+        if ($year) {
+            $sql .= 'LEFT JOIN WPStartDate_Assessment_Xrefs ON SS.JOBGUID = WPStartDate_Assessment_Xrefs.Assess_JOBGUID '
+                ."WHERE WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$year}%' "
+                ."AND VEGJOB.LINENAME IS NOT NULL AND VEGJOB.LINENAME != '' AND SS.JOBTYPE IN ({$jobTypes}) ";
+        } else {
+            $sql .= "WHERE VEGJOB.LINENAME IS NOT NULL AND VEGJOB.LINENAME != '' AND SS.JOBTYPE IN ({$jobTypes}) ";
+        }
+
+        $sql .= 'ORDER BY VEGJOB.LINENAME ASC';
 
         $payload = [
             'Protocol' => 'GETQUERY',

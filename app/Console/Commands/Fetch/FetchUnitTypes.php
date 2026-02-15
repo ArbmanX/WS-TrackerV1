@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Console\Commands;
+namespace App\Console\Commands\Fetch;
 
 use App\Models\UnitType;
 use App\Services\WorkStudio\Client\ApiCredentialManager;
@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Http;
 class FetchUnitTypes extends Command
 {
     protected $signature = 'ws:fetch-unit-types
-        {--dry-run : Show what would happen without changes}';
+        {--seed : Upsert results into unit_types table}';
 
     protected $description = 'Fetch unit types from WorkStudio UNITS table and upsert into unit_types';
 
@@ -33,13 +33,11 @@ class FetchUnitTypes extends Command
             return self::SUCCESS;
         }
 
-        if ($this->option('dry-run')) {
-            $this->displayDryRun($rows);
-
-            return self::SUCCESS;
+        if ($this->option('seed')) {
+            $this->upsertUnitTypes($rows);
+        } else {
+            $this->displayTable($rows);
         }
-
-        $this->upsertUnitTypes($rows);
 
         return self::SUCCESS;
     }
@@ -98,9 +96,9 @@ class FetchUnitTypes extends Command
     /**
      * @param  Collection<int, array<string, mixed>>  $rows
      */
-    private function displayDryRun(Collection $rows): void
+    private function displayTable(Collection $rows): void
     {
-        $preview = $rows->take(20)->map(fn (array $row) => [
+        $preview = $rows->map(fn (array $row) => [
             $row['UNIT'],
             $row['UNITSSNAME'] ?? '',
             $row['SUMMARYGRP'] ?? '',
@@ -108,7 +106,6 @@ class FetchUnitTypes extends Command
         ]);
 
         $this->table(['UNIT', 'UNITSSNAME', 'SUMMARYGRP', 'work_unit'], $preview->toArray());
-        $this->warn("Dry run — showing first 20 of {$rows->count()} unit types. No changes made.");
     }
 
     /**

@@ -20,15 +20,10 @@ function fakeSampleResponse(): array
     ];
 }
 
-test('command exists with correct signature', function () {
-    $this->artisan('ws:fetch-circuits --dry-run')
-        ->assertSuccessful();
-})->skip('Requires HTTP fake — tested below');
-
-test('dry-run does not modify database', function () {
+test('default display does not modify database', function () {
     Http::fake(['*/GETQUERY' => Http::response(fakeSampleResponse())]);
 
-    $this->artisan('ws:fetch-circuits --dry-run')
+    $this->artisan('ws:fetch-circuits')
         ->assertSuccessful();
 
     expect(Circuit::count())->toBe(0);
@@ -103,13 +98,13 @@ test('handles API error response gracefully', function () {
         'errorMessage' => 'Test error message',
     ])]);
 
-    $this->artisan('ws:fetch-circuits --dry-run')
+    $this->artisan('ws:fetch-circuits')
         ->assertFailed();
 });
 
 test('handles empty API response gracefully', function () {
     Http::fake(['*/GETQUERY' => Http::response(null, 200)]);
 
-    $this->artisan('ws:fetch-circuits --dry-run')
+    $this->artisan('ws:fetch-circuits')
         ->assertFailed();
 });
