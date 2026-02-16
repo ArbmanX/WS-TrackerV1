@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Planner Metrics Redesign — Unified View with Accordion** (2026-02-16)
+  - Replaced Quota/Health card toggle with unified single-column layout showing both in one row
+  - Replaced side drawer with inline accordion for circuit details (one open at a time)
+  - Removed period type selector (Week/Month/Year/Scope) — hardcoded to weekly view
+  - Added 4 stat cards at top: On Track, Team Avg, Aging Units, Team Miles
+  - Added `getUnifiedMetrics()` to service layer merging quota + health data
+  - New partials: `_stat-cards`, `_planner-row`, `_circuit-accordion`
+  - Deleted old partials: `_quota-card`, `_health-card`, `_circuit-drawer`
+  - Constrained layout to `max-w-5xl mx-auto` for focused reading flow
+  - 77 PlannerMetrics tests (165 assertions) — 18 overview + 14 accordion + 45 service
+
 ### Added
 - **Planner Metrics Circuit Drawer** (2026-02-16)
   - Side drawer panel on planner cards showing circuit-level details (line name, region, miles, completion %)

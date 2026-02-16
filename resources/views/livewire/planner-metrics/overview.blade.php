@@ -1,46 +1,46 @@
-<div class="space-y-6">
+<div class="max-w-5xl mx-auto space-y-6">
     {{-- Header --}}
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-            <h1 class="text-2xl font-bold">Planner Metrics</h1>
-            <p class="text-base-content/60">Track planner footage quotas and assessment health</p>
-        </div>
+    <div>
+        <h1 class="text-2xl font-bold">Planner Metrics</h1>
+        <p class="text-base-content/60">Weekly planner performance overview</p>
     </div>
 
+    {{-- Stat Cards --}}
+    @if(!empty($this->planners))
+        @include('livewire.planner-metrics._stat-cards')
+    @endif
+
     {{-- Controls Row --}}
-    <div class="flex flex-wrap items-center gap-3">
-        {{-- View Toggle --}}
-        <div class="join">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        {{-- Period Navigation --}}
+        <div class="flex items-center gap-2">
             <button
                 type="button"
-                wire:click="switchView('quota')"
-                @class(['btn btn-sm join-item', 'btn-primary' => $cardView === 'quota'])
+                wire:click="navigateOffset(-1)"
+                class="btn btn-sm btn-ghost btn-circle"
+                aria-label="Previous week"
             >
-                Quota
+                <x-heroicon-m-chevron-left class="size-4" />
             </button>
+
             <button
                 type="button"
-                wire:click="switchView('health')"
-                @class(['btn btn-sm join-item', 'btn-primary' => $cardView === 'health'])
+                wire:click="resetOffset"
+                class="btn btn-sm btn-ghost font-medium min-w-48 tabular-nums"
             >
-                Health
+                {{ $this->periodLabel }}
+            </button>
+
+            <button
+                type="button"
+                wire:click="navigateOffset(1)"
+                class="btn btn-sm btn-ghost btn-circle"
+                @disabled($this->resolvedOffset >= 0)
+                aria-label="Next week"
+            >
+                <x-heroicon-m-chevron-right class="size-4" />
             </button>
         </div>
-
-        {{-- Period Toggle (quota view only) --}}
-        @if($cardView === 'quota')
-            <div class="join">
-                @foreach(config('planner_metrics.periods', []) as $p)
-                    <button
-                        type="button"
-                        wire:click="switchPeriod('{{ $p }}')"
-                        @class(['btn btn-sm join-item', 'btn-primary' => $period === $p])
-                    >
-                        {{ str($p)->replace('-', ' ')->title() }}
-                    </button>
-                @endforeach
-            </div>
-        @endif
 
         {{-- Sort Toggle --}}
         <div class="join">
@@ -61,50 +61,18 @@
         </div>
     </div>
 
-    {{-- Period Navigation --}}
-    @if($cardView === 'quota')
-    <div class="flex items-center justify-center gap-2">
-        <button
-            type="button"
-            wire:click="navigateOffset(-1)"
-            class="btn btn-sm btn-ghost btn-circle"
-            aria-label="Previous period"
-        >
-            <x-heroicon-m-chevron-left class="size-4" />
-        </button>
-
-        <button
-            type="button"
-            wire:click="resetOffset"
-            class="btn btn-sm btn-ghost font-medium min-w-48 tabular-nums"
-        >
-            {{ $this->periodLabel }}
-        </button>
-
-        <button
-            type="button"
-            wire:click="navigateOffset(1)"
-            class="btn btn-sm btn-ghost btn-circle"
-            @disabled($this->resolvedOffset >= 0)
-            aria-label="Next period"
-        >
-            <x-heroicon-m-chevron-right class="size-4" />
-        </button>
-    </div>
-    @endif
-
-    {{-- Card Grid --}}
+    {{-- Planner List --}}
     <div class="relative">
         {{-- Loading Overlay --}}
         <div
             wire:loading.flex
-            wire:target="switchView, switchPeriod, switchSort, navigateOffset, resetOffset"
+            wire:target="switchSort, navigateOffset, resetOffset"
             class="absolute inset-0 z-10 items-center justify-center rounded-box bg-base-100/60"
         >
             <span class="loading loading-spinner loading-lg text-primary"></span>
         </div>
 
-        <div wire:loading.remove wire:target="switchView, switchPeriod, switchSort, navigateOffset, resetOffset">
+        <div wire:loading.remove wire:target="switchSort, navigateOffset, resetOffset">
             @if(empty($this->planners))
                 {{-- Empty State --}}
                 <div class="card bg-base-100 shadow">
@@ -117,16 +85,9 @@
                     </div>
                 </div>
             @else
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5 xl:gap-6">
+                <div class="space-y-3">
                     @foreach($this->planners as $planner)
-                        @if($cardView === 'health')
-                            @include('livewire.planner-metrics._health-card', ['planner' => $planner])
-                        @else
-                            @include('livewire.planner-metrics._quota-card', [
-                                'planner' => $planner,
-                                'coachingMessage' => $this->coachingMessages[$planner['username']] ?? null,
-                            ])
-                        @endif
+                        @include('livewire.planner-metrics._planner-row', ['planner' => $planner])
                     @endforeach
                 </div>
             @endif
@@ -134,34 +95,7 @@
     </div>
 
     {{-- Footer --}}
-    <div class="text-xs text-base-content/40 text-right" wire:loading.remove wire:target="switchView, switchPeriod, switchSort, navigateOffset, resetOffset">
+    <div class="text-xs text-base-content/40 text-right" wire:loading.remove wire:target="switchSort, navigateOffset, resetOffset">
         Last updated: {{ now()->format('M j, Y g:i A') }}
     </div>
-
-    {{-- Circuit Drawer (fixed panel, not DaisyUI drawer — avoids nesting with app-shell drawer) --}}
-    @if($drawerPlanner)
-        <div
-            x-data
-            x-init="$el.querySelector('[data-drawer-panel]')?.focus()"
-            @keydown.escape.window="$wire.closeDrawer()"
-        >
-            {{-- Backdrop --}}
-            <div
-                class="fixed inset-0 z-40 bg-black/30 transition-opacity"
-                wire:click="closeDrawer"
-            ></div>
-
-            {{-- Panel --}}
-            <div
-                data-drawer-panel
-                tabindex="-1"
-                class="fixed inset-y-0 right-0 z-50 w-96 max-w-[85vw] bg-base-100 p-6 shadow-xl overflow-y-auto transform transition-transform"
-            >
-                @include('livewire.planner-metrics._circuit-drawer', [
-                    'circuits' => $this->drawerCircuits,
-                    'plannerName' => $this->drawerDisplayName,
-                ])
-            </div>
-        </div>
-    @endif
 </div>

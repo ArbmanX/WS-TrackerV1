@@ -63,6 +63,61 @@ class PlannerMetricsService implements PlannerMetricsServiceInterface
         return $results;
     }
 
+    public function getUnifiedMetrics(int $offset = 0): array
+    {
+        $files = $this->discoverCareerFiles();
+        $quota = (float) config('planner_metrics.quota_miles_per_week');
+        $gapThreshold = (float) config('planner_metrics.gap_warning_threshold', 3.0);
+        $results = [];
+
+        foreach ($files as $username => $filepath) {
+            $data = $this->loadCareerFile($filepath);
+
+            if ($data === null) {
+                continue;
+            }
+
+            $assessments = $data['assessments'] ?? [];
+            $displayName = $this->extractDisplayName($data, $username);
+            unset($data);
+
+            $periodMiles = $this->calculatePeriodMiles($assessments, 'week', $offset);
+            $quotaTarget = $this->calculateQuotaTarget('week', $quota, $offset);
+            $quotaPercent = $quotaTarget > 0 ? round(($periodMiles / $quotaTarget) * 100, 1) : 0;
+            $gapMiles = max(0, round($quotaTarget - $periodMiles, 1));
+            $streakWeeks = $this->calculateStreak($assessments, $quota);
+            $healthSignal = $this->resolveHealthSignal($username);
+
+            unset($assessments);
+
+            $status = match (true) {
+                $periodMiles >= $quotaTarget => 'success',
+                $gapMiles < $gapThreshold => 'warning',
+                default => 'error',
+            };
+
+            $results[] = [
+                'username' => $username,
+                'display_name' => $displayName,
+                'period_miles' => round($periodMiles, 1),
+                'quota_target' => round($quotaTarget, 1),
+                'quota_percent' => $quotaPercent,
+                'streak_weeks' => $streakWeeks,
+                'gap_miles' => $gapMiles,
+                'days_since_last_edit' => $healthSignal['days_since_last_edit'],
+                'pending_over_threshold' => $healthSignal['pending_over_threshold'],
+                'permission_breakdown' => $healthSignal['permission_breakdown'],
+                'total_miles' => $healthSignal['total_miles'],
+                'overall_percent' => $healthSignal['percent_complete'],
+                'active_assessment_count' => $healthSignal['active_assessment_count'],
+                'status' => $status,
+                'circuits' => $healthSignal['circuits'],
+            ];
+        }
+
+        return $results;
+    }
+
     public function getHealthMetrics(): array
     {
         $files = $this->discoverCareerFiles();

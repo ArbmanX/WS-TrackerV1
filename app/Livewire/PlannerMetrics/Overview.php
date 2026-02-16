@@ -2,7 +2,6 @@
 
 namespace App\Livewire\PlannerMetrics;
 
-use App\Services\PlannerMetrics\Contracts\CoachingMessageGeneratorInterface;
 use App\Services\PlannerMetrics\Contracts\PlannerMetricsServiceInterface;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
@@ -14,28 +13,16 @@ use Livewire\Component;
 class Overview extends Component
 {
     #[Url]
-    public string $cardView = 'quota';
-
-    #[Url]
-    public string $period = 'week';
-
-    #[Url]
     public string $sortBy = 'alpha';
 
     /** @var int|null Null = auto-default (service decides). Explicit int = user-navigated. */
     #[Url]
     public ?int $offset = null;
 
-    public ?string $drawerPlanner = null;
+    public ?string $expandedPlanner = null;
 
     public function mount(): void
     {
-        if (! in_array($this->cardView, ['quota', 'health'])) {
-            $this->cardView = config('planner_metrics.default_card_view', 'quota');
-        }
-        if (! in_array($this->period, config('planner_metrics.periods', []))) {
-            $this->period = config('planner_metrics.default_period', 'week');
-        }
         if (! in_array($this->sortBy, ['alpha', 'attention'])) {
             $this->sortBy = 'alpha';
         }
@@ -47,16 +34,13 @@ class Overview extends Component
     #[Computed]
     public function resolvedOffset(): int
     {
-        return $this->offset ?? app(PlannerMetricsServiceInterface::class)->getDefaultOffset($this->period);
+        return $this->offset ?? app(PlannerMetricsServiceInterface::class)->getDefaultOffset('week');
     }
 
     #[Computed]
     public function planners(): array
     {
-        $data = match ($this->cardView) {
-            'health' => app(PlannerMetricsServiceInterface::class)->getHealthMetrics(),
-            default => app(PlannerMetricsServiceInterface::class)->getQuotaMetrics($this->period, $this->resolvedOffset),
-        };
+        $data = app(PlannerMetricsServiceInterface::class)->getUnifiedMetrics($this->resolvedOffset);
 
         return $this->sortPlanners($data);
     }
@@ -64,35 +48,36 @@ class Overview extends Component
     #[Computed]
     public function periodLabel(): string
     {
-        return app(PlannerMetricsServiceInterface::class)->getPeriodLabel($this->period, $this->resolvedOffset);
+        return app(PlannerMetricsServiceInterface::class)->getPeriodLabel('week', $this->resolvedOffset);
     }
 
     #[Computed]
-    public function coachingMessages(): array
+    public function summaryStats(): array
     {
-        if ($this->cardView !== 'quota') {
-            return [];
-        }
+        $planners = $this->planners;
+        $total = count($planners);
+        $onTrack = collect($planners)->where('status', 'success')->count();
 
-        $generator = app(CoachingMessageGeneratorInterface::class);
-
-        return collect($this->planners)
-            ->mapWithKeys(fn ($p) => [$p['username'] => $generator->generate($p)])
-            ->filter()
-            ->all();
+        return [
+            'on_track' => $onTrack,
+            'total_planners' => $total,
+            'team_avg_percent' => $total ? round(collect($planners)->avg('quota_percent'), 1) : 0,
+            'total_aging' => collect($planners)->sum('pending_over_threshold'),
+            'total_miles' => round(collect($planners)->sum('period_miles'), 1),
+        ];
     }
 
     #[Computed]
-    public function drawerCircuits(): array
+    public function expandedCircuits(): array
     {
-        if (! $this->drawerPlanner) {
+        if (! $this->expandedPlanner) {
             return [];
         }
 
-        $planner = collect($this->planners)->firstWhere('username', $this->drawerPlanner);
+        $planner = collect($this->planners)->firstWhere('username', $this->expandedPlanner);
 
         if (! $planner) {
-            $this->drawerPlanner = null;
+            $this->expandedPlanner = null;
 
             return [];
         }
@@ -100,51 +85,13 @@ class Overview extends Component
         return $planner['circuits'] ?? [];
     }
 
-    #[Computed]
-    public function drawerDisplayName(): string
-    {
-        if (! $this->drawerPlanner) {
-            return '';
-        }
-
-        $planner = collect($this->planners)->firstWhere('username', $this->drawerPlanner);
-
-        return $planner['display_name'] ?? $this->drawerPlanner;
-    }
-
-    public function openDrawer(string $username): void
+    public function toggleAccordion(string $username): void
     {
         if (! collect($this->planners)->contains('username', $username)) {
             return;
         }
 
-        $this->drawerPlanner = $username;
-    }
-
-    public function closeDrawer(): void
-    {
-        $this->drawerPlanner = null;
-    }
-
-    public function switchView(string $view): void
-    {
-        if (! in_array($view, ['quota', 'health'])) {
-            return;
-        }
-
-        $this->cardView = $view;
-        $this->clearCache();
-    }
-
-    public function switchPeriod(string $period): void
-    {
-        if (! in_array($period, config('planner_metrics.periods', []))) {
-            return;
-        }
-
-        $this->period = $period;
-        $this->offset = null;
-        $this->clearCache();
+        $this->expandedPlanner = $this->expandedPlanner === $username ? null : $username;
     }
 
     public function switchSort(string $sort): void
@@ -176,18 +123,14 @@ class Overview extends Component
 
     private function clearCache(): void
     {
-        unset($this->planners, $this->coachingMessages, $this->periodLabel, $this->resolvedOffset);
-        unset($this->drawerCircuits, $this->drawerDisplayName);
-        $this->drawerPlanner = null;
+        unset($this->planners, $this->periodLabel, $this->resolvedOffset, $this->summaryStats, $this->expandedCircuits);
+        $this->expandedPlanner = null;
     }
 
     private function sortPlanners(array $data): array
     {
         return match ($this->sortBy) {
-            'attention' => match ($this->cardView) {
-                'health' => collect($data)->sortByDesc('days_since_last_edit')->values()->all(),
-                default => collect($data)->sortByDesc('gap_miles')->values()->all(),
-            },
+            'attention' => collect($data)->sortByDesc('gap_miles')->values()->all(),
             default => collect($data)->sortBy('display_name')->values()->all(),
         };
     }

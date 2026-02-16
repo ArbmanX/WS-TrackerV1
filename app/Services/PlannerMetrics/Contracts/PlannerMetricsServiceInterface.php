@@ -50,6 +50,29 @@ interface PlannerMetricsServiceInterface
     public function getDistinctPlanners(): array;
 
     /**
+     * Get unified metrics (quota + health) for all planners, week-only.
+     *
+     * @return list<array{
+     *     username: string,
+     *     display_name: string,
+     *     period_miles: float,
+     *     quota_target: float,
+     *     quota_percent: float,
+     *     streak_weeks: int,
+     *     gap_miles: float,
+     *     days_since_last_edit: int|null,
+     *     pending_over_threshold: int,
+     *     permission_breakdown: array<string, int>,
+     *     total_miles: float,
+     *     overall_percent: float,
+     *     active_assessment_count: int,
+     *     status: string,
+     *     circuits: list<array{job_guid: string, line_name: string, region: string, total_miles: float, completed_miles: float, percent_complete: float, permission_breakdown: array<string, int>}>,
+     * }>
+     */
+    public function getUnifiedMetrics(int $offset = 0): array;
+
+    /**
      * Get the human-readable label for a period + offset combination.
      *
      * @return string e.g. "Feb 9 – Feb 15, 2026"

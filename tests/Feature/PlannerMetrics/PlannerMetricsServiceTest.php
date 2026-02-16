@@ -763,6 +763,92 @@ test('circuits handles null latest_snapshot gracefully', function () {
         ->and($circuit['permission_breakdown'])->toBe([]);
 });
 
+// ─── Unified metrics tests ──────────────────────────────────────────────────
+
+test('getUnifiedMetrics returns all expected keys', function () {
+    $guid = '{'.Str::uuid()->toString().'}';
+    $weekStart = CarbonImmutable::now()->startOfWeek(CarbonImmutable::SUNDAY);
+
+    writeCareerFixture($this->fixtureDir, 'unified', [
+        [
+            'planner_username' => 'ASPLUNDH\\unified',
+            'job_guid' => $guid,
+            'scope_year' => 2026,
+            'daily_metrics' => [
+                ['completion_date' => $weekStart->format('Y-m-d'), 'daily_footage_miles' => 4.0, 'unit_count' => 10, 'stations' => []],
+            ],
+        ],
+    ]);
+
+    PlannerJobAssignment::factory()->create([
+        'normalized_username' => 'unified',
+        'frstr_user' => 'ASPLUNDH\\unified',
+        'job_guid' => $guid,
+    ]);
+
+    AssessmentMonitor::factory()->withSnapshots(1)->create([
+        'job_guid' => $guid,
+        'current_status' => 'ACTIV',
+    ]);
+
+    $result = $this->service->getUnifiedMetrics();
+
+    expect($result)->toHaveCount(1)
+        ->and($result[0])->toHaveKeys([
+            'username', 'display_name',
+            'period_miles', 'quota_target', 'quota_percent', 'streak_weeks', 'gap_miles',
+            'days_since_last_edit', 'pending_over_threshold', 'permission_breakdown',
+            'total_miles', 'overall_percent', 'active_assessment_count',
+            'status', 'circuits',
+        ]);
+});
+
+test('getUnifiedMetrics uses quota_percent not percent_complete', function () {
+    $weekStart = CarbonImmutable::now()->startOfWeek(CarbonImmutable::SUNDAY);
+
+    writeCareerFixture($this->fixtureDir, 'namechk', [
+        [
+            'planner_username' => 'ASPLUNDH\\namechk',
+            'job_guid' => '{11111111-1111-1111-1111-111111111111}',
+            'scope_year' => 2026,
+            'daily_metrics' => [
+                ['completion_date' => $weekStart->format('Y-m-d'), 'daily_footage_miles' => 3.25, 'unit_count' => 10, 'stations' => []],
+            ],
+        ],
+    ]);
+
+    $result = $this->service->getUnifiedMetrics();
+
+    expect($result[0])->toHaveKey('quota_percent')
+        ->and($result[0])->toHaveKey('overall_percent')
+        ->and($result[0])->not->toHaveKey('percent_complete')
+        ->and($result[0]['quota_percent'])->toBe(50.0); // 3.25 / 6.5 = 50%
+});
+
+test('getUnifiedMetrics respects offset for week navigation', function () {
+    // Previous week: Sun Feb 1 – Sat Feb 7
+    writeCareerFixture($this->fixtureDir, 'offnav', [
+        [
+            'planner_username' => 'ASPLUNDH\\offnav',
+            'job_guid' => '{22222222-2222-2222-2222-222222222222}',
+            'scope_year' => 2026,
+            'daily_metrics' => [
+                ['completion_date' => '2026-02-03', 'daily_footage_miles' => 5.0, 'unit_count' => 15, 'stations' => []],
+                // Current week — excluded at offset -1
+                ['completion_date' => '2026-02-09', 'daily_footage_miles' => 99.0, 'unit_count' => 50, 'stations' => []],
+            ],
+        ],
+    ]);
+
+    $result = $this->service->getUnifiedMetrics(-1);
+
+    expect($result[0]['period_miles'])->toBe(5.0);
+});
+
+test('getUnifiedMetrics returns empty when no career files', function () {
+    expect($this->service->getUnifiedMetrics())->toBe([]);
+});
+
 test('circuits are included in quota metrics return', function () {
     $guid = '{'.Str::uuid()->toString().'}';
     $weekStart = CarbonImmutable::now()->startOfWeek(CarbonImmutable::SUNDAY);
