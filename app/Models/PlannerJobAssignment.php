@@ -63,4 +63,19 @@ class PlannerJobAssignment extends Model
     {
         return $this->belongsTo(WsUser::class, 'frstr_user', 'username');
     }
+
+    /**
+     * Canonical username normalization: strip domain prefix, spaces → underscores.
+     *
+     * Must match the filename convention in PlannerCareerLedgerService::stripDomain().
+     * Used for the normalized_username column and for matching JSON filenames.
+     */
+    public static function normalizeUsername(string $frstrUser): string
+    {
+        $stripped = str_contains($frstrUser, '\\')
+            ? substr($frstrUser, strrpos($frstrUser, '\\') + 1)
+            : $frstrUser;
+
+        return preg_replace('/\s+/', '_', trim($stripped));
+    }
 }

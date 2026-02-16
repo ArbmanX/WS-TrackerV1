@@ -10,6 +10,10 @@ use Illuminate\Support\Str;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
+    // Freeze to Wednesday, February 11, 2026 at noon UTC.
+    // With Sunday-start weeks: current week = Sun Feb 8 – (today) Wed Feb 11.
+    CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 2, 11, 12, 0, 0, 'UTC'));
+
     $this->service = new PlannerMetricsService;
     $this->fixtureDir = sys_get_temp_dir().'/career_test_'.Str::random(8);
     mkdir($this->fixtureDir, 0755, true);
@@ -17,7 +21,8 @@ beforeEach(function () {
 });
 
 afterEach(function () {
-    // Clean up fixture files
+    CarbonImmutable::setTestNow();
+
     if (is_dir($this->fixtureDir)) {
         array_map('unlink', glob($this->fixtureDir.'/*.json'));
         rmdir($this->fixtureDir);
@@ -40,13 +45,15 @@ function writeCareerFixture(string $dir, string $username, array $assessments, s
     );
 }
 
+// ─── Existing tests (updated for Sunday–Saturday boundaries) ─────────────────
+
 test('it returns empty array when no career JSON files exist', function () {
     expect($this->service->getQuotaMetrics())->toBe([])
         ->and($this->service->getHealthMetrics())->toBe([]);
 });
 
 test('it calculates weekly miles from daily_metrics in JSON', function () {
-    $monday = CarbonImmutable::now()->startOfWeek();
+    $weekStart = CarbonImmutable::now()->startOfWeek(CarbonImmutable::SUNDAY); // Sun Feb 8
 
     writeCareerFixture($this->fixtureDir, 'jsmith', [
         [
@@ -54,8 +61,8 @@ test('it calculates weekly miles from daily_metrics in JSON', function () {
             'job_guid' => '{11111111-1111-1111-1111-111111111111}',
             'scope_year' => 2026,
             'daily_metrics' => [
-                ['completion_date' => $monday->format('Y-m-d'), 'daily_footage_miles' => 2.5, 'unit_count' => 10, 'stations' => []],
-                ['completion_date' => $monday->addDay()->format('Y-m-d'), 'daily_footage_miles' => 3.0, 'unit_count' => 12, 'stations' => []],
+                ['completion_date' => $weekStart->format('Y-m-d'), 'daily_footage_miles' => 2.5, 'unit_count' => 10, 'stations' => []],
+                ['completion_date' => $weekStart->addDay()->format('Y-m-d'), 'daily_footage_miles' => 3.0, 'unit_count' => 12, 'stations' => []],
             ],
         ],
     ]);
@@ -68,7 +75,7 @@ test('it calculates weekly miles from daily_metrics in JSON', function () {
 });
 
 test('it calculates monthly miles aggregation', function () {
-    $startOfMonth = CarbonImmutable::now()->startOfMonth();
+    $startOfMonth = CarbonImmutable::now()->startOfMonth(); // Feb 1
 
     writeCareerFixture($this->fixtureDir, 'alice', [
         [
@@ -90,8 +97,8 @@ test('it calculates monthly miles aggregation', function () {
 
 test('it computes streak count for consecutive on-target weeks', function () {
     $now = CarbonImmutable::now();
-    $lastMonday = $now->startOfWeek()->subWeek();
-    $twoWeeksAgo = $lastMonday->subWeek();
+    $lastWeekStart = $now->startOfWeek(CarbonImmutable::SUNDAY)->subWeek(); // Sun Feb 1
+    $twoWeeksAgo = $lastWeekStart->subWeek(); // Sun Jan 25
 
     writeCareerFixture($this->fixtureDir, 'streaker', [
         [
@@ -100,7 +107,7 @@ test('it computes streak count for consecutive on-target weeks', function () {
             'scope_year' => 2026,
             'daily_metrics' => [
                 ['completion_date' => $twoWeeksAgo->format('Y-m-d'), 'daily_footage_miles' => 7.0, 'unit_count' => 20, 'stations' => []],
-                ['completion_date' => $lastMonday->format('Y-m-d'), 'daily_footage_miles' => 6.5, 'unit_count' => 18, 'stations' => []],
+                ['completion_date' => $lastWeekStart->format('Y-m-d'), 'daily_footage_miles' => 6.5, 'unit_count' => 18, 'stations' => []],
             ],
         ],
     ]);
@@ -112,9 +119,9 @@ test('it computes streak count for consecutive on-target weeks', function () {
 
 test('it resets streak when a week is below quota', function () {
     $now = CarbonImmutable::now();
-    $lastMonday = $now->startOfWeek()->subWeek();
-    $twoWeeksAgo = $lastMonday->subWeek();
-    $threeWeeksAgo = $twoWeeksAgo->subWeek();
+    $lastWeekStart = $now->startOfWeek(CarbonImmutable::SUNDAY)->subWeek(); // Sun Feb 1
+    $twoWeeksAgo = $lastWeekStart->subWeek(); // Sun Jan 25
+    $threeWeeksAgo = $twoWeeksAgo->subWeek(); // Sun Jan 18
 
     writeCareerFixture($this->fixtureDir, 'broken', [
         [
@@ -124,7 +131,7 @@ test('it resets streak when a week is below quota', function () {
             'daily_metrics' => [
                 ['completion_date' => $threeWeeksAgo->format('Y-m-d'), 'daily_footage_miles' => 7.0, 'unit_count' => 20, 'stations' => []],
                 ['completion_date' => $twoWeeksAgo->format('Y-m-d'), 'daily_footage_miles' => 2.0, 'unit_count' => 5, 'stations' => []],
-                ['completion_date' => $lastMonday->format('Y-m-d'), 'daily_footage_miles' => 8.0, 'unit_count' => 25, 'stations' => []],
+                ['completion_date' => $lastWeekStart->format('Y-m-d'), 'daily_footage_miles' => 8.0, 'unit_count' => 25, 'stations' => []],
             ],
         ],
     ]);
@@ -151,7 +158,7 @@ test('it returns planners from JSON files', function () {
 });
 
 test('it includes all expected keys in quota metrics return', function () {
-    $monday = CarbonImmutable::now()->startOfWeek();
+    $weekStart = CarbonImmutable::now()->startOfWeek(CarbonImmutable::SUNDAY); // Sun Feb 8
 
     writeCareerFixture($this->fixtureDir, 'editor', [
         [
@@ -159,7 +166,7 @@ test('it includes all expected keys in quota metrics return', function () {
             'job_guid' => '{88888888-8888-8888-8888-888888888888}',
             'scope_year' => 2026,
             'daily_metrics' => [
-                ['completion_date' => $monday->format('Y-m-d'), 'daily_footage_miles' => 3.0, 'unit_count' => 10, 'stations' => []],
+                ['completion_date' => $weekStart->format('Y-m-d'), 'daily_footage_miles' => 3.0, 'unit_count' => 10, 'stations' => []],
             ],
         ],
     ]);
@@ -266,7 +273,7 @@ test('it uses forNormalizedUser scope for username bridge', function () {
 });
 
 test('it returns success/warning/error status based on thresholds', function () {
-    $monday = CarbonImmutable::now()->startOfWeek();
+    $weekStart = CarbonImmutable::now()->startOfWeek(CarbonImmutable::SUNDAY); // Sun Feb 8
 
     writeCareerFixture($this->fixtureDir, 'onpace', [
         [
@@ -274,7 +281,7 @@ test('it returns success/warning/error status based on thresholds', function () 
             'job_guid' => '{AAAA1111-1111-1111-1111-111111111111}',
             'scope_year' => 2026,
             'daily_metrics' => [
-                ['completion_date' => $monday->format('Y-m-d'), 'daily_footage_miles' => 7.0, 'unit_count' => 20, 'stations' => []],
+                ['completion_date' => $weekStart->format('Y-m-d'), 'daily_footage_miles' => 7.0, 'unit_count' => 20, 'stations' => []],
             ],
         ],
     ]);
@@ -285,7 +292,7 @@ test('it returns success/warning/error status based on thresholds', function () 
             'job_guid' => '{BBBB2222-2222-2222-2222-222222222222}',
             'scope_year' => 2026,
             'daily_metrics' => [
-                ['completion_date' => $monday->format('Y-m-d'), 'daily_footage_miles' => 5.0, 'unit_count' => 14, 'stations' => []],
+                ['completion_date' => $weekStart->format('Y-m-d'), 'daily_footage_miles' => 5.0, 'unit_count' => 14, 'stations' => []],
             ],
         ],
     ]);
@@ -296,7 +303,7 @@ test('it returns success/warning/error status based on thresholds', function () 
             'job_guid' => '{CCCC3333-3333-3333-3333-333333333333}',
             'scope_year' => 2026,
             'daily_metrics' => [
-                ['completion_date' => $monday->format('Y-m-d'), 'daily_footage_miles' => 1.0, 'unit_count' => 3, 'stations' => []],
+                ['completion_date' => $weekStart->format('Y-m-d'), 'daily_footage_miles' => 1.0, 'unit_count' => 3, 'stations' => []],
             ],
         ],
     ]);
@@ -324,7 +331,7 @@ test('it handles planner with zero active assessments in health view', function 
 test('it respects config values for quota target and thresholds', function () {
     config(['planner_metrics.quota_miles_per_week' => 10.0]);
 
-    $monday = CarbonImmutable::now()->startOfWeek();
+    $weekStart = CarbonImmutable::now()->startOfWeek(CarbonImmutable::SUNDAY);
 
     writeCareerFixture($this->fixtureDir, 'configtest', [
         [
@@ -332,7 +339,7 @@ test('it respects config values for quota target and thresholds', function () {
             'job_guid' => '{EEEE5555-5555-5555-5555-555555555555}',
             'scope_year' => 2026,
             'daily_metrics' => [
-                ['completion_date' => $monday->format('Y-m-d'), 'daily_footage_miles' => 7.0, 'unit_count' => 20, 'stations' => []],
+                ['completion_date' => $weekStart->format('Y-m-d'), 'daily_footage_miles' => 7.0, 'unit_count' => 20, 'stations' => []],
             ],
         ],
     ]);
@@ -345,28 +352,26 @@ test('it respects config values for quota target and thresholds', function () {
 });
 
 test('it picks the most recent JSON file per planner', function () {
-    $monday = CarbonImmutable::now()->startOfWeek();
+    $weekStart = CarbonImmutable::now()->startOfWeek(CarbonImmutable::SUNDAY);
 
-    // Older file with different data
     writeCareerFixture($this->fixtureDir, 'jsmith', [
         [
             'planner_username' => 'ASPLUNDH\\jsmith',
             'job_guid' => '{FFFF6666-6666-6666-6666-666666666666}',
             'scope_year' => 2026,
             'daily_metrics' => [
-                ['completion_date' => $monday->format('Y-m-d'), 'daily_footage_miles' => 1.0, 'unit_count' => 5, 'stations' => []],
+                ['completion_date' => $weekStart->format('Y-m-d'), 'daily_footage_miles' => 1.0, 'unit_count' => 5, 'stations' => []],
             ],
         ],
     ], '2026-02-10');
 
-    // Newer file should win
     writeCareerFixture($this->fixtureDir, 'jsmith', [
         [
             'planner_username' => 'ASPLUNDH\\jsmith',
             'job_guid' => '{FFFF7777-7777-7777-7777-777777777777}',
             'scope_year' => 2026,
             'daily_metrics' => [
-                ['completion_date' => $monday->format('Y-m-d'), 'daily_footage_miles' => 5.0, 'unit_count' => 15, 'stations' => []],
+                ['completion_date' => $weekStart->format('Y-m-d'), 'daily_footage_miles' => 5.0, 'unit_count' => 15, 'stations' => []],
             ],
         ],
     ], '2026-02-15');
@@ -409,7 +414,7 @@ test('it handles planner with empty assessments array', function () {
 });
 
 test('it handles underscored usernames in filenames', function () {
-    $monday = CarbonImmutable::now()->startOfWeek();
+    $weekStart = CarbonImmutable::now()->startOfWeek(CarbonImmutable::SUNDAY);
 
     writeCareerFixture($this->fixtureDir, 'eci_chris', [
         [
@@ -417,7 +422,7 @@ test('it handles underscored usernames in filenames', function () {
             'job_guid' => '{AAAA9999-9999-9999-9999-999999999999}',
             'scope_year' => 2026,
             'daily_metrics' => [
-                ['completion_date' => $monday->format('Y-m-d'), 'daily_footage_miles' => 4.0, 'unit_count' => 10, 'stations' => []],
+                ['completion_date' => $weekStart->format('Y-m-d'), 'daily_footage_miles' => 4.0, 'unit_count' => 10, 'stations' => []],
             ],
         ],
     ]);
@@ -435,4 +440,214 @@ test('it returns empty when directory does not exist', function () {
 
     expect($this->service->getQuotaMetrics())->toBe([])
         ->and($this->service->getDistinctPlanners())->toBe([]);
+});
+
+// ─── Offset navigation tests ────────────────────────────────────────────────
+
+test('it returns previous week data when offset is -1', function () {
+    // Frozen: Wed Feb 11. Previous week: Sun Feb 1 – Sat Feb 7.
+    writeCareerFixture($this->fixtureDir, 'nav', [
+        [
+            'planner_username' => 'ASPLUNDH\\nav',
+            'job_guid' => '{11111111-1111-1111-1111-111111111111}',
+            'scope_year' => 2026,
+            'daily_metrics' => [
+                // Previous week data (Feb 1 and Feb 5)
+                ['completion_date' => '2026-02-01', 'daily_footage_miles' => 3.0, 'unit_count' => 10, 'stations' => []],
+                ['completion_date' => '2026-02-05', 'daily_footage_miles' => 4.0, 'unit_count' => 12, 'stations' => []],
+                // Current week data (Feb 8) — should NOT be included
+                ['completion_date' => '2026-02-08', 'daily_footage_miles' => 99.0, 'unit_count' => 50, 'stations' => []],
+            ],
+        ],
+    ]);
+
+    $result = $this->service->getQuotaMetrics('week', -1);
+
+    expect($result[0]['period_miles'])->toBe(7.0);
+});
+
+test('it returns two weeks ago data when offset is -2', function () {
+    // Frozen: Wed Feb 11. Two weeks ago: Sun Jan 25 – Sat Jan 31.
+    writeCareerFixture($this->fixtureDir, 'nav2', [
+        [
+            'planner_username' => 'ASPLUNDH\\nav2',
+            'job_guid' => '{22222222-2222-2222-2222-222222222222}',
+            'scope_year' => 2026,
+            'daily_metrics' => [
+                ['completion_date' => '2026-01-27', 'daily_footage_miles' => 5.5, 'unit_count' => 15, 'stations' => []],
+                // Previous week data — should NOT be included
+                ['completion_date' => '2026-02-03', 'daily_footage_miles' => 99.0, 'unit_count' => 50, 'stations' => []],
+            ],
+        ],
+    ]);
+
+    $result = $this->service->getQuotaMetrics('week', -2);
+
+    expect($result[0]['period_miles'])->toBe(5.5);
+});
+
+test('it includes Saturday data for past weeks (full Sun-Sat range)', function () {
+    // Previous week: Sun Feb 1 – Sat Feb 7. Data on Saturday should be included.
+    writeCareerFixture($this->fixtureDir, 'sattest', [
+        [
+            'planner_username' => 'ASPLUNDH\\sattest',
+            'job_guid' => '{33333333-3333-3333-3333-333333333333}',
+            'scope_year' => 2026,
+            'daily_metrics' => [
+                ['completion_date' => '2026-02-07', 'daily_footage_miles' => 2.0, 'unit_count' => 5, 'stations' => []],
+                // Sunday (start of NEXT week) — excluded from offset -1
+                ['completion_date' => '2026-02-08', 'daily_footage_miles' => 99.0, 'unit_count' => 50, 'stations' => []],
+            ],
+        ],
+    ]);
+
+    $result = $this->service->getQuotaMetrics('week', -1);
+
+    expect($result[0]['period_miles'])->toBe(2.0);
+});
+
+test('it shows partial week for current week offset 0', function () {
+    // Frozen: Wed Feb 11. Current week window = Sun Feb 8 – Wed Feb 11.
+    writeCareerFixture($this->fixtureDir, 'partial', [
+        [
+            'planner_username' => 'ASPLUNDH\\partial',
+            'job_guid' => '{44444444-4444-4444-4444-444444444444}',
+            'scope_year' => 2026,
+            'daily_metrics' => [
+                ['completion_date' => '2026-02-08', 'daily_footage_miles' => 1.0, 'unit_count' => 3, 'stations' => []],
+                ['completion_date' => '2026-02-10', 'daily_footage_miles' => 2.0, 'unit_count' => 5, 'stations' => []],
+                ['completion_date' => '2026-02-11', 'daily_footage_miles' => 1.5, 'unit_count' => 4, 'stations' => []],
+                // Future data (Feb 12) — should NOT be included
+                ['completion_date' => '2026-02-12', 'daily_footage_miles' => 99.0, 'unit_count' => 50, 'stations' => []],
+            ],
+        ],
+    ]);
+
+    $result = $this->service->getQuotaMetrics('week', 0);
+
+    expect($result[0]['period_miles'])->toBe(4.5);
+});
+
+// ─── Default offset (auto-flip) tests ────────────────────────────────────────
+
+test('it defaults to previous week on Sunday', function () {
+    CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 2, 8, 10, 0, 0, 'America/New_York'));
+
+    expect($this->service->getDefaultOffset('week'))->toBe(-1);
+});
+
+test('it defaults to previous week on Monday', function () {
+    CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 2, 9, 10, 0, 0, 'America/New_York'));
+
+    expect($this->service->getDefaultOffset('week'))->toBe(-1);
+});
+
+test('it defaults to previous week on Tuesday before 5 PM ET', function () {
+    CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 2, 10, 16, 59, 0, 'America/New_York'));
+
+    expect($this->service->getDefaultOffset('week'))->toBe(-1);
+});
+
+test('it defaults to current week on Tuesday at 5 PM ET', function () {
+    CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 2, 10, 17, 0, 0, 'America/New_York'));
+
+    expect($this->service->getDefaultOffset('week'))->toBe(0);
+});
+
+test('it defaults to current week on Wednesday', function () {
+    CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 2, 11, 10, 0, 0, 'America/New_York'));
+
+    expect($this->service->getDefaultOffset('week'))->toBe(0);
+});
+
+test('it always returns 0 offset for non-week periods', function () {
+    CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 2, 9, 10, 0, 0, 'America/New_York'));
+
+    expect($this->service->getDefaultOffset('month'))->toBe(0)
+        ->and($this->service->getDefaultOffset('year'))->toBe(0)
+        ->and($this->service->getDefaultOffset('scope-year'))->toBe(0);
+});
+
+// ─── Scope-year (fiscal year Jul 1 – Jun 30) tests ──────────────────────────
+
+test('it calculates scope-year from July 1 to June 30', function () {
+    // Frozen: Feb 11, 2026. Fiscal year = Jul 1, 2025 – Jun 30, 2026.
+    writeCareerFixture($this->fixtureDir, 'fiscal', [
+        [
+            'planner_username' => 'ASPLUNDH\\fiscal',
+            'job_guid' => '{55555555-5555-5555-5555-555555555555}',
+            'scope_year' => 2026,
+            'daily_metrics' => [
+                // Aug 2025 — within fiscal year
+                ['completion_date' => '2025-08-15', 'daily_footage_miles' => 3.0, 'unit_count' => 10, 'stations' => []],
+                // Dec 2025 — within fiscal year
+                ['completion_date' => '2025-12-10', 'daily_footage_miles' => 2.0, 'unit_count' => 8, 'stations' => []],
+                // Feb 2026 — within fiscal year
+                ['completion_date' => '2026-02-05', 'daily_footage_miles' => 4.0, 'unit_count' => 12, 'stations' => []],
+                // Jun 2025 — BEFORE fiscal year, should NOT be included
+                ['completion_date' => '2025-06-15', 'daily_footage_miles' => 99.0, 'unit_count' => 50, 'stations' => []],
+            ],
+        ],
+    ]);
+
+    $result = $this->service->getQuotaMetrics('scope-year', 0);
+
+    expect($result[0]['period_miles'])->toBe(9.0);
+});
+
+test('it shifts scope-year with offset', function () {
+    // Frozen: Feb 11, 2026. Offset -1 = Jul 1, 2024 – Jun 30, 2025.
+    writeCareerFixture($this->fixtureDir, 'pastfiscal', [
+        [
+            'planner_username' => 'ASPLUNDH\\pastfiscal',
+            'job_guid' => '{66666666-6666-6666-6666-666666666666}',
+            'scope_year' => 2025,
+            'daily_metrics' => [
+                // Oct 2024 — within previous fiscal year
+                ['completion_date' => '2024-10-20', 'daily_footage_miles' => 5.0, 'unit_count' => 15, 'stations' => []],
+                // Mar 2025 — within previous fiscal year
+                ['completion_date' => '2025-03-12', 'daily_footage_miles' => 3.0, 'unit_count' => 10, 'stations' => []],
+                // Aug 2025 — CURRENT fiscal year, NOT included in offset -1
+                ['completion_date' => '2025-08-15', 'daily_footage_miles' => 99.0, 'unit_count' => 50, 'stations' => []],
+            ],
+        ],
+    ]);
+
+    $result = $this->service->getQuotaMetrics('scope-year', -1);
+
+    expect($result[0]['period_miles'])->toBe(8.0);
+});
+
+// ─── Period label tests ──────────────────────────────────────────────────────
+
+test('it generates correct period label for same-year range', function () {
+    // Frozen: Wed Feb 11. Week offset 0 = Feb 8 – Feb 11, 2026.
+    expect($this->service->getPeriodLabel('week', 0))->toBe('Feb 8 – Feb 11, 2026');
+});
+
+test('it generates full week label for past weeks', function () {
+    // Week offset -1 = Feb 1 – Feb 7, 2026.
+    expect($this->service->getPeriodLabel('week', -1))->toBe('Feb 1 – Feb 7, 2026');
+});
+
+test('it generates cross-year period label when range spans years', function () {
+    // Freeze to Friday Jan 2, 2026. Current week (Sunday-start) = Dec 28, 2025 – Jan 2, 2026.
+    CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 1, 2, 12, 0, 0, 'UTC'));
+
+    expect($this->service->getPeriodLabel('week', 0))->toBe('Dec 28, 2025 – Jan 2, 2026');
+});
+
+test('it generates month period label', function () {
+    // Frozen: Feb 11. Month offset 0 = Feb 1 – Feb 11, 2026.
+    expect($this->service->getPeriodLabel('month', 0))->toBe('Feb 1 – Feb 11, 2026');
+});
+
+test('it generates full month label for past months', function () {
+    // Month offset -1 = Jan 1 – Jan 31, 2026.
+    expect($this->service->getPeriodLabel('month', -1))->toBe('Jan 1 – Jan 31, 2026');
+});
+
+test('it generates scope-year period label', function () {
+    // Scope-year offset 0 = Jul 1, 2025 – Feb 11, 2026.
+    expect($this->service->getPeriodLabel('scope-year', 0))->toBe('Jul 1, 2025 – Feb 11, 2026');
 });

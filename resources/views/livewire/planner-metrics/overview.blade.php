@@ -61,18 +61,50 @@
         </div>
     </div>
 
+    {{-- Period Navigation --}}
+    @if($cardView === 'quota')
+    <div class="flex items-center justify-center gap-2">
+        <button
+            type="button"
+            wire:click="navigateOffset(-1)"
+            class="btn btn-sm btn-ghost btn-circle"
+            aria-label="Previous period"
+        >
+            <x-heroicon-m-chevron-left class="size-4" />
+        </button>
+
+        <button
+            type="button"
+            wire:click="resetOffset"
+            class="btn btn-sm btn-ghost font-medium min-w-48 tabular-nums"
+        >
+            {{ $this->periodLabel }}
+        </button>
+
+        <button
+            type="button"
+            wire:click="navigateOffset(1)"
+            class="btn btn-sm btn-ghost btn-circle"
+            @disabled($this->resolvedOffset >= 0)
+            aria-label="Next period"
+        >
+            <x-heroicon-m-chevron-right class="size-4" />
+        </button>
+    </div>
+    @endif
+
     {{-- Card Grid --}}
     <div class="relative">
         {{-- Loading Overlay --}}
         <div
             wire:loading.flex
-            wire:target="switchView, switchPeriod, switchSort"
+            wire:target="switchView, switchPeriod, switchSort, navigateOffset, resetOffset"
             class="absolute inset-0 z-10 items-center justify-center rounded-box bg-base-100/60"
         >
             <span class="loading loading-spinner loading-lg text-primary"></span>
         </div>
 
-        <div wire:loading.remove wire:target="switchView, switchPeriod, switchSort">
+        <div wire:loading.remove wire:target="switchView, switchPeriod, switchSort, navigateOffset, resetOffset">
             @if(empty($this->planners))
                 {{-- Empty State --}}
                 <div class="card bg-base-100 shadow">
@@ -102,7 +134,7 @@
     </div>
 
     {{-- Footer --}}
-    <div class="text-xs text-base-content/40 text-right" wire:loading.remove wire:target="switchView, switchPeriod, switchSort">
+    <div class="text-xs text-base-content/40 text-right" wire:loading.remove wire:target="switchView, switchPeriod, switchSort, navigateOffset, resetOffset">
         Last updated: {{ now()->format('M j, Y g:i A') }}
     </div>
 </div>

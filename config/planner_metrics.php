@@ -41,6 +41,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Week Boundaries & Auto-Default
+    |--------------------------------------------------------------------------
+    |
+    | week_starts_on: Carbon day constant (0=Sunday, 1=Monday).
+    | default_offset_flip_*: Controls when "current week" becomes the default.
+    | Before flip day+hour, the dashboard defaults to the previous completed week.
+    |
+    */
+    'week_starts_on' => \Carbon\Carbon::SUNDAY,
+    'default_offset_flip_day' => 'Tuesday',
+    'default_offset_flip_hour' => 17,
+    'default_offset_timezone' => 'America/New_York',
+
+    /*
+    |--------------------------------------------------------------------------
     | Career JSON Path
     |--------------------------------------------------------------------------
     |

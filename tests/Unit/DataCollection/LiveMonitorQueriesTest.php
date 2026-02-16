@@ -91,14 +91,15 @@ test('getDailySnapshot outputs all notes compliance columns with safe division',
 
 // ─── Edit Recency ───────────────────────────────────────────────────────────
 
-test('getDailySnapshot includes MAX edit timestamp columns', function () {
+test('getDailySnapshot casts EDITDATE via OLE datetime for edit recency', function () {
     $queries = new LiveMonitorQueries(makeMonitorContext());
     $sql = $queries->getDailySnapshot(MONITOR_TEST_GUID, 14);
 
     expect($sql)
         ->toContain('last_edit_date')
         ->toContain('last_edit_by')
-        ->toContain('LASTEDITDT');
+        ->toContain('VU.EDITDATE')
+        ->toContain('CAST(VU.EDITDATE AS DATETIME)');
 });
 
 // ─── Aging Units ────────────────────────────────────────────────────────────

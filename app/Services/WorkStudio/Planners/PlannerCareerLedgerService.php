@@ -46,8 +46,17 @@ class PlannerCareerLedgerService
 
             $assignment = PlannerJobAssignment::firstOrCreate(
                 ['frstr_user' => $frstrUser, 'job_guid' => $jobGuid],
-                ['status' => 'discovered', 'discovered_at' => now()],
+                [
+                    'normalized_username' => PlannerJobAssignment::normalizeUsername($frstrUser),
+                    'status' => 'discovered',
+                    'discovered_at' => now(),
+                ],
             );
+
+            // Backfill normalized_username for records created before this field existed
+            if ($assignment->normalized_username === null) {
+                $assignment->update(['normalized_username' => PlannerJobAssignment::normalizeUsername($frstrUser)]);
+            }
 
             $assignments->push($assignment);
         }
@@ -579,9 +588,7 @@ class PlannerCareerLedgerService
      */
     private function stripDomain(string $user): string
     {
-        $stripped = str_contains($user, '\\') ? substr($user, strrpos($user, '\\') + 1) : $user;
-
-        return preg_replace('/\s+/', '_', trim($stripped));
+        return PlannerJobAssignment::normalizeUsername($user);
     }
 
     /**

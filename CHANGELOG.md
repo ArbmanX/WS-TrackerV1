@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Planner Metrics Week Navigation & Boundary Overhaul** (2026-02-15)
+  - Sunday–Saturday week boundaries (configurable via `planner_metrics.week_starts_on`)
+  - Prev/next offset navigation with chevron arrows and date range label
+  - Auto-default flip: shows previous completed week until Tuesday 5 PM ET, then current week
+  - Fiscal scope-year (Jul 1 – Jun 30) for scope-year period
+  - Period labels with en-dash formatting and cross-year awareness
+  - Server-side validation clamps positive offsets to 0 (no future weeks)
+  - 18 new service tests + 1 new Livewire test for offset navigation (53 total PlannerMetrics tests)
+
 ### Changed
 - **Refactored PlannerMetricsService to read from career JSON files** (2026-02-15)
   - `PlannerMetricsService` now reads career data from JSON files produced by `PlannerCareerLedgerService` instead of querying `planner_career_entries` table

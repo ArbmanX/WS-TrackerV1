@@ -22,6 +22,10 @@ class Overview extends Component
     #[Url]
     public string $sortBy = 'alpha';
 
+    /** @var int|null Null = auto-default (service decides). Explicit int = user-navigated. */
+    #[Url]
+    public ?int $offset = null;
+
     public function mount(): void
     {
         if (! in_array($this->cardView, ['quota', 'health'])) {
@@ -33,6 +37,15 @@ class Overview extends Component
         if (! in_array($this->sortBy, ['alpha', 'attention'])) {
             $this->sortBy = 'alpha';
         }
+        if ($this->offset !== null && $this->offset > 0) {
+            $this->offset = 0;
+        }
+    }
+
+    #[Computed]
+    public function resolvedOffset(): int
+    {
+        return $this->offset ?? app(PlannerMetricsServiceInterface::class)->getDefaultOffset($this->period);
     }
 
     #[Computed]
@@ -40,10 +53,16 @@ class Overview extends Component
     {
         $data = match ($this->cardView) {
             'health' => app(PlannerMetricsServiceInterface::class)->getHealthMetrics(),
-            default => app(PlannerMetricsServiceInterface::class)->getQuotaMetrics($this->period),
+            default => app(PlannerMetricsServiceInterface::class)->getQuotaMetrics($this->period, $this->resolvedOffset),
         };
 
         return $this->sortPlanners($data);
+    }
+
+    #[Computed]
+    public function periodLabel(): string
+    {
+        return app(PlannerMetricsServiceInterface::class)->getPeriodLabel($this->period, $this->resolvedOffset);
     }
 
     #[Computed]
@@ -78,6 +97,7 @@ class Overview extends Component
         }
 
         $this->period = $period;
+        $this->offset = null;
         $this->clearCache();
     }
 
@@ -91,6 +111,18 @@ class Overview extends Component
         $this->clearCache();
     }
 
+    public function navigateOffset(int $direction): void
+    {
+        $this->offset = $this->resolvedOffset + $direction;
+        $this->clearCache();
+    }
+
+    public function resetOffset(): void
+    {
+        $this->offset = null;
+        $this->clearCache();
+    }
+
     public function render(): View
     {
         return view('livewire.planner-metrics.overview');
@@ -98,7 +130,7 @@ class Overview extends Component
 
     private function clearCache(): void
     {
-        unset($this->planners, $this->coachingMessages);
+        unset($this->planners, $this->coachingMessages, $this->periodLabel, $this->resolvedOffset);
     }
 
     private function sortPlanners(array $data): array

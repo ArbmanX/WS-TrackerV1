@@ -23,6 +23,8 @@ function mockMetricsService(array $quotaReturn = [], array $healthReturn = []): 
     $mock = Mockery::mock(PlannerMetricsServiceInterface::class);
     $mock->shouldReceive('getQuotaMetrics')->andReturn($quotaReturn);
     $mock->shouldReceive('getHealthMetrics')->andReturn($healthReturn);
+    $mock->shouldReceive('getDefaultOffset')->andReturn(0);
+    $mock->shouldReceive('getPeriodLabel')->andReturn('Feb 8 – Feb 11, 2026');
     app()->bind(PlannerMetricsServiceInterface::class, fn () => $mock);
 }
 
@@ -228,4 +230,13 @@ test('it persists sortBy in URL parameter', function () {
     Livewire::actingAs(createMetricsTestUser())
         ->test(Overview::class, ['sortBy' => 'attention'])
         ->assertSet('sortBy', 'attention');
+});
+
+test('it clamps positive offset to zero on mount', function () {
+    mockMetricsService();
+    mockCoachingGenerator();
+
+    Livewire::actingAs(createMetricsTestUser())
+        ->test(Overview::class, ['offset' => 5])
+        ->assertSet('offset', 0);
 });

@@ -3,6 +3,7 @@
 namespace App\Services\WorkStudio\DataCollection\Queries;
 
 use App\Services\WorkStudio\Assessments\Queries\AbstractQueryBuilder;
+use App\Services\WorkStudio\Shared\Helpers\WSSQLCaster;
 
 class LiveMonitorQueries extends AbstractQueryBuilder
 {
@@ -13,7 +14,7 @@ class LiveMonitorQueries extends AbstractQueryBuilder
      * - Permission breakdown (PERMSTAT counts)
      * - Unit counts (work vs non-work via UNITS.SUMMARYGRP)
      * - Notes compliance (conditional on JVU area threshold)
-     * - Edit recency (MAX LASTEDITDT/LASTEDITBY)
+     * - Edit recency (MAX EDITDATE via OLE cast)
      * - Aging units (pending PERMSTAT older than threshold)
      * - Work type breakdown (FOR JSON PATH from V_ASSESSMENT)
      *
@@ -26,6 +27,7 @@ class LiveMonitorQueries extends AbstractQueryBuilder
         $validUnit = self::validUnitFilter('VU');
         $areaThreshold = config('ws_data_collection.thresholds.notes_compliance_area_sqm');
         $parseAssddate = self::parseMsDateToDate('VU.ASSDDATE');
+        $castEditDate = WSSQLCaster::cast('VU.EDITDATE');
 
         return "SELECT
     -- Permission breakdown
@@ -74,10 +76,10 @@ class LiveMonitorQueries extends AbstractQueryBuilder
             THEN 1 ELSE 0 END), 0) * 100
     AS DECIMAL(5,1)) AS compliance_percent,
 
-    -- Edit recency
-    MAX(CASE WHEN VU.LASTEDITDT IS NOT NULL AND VU.LASTEDITDT != ''
-        THEN VU.LASTEDITDT END) AS last_edit_date,
-    MAX(CASE WHEN VU.LASTEDITDT IS NOT NULL AND VU.LASTEDITDT != ''
+    -- Edit recency (EDITDATE is OLE Automation float — cast to datetime)
+    MAX(CASE WHEN VU.EDITDATE IS NOT NULL AND VU.EDITDATE != '' AND VU.EDITDATE != 0
+        THEN {$castEditDate} END) AS last_edit_date,
+    MAX(CASE WHEN VU.EDITDATE IS NOT NULL AND VU.EDITDATE != '' AND VU.EDITDATE != 0
         THEN VU.LASTEDITBY END) AS last_edit_by,
 
     -- Aging units

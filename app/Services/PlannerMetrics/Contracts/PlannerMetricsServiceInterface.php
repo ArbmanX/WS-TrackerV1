@@ -21,7 +21,7 @@ interface PlannerMetricsServiceInterface
      *     gap_miles: float,
      * }>
      */
-    public function getQuotaMetrics(string $period = 'week'): array;
+    public function getQuotaMetrics(string $period = 'week', int $offset = 0): array;
 
     /**
      * Get health metrics for all planners.
@@ -46,4 +46,19 @@ interface PlannerMetricsServiceInterface
      * @return list<array{username: string, display_name: string}>
      */
     public function getDistinctPlanners(): array;
+
+    /**
+     * Get the human-readable label for a period + offset combination.
+     *
+     * @return string e.g. "Feb 9 – Feb 15, 2026"
+     */
+    public function getPeriodLabel(string $period, int $offset = 0): string;
+
+    /**
+     * Get the auto-default offset for a period.
+     *
+     * For "week", returns -1 before the flip day/hour (previous completed week)
+     * and 0 after (current week). Other periods always return 0.
+     */
+    public function getDefaultOffset(string $period): int;
 }
