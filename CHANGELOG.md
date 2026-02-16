@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Planner Metrics Circuit Drawer** (2026-02-16)
+  - Side drawer panel on planner cards showing circuit-level details (line name, region, miles, completion %)
+  - `getCircuitsForPlanner()` on PlannerMetricsService to fetch circuit data from AssessmentMonitor snapshots
+  - Drawer accessible from both Quota and Health card views via click-to-open action
+  - 16 new drawer tests in `OverviewDrawerTest.php` (74 total PlannerMetrics tests)
+  - Card layout refinements for health and quota views
+
 - **Planner Metrics Week Navigation & Boundary Overhaul** (2026-02-15)
   - Sunday–Saturday week boundaries (configurable via `planner_metrics.week_starts_on`)
   - Prev/next offset navigation with chevron arrows and date range label

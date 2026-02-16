@@ -137,4 +137,31 @@
     <div class="text-xs text-base-content/40 text-right" wire:loading.remove wire:target="switchView, switchPeriod, switchSort, navigateOffset, resetOffset">
         Last updated: {{ now()->format('M j, Y g:i A') }}
     </div>
+
+    {{-- Circuit Drawer (fixed panel, not DaisyUI drawer — avoids nesting with app-shell drawer) --}}
+    @if($drawerPlanner)
+        <div
+            x-data
+            x-init="$el.querySelector('[data-drawer-panel]')?.focus()"
+            @keydown.escape.window="$wire.closeDrawer()"
+        >
+            {{-- Backdrop --}}
+            <div
+                class="fixed inset-0 z-40 bg-black/30 transition-opacity"
+                wire:click="closeDrawer"
+            ></div>
+
+            {{-- Panel --}}
+            <div
+                data-drawer-panel
+                tabindex="-1"
+                class="fixed inset-y-0 right-0 z-50 w-96 max-w-[85vw] bg-base-100 p-6 shadow-xl overflow-y-auto transform transition-transform"
+            >
+                @include('livewire.planner-metrics._circuit-drawer', [
+                    'circuits' => $this->drawerCircuits,
+                    'plannerName' => $this->drawerDisplayName,
+                ])
+            </div>
+        </div>
+    @endif
 </div>

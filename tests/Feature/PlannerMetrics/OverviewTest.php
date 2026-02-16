@@ -51,6 +51,7 @@ function sampleQuotaData(array $overrides = []): array
         'active_assessment_count' => 3,
         'status' => 'warning',
         'gap_miles' => 2.2,
+        'circuits' => [],
     ], $overrides);
 }
 
@@ -66,6 +67,7 @@ function sampleHealthData(array $overrides = []): array
         'percent_complete' => 68.0,
         'active_assessment_count' => 3,
         'status' => 'warning',
+        'circuits' => [],
     ], $overrides);
 }
 

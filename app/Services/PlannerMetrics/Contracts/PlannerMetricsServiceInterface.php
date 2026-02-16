@@ -19,6 +19,7 @@ interface PlannerMetricsServiceInterface
      *     active_assessment_count: int,
      *     status: string,
      *     gap_miles: float,
+     *     circuits: list<array{job_guid: string, line_name: string, region: string, total_miles: float, completed_miles: float, percent_complete: float, permission_breakdown: array<string, int>}>,
      * }>
      */
     public function getQuotaMetrics(string $period = 'week', int $offset = 0): array;
@@ -36,6 +37,7 @@ interface PlannerMetricsServiceInterface
      *     percent_complete: float,
      *     active_assessment_count: int,
      *     status: string,
+     *     circuits: list<array{job_guid: string, line_name: string, region: string, total_miles: float, completed_miles: float, percent_complete: float, permission_breakdown: array<string, int>}>,
      * }>
      */
     public function getHealthMetrics(): array;

@@ -651,3 +651,146 @@ test('it generates scope-year period label', function () {
     // Scope-year offset 0 = Jul 1, 2025 – Feb 11, 2026.
     expect($this->service->getPeriodLabel('scope-year', 0))->toBe('Jul 1, 2025 – Feb 11, 2026');
 });
+
+// ─── Circuit drawer data tests ───────────────────────────────────────────────
+
+test('resolveHealthSignal returns circuits key with correct count', function () {
+    $guid1 = '{'.Str::uuid()->toString().'}';
+    $guid2 = '{'.Str::uuid()->toString().'}';
+
+    writeCareerFixture($this->fixtureDir, 'drawer', [
+        ['planner_username' => 'ASPLUNDH\\drawer', 'job_guid' => $guid1, 'scope_year' => 2026, 'daily_metrics' => []],
+    ]);
+
+    PlannerJobAssignment::factory()->create([
+        'normalized_username' => 'drawer',
+        'frstr_user' => 'ASPLUNDH\\drawer',
+        'job_guid' => $guid1,
+    ]);
+    PlannerJobAssignment::factory()->create([
+        'normalized_username' => 'drawer',
+        'frstr_user' => 'ASPLUNDH\\drawer',
+        'job_guid' => $guid2,
+    ]);
+
+    AssessmentMonitor::factory()->withSnapshots(1)->create([
+        'job_guid' => $guid1,
+        'current_status' => 'ACTIV',
+        'line_name' => 'Circuit-1234',
+        'region' => 'NORTH',
+    ]);
+    AssessmentMonitor::factory()->withSnapshots(1)->create([
+        'job_guid' => $guid2,
+        'current_status' => 'ACTIV',
+        'line_name' => 'Circuit-5678',
+        'region' => 'SOUTH',
+    ]);
+
+    $result = $this->service->getHealthMetrics();
+
+    expect($result[0])->toHaveKey('circuits')
+        ->and($result[0]['circuits'])->toHaveCount(2);
+});
+
+test('each circuit has expected keys', function () {
+    $guid = '{'.Str::uuid()->toString().'}';
+
+    writeCareerFixture($this->fixtureDir, 'keys', [
+        ['planner_username' => 'ASPLUNDH\\keys', 'job_guid' => $guid, 'scope_year' => 2026, 'daily_metrics' => []],
+    ]);
+
+    PlannerJobAssignment::factory()->create([
+        'normalized_username' => 'keys',
+        'frstr_user' => 'ASPLUNDH\\keys',
+        'job_guid' => $guid,
+    ]);
+
+    AssessmentMonitor::factory()->withSnapshots(1)->create([
+        'job_guid' => $guid,
+        'current_status' => 'ACTIV',
+        'line_name' => 'Circuit-9999',
+        'region' => 'EAST',
+        'total_miles' => 15.5,
+    ]);
+
+    $result = $this->service->getHealthMetrics();
+    $circuit = $result[0]['circuits'][0];
+
+    expect($circuit)->toHaveKeys([
+        'job_guid', 'line_name', 'region', 'total_miles',
+        'completed_miles', 'percent_complete', 'permission_breakdown',
+    ])
+        ->and($circuit['line_name'])->toBe('Circuit-9999')
+        ->and($circuit['region'])->toBe('EAST')
+        ->and($circuit['total_miles'])->toBe(15.5);
+});
+
+test('circuits array is empty when no active monitors exist', function () {
+    writeCareerFixture($this->fixtureDir, 'nocircuit', [
+        ['planner_username' => 'ASPLUNDH\\nocircuit', 'job_guid' => '{AAAA0000-0000-0000-0000-000000000000}', 'scope_year' => 2026, 'daily_metrics' => []],
+    ]);
+
+    $result = $this->service->getHealthMetrics();
+
+    expect($result[0]['circuits'])->toBe([]);
+});
+
+test('circuits handles null latest_snapshot gracefully', function () {
+    $guid = '{'.Str::uuid()->toString().'}';
+
+    writeCareerFixture($this->fixtureDir, 'nullsnap', [
+        ['planner_username' => 'ASPLUNDH\\nullsnap', 'job_guid' => $guid, 'scope_year' => 2026, 'daily_metrics' => []],
+    ]);
+
+    PlannerJobAssignment::factory()->create([
+        'normalized_username' => 'nullsnap',
+        'frstr_user' => 'ASPLUNDH\\nullsnap',
+        'job_guid' => $guid,
+    ]);
+
+    // Create monitor WITHOUT snapshots (latest_snapshot = null)
+    AssessmentMonitor::factory()->create([
+        'job_guid' => $guid,
+        'current_status' => 'ACTIV',
+        'total_miles' => 10.0,
+    ]);
+
+    $result = $this->service->getHealthMetrics();
+    $circuit = $result[0]['circuits'][0];
+
+    expect($circuit['completed_miles'])->toBe(0.0)
+        ->and($circuit['percent_complete'])->toBe(0.0)
+        ->and($circuit['permission_breakdown'])->toBe([]);
+});
+
+test('circuits are included in quota metrics return', function () {
+    $guid = '{'.Str::uuid()->toString().'}';
+    $weekStart = CarbonImmutable::now()->startOfWeek(CarbonImmutable::SUNDAY);
+
+    writeCareerFixture($this->fixtureDir, 'quotacircuit', [
+        [
+            'planner_username' => 'ASPLUNDH\\quotacircuit',
+            'job_guid' => $guid,
+            'scope_year' => 2026,
+            'daily_metrics' => [
+                ['completion_date' => $weekStart->format('Y-m-d'), 'daily_footage_miles' => 3.0, 'unit_count' => 10, 'stations' => []],
+            ],
+        ],
+    ]);
+
+    PlannerJobAssignment::factory()->create([
+        'normalized_username' => 'quotacircuit',
+        'frstr_user' => 'ASPLUNDH\\quotacircuit',
+        'job_guid' => $guid,
+    ]);
+
+    AssessmentMonitor::factory()->withSnapshots(1)->create([
+        'job_guid' => $guid,
+        'current_status' => 'ACTIV',
+    ]);
+
+    $result = $this->service->getQuotaMetrics('week');
+
+    expect($result[0])->toHaveKey('circuits')
+        ->and($result[0]['circuits'])->toHaveCount(1);
+});

@@ -56,6 +56,7 @@ class PlannerMetricsService implements PlannerMetricsServiceInterface
                 'active_assessment_count' => $healthSignal['active_assessment_count'],
                 'status' => $status,
                 'gap_miles' => $gapMiles,
+                'circuits' => $healthSignal['circuits'],
             ];
         }
 
@@ -99,6 +100,7 @@ class PlannerMetricsService implements PlannerMetricsServiceInterface
                 'percent_complete' => $healthSignal['percent_complete'],
                 'active_assessment_count' => $healthSignal['active_assessment_count'],
                 'status' => $status,
+                'circuits' => $healthSignal['circuits'],
             ];
         }
 
@@ -253,6 +255,7 @@ class PlannerMetricsService implements PlannerMetricsServiceInterface
      *     total_miles: float,
      *     percent_complete: float,
      *     active_assessment_count: int,
+     *     circuits: list<array{job_guid: string, line_name: string, region: string, total_miles: float, completed_miles: float, percent_complete: float, permission_breakdown: array<string, int>}>,
      * }
      */
     private function resolveHealthSignal(string $username): array
@@ -268,8 +271,23 @@ class PlannerMetricsService implements PlannerMetricsServiceInterface
                 'total_miles' => 0,
                 'percent_complete' => 0,
                 'active_assessment_count' => 0,
+                'circuits' => [],
             ];
         }
+
+        $circuits = $monitors->map(function ($monitor) {
+            $footage = $monitor->latest_snapshot['footage'] ?? [];
+
+            return [
+                'job_guid' => $monitor->job_guid,
+                'line_name' => $monitor->line_name,
+                'region' => $monitor->region,
+                'total_miles' => (float) $monitor->total_miles,
+                'completed_miles' => (float) ($footage['completed_miles'] ?? 0),
+                'percent_complete' => (float) ($footage['percent_complete'] ?? 0),
+                'permission_breakdown' => $monitor->latest_snapshot['permission_breakdown'] ?? [],
+            ];
+        })->values()->all();
 
         $worstDays = 0;
         $totalPending = 0;
@@ -305,6 +323,7 @@ class PlannerMetricsService implements PlannerMetricsServiceInterface
             'total_miles' => round($totalMiles, 1),
             'percent_complete' => $avgPercent,
             'active_assessment_count' => $monitors->count(),
+            'circuits' => $circuits,
         ];
     }
 

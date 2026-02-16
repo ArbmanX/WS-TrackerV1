@@ -26,6 +26,8 @@ class Overview extends Component
     #[Url]
     public ?int $offset = null;
 
+    public ?string $drawerPlanner = null;
+
     public function mount(): void
     {
         if (! in_array($this->cardView, ['quota', 'health'])) {
@@ -80,6 +82,50 @@ class Overview extends Component
             ->all();
     }
 
+    #[Computed]
+    public function drawerCircuits(): array
+    {
+        if (! $this->drawerPlanner) {
+            return [];
+        }
+
+        $planner = collect($this->planners)->firstWhere('username', $this->drawerPlanner);
+
+        if (! $planner) {
+            $this->drawerPlanner = null;
+
+            return [];
+        }
+
+        return $planner['circuits'] ?? [];
+    }
+
+    #[Computed]
+    public function drawerDisplayName(): string
+    {
+        if (! $this->drawerPlanner) {
+            return '';
+        }
+
+        $planner = collect($this->planners)->firstWhere('username', $this->drawerPlanner);
+
+        return $planner['display_name'] ?? $this->drawerPlanner;
+    }
+
+    public function openDrawer(string $username): void
+    {
+        if (! collect($this->planners)->contains('username', $username)) {
+            return;
+        }
+
+        $this->drawerPlanner = $username;
+    }
+
+    public function closeDrawer(): void
+    {
+        $this->drawerPlanner = null;
+    }
+
     public function switchView(string $view): void
     {
         if (! in_array($view, ['quota', 'health'])) {
@@ -131,6 +177,8 @@ class Overview extends Component
     private function clearCache(): void
     {
         unset($this->planners, $this->coachingMessages, $this->periodLabel, $this->resolvedOffset);
+        unset($this->drawerCircuits, $this->drawerDisplayName);
+        $this->drawerPlanner = null;
     }
 
     private function sortPlanners(array $data): array
