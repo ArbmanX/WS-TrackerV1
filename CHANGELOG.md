@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **FetchAssessments Command** (2026-02-16)
+  - New `ws:fetch-assessments` Artisan command replacing `ws:fetch-jobs` / `FetchSsJobs`
+  - New `assessments` table with self-referential FK for split assessment hierarchy
+  - VEGJOB fields: cycle_type, region, planned_emergent, voltage, cost_method, program_name, permissioning_required, percent_complete, length, length_completed
+  - Dual date storage: `last_edited` (Carbon) + `last_edited_ole` (raw OLE float for incremental sync)
+  - Incremental sync via OLE EDITDATE comparison, bypassed with `--full`
+  - Default status filter from `planner_concern` config, overridable with `--status`
+  - Extension depth sorting for parent-first FK ordering
+  - `is_split` flagging on parent Assessment Dx records with split children
+  - Failed circuit resolution logged to `storage/logs/failed-assessment-fetch.log`
+  - 19 tests (69 assertions) in `FetchAssessmentsCommandTest.php`
+
+### Removed
+- `FetchSsJobs` command, `SsJob` model, `SsJobFactory`, `ss_jobs` table
+- `SsJob` relationships from `WsUser` model (Assessment uses username strings)
+- `FetchSsJobsCommandTest`, `SsJobTest`
+
 ### Changed
 - **Planner Metrics Redesign — Unified View with Accordion** (2026-02-16)
   - Replaced Quota/Health card toggle with unified single-column layout showing both in one row

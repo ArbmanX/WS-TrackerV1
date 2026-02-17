@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\SsJob;
+use App\Models\Assessment;
 use App\Services\WorkStudio\Assessments\Queries\DailyFootageQuery;
 use App\Services\WorkStudio\Client\ApiCredentialManager;
 use Illuminate\Console\Command;
@@ -15,7 +15,7 @@ class FetchDailyFootage extends Command
 {
     protected $signature = 'ws:fetch-daily-footage
         {date? : Target date (MM-DD-YYYY, MM-DD, or YYYY). Default: previous complete week (Sun-Sat)}
-        {--jobguid= : Query a single JOBGUID directly (skips ss_jobs lookup)}
+        {--jobguid= : Query a single JOBGUID directly (skips assessments lookup)}
         {--status=ACTIV : Job status filter (single value)}
         {--all-statuses : Use all planner_concern statuses (ACTIV, QC, REWRK, CLOSE)}
         {--chunk-size=200 : Number of JOBGUIDs per API batch}
@@ -193,7 +193,7 @@ class FetchDailyFootage extends Command
     }
 
     /**
-     * Get JOBGUIDs from ss_jobs or a single --jobguid option.
+     * Get JOBGUIDs from assessments or a single --jobguid option.
      *
      * @return Collection<int, string>
      */
@@ -208,7 +208,7 @@ class FetchDailyFootage extends Command
         $scopeYear = config('ws_assessment_query.scope_year');
         $jobTypes = config('ws_assessment_query.job_types.assessments');
 
-        $query = SsJob::query()
+        $query = Assessment::query()
             ->where('scope_year', $scopeYear)
             ->whereIn('job_type', $jobTypes);
 
@@ -229,15 +229,15 @@ class FetchDailyFootage extends Command
      */
     private function displayDryRun(Collection $jobGuids): void
     {
-        $jobs = SsJob::whereIn('job_guid', $jobGuids->take(20))->get();
+        $jobs = Assessment::whereIn('job_guid', $jobGuids->take(20))->get();
 
         $this->table(
-            ['job_guid', 'status', 'job_type', 'edit_date'],
-            $jobs->map(fn (SsJob $job) => [
+            ['job_guid', 'status', 'job_type', 'last_edited'],
+            $jobs->map(fn (Assessment $job) => [
                 $job->job_guid,
                 $job->status,
                 $job->job_type,
-                $job->edit_date?->format('Y-m-d'),
+                $job->last_edited?->format('Y-m-d'),
             ])->toArray(),
         );
 

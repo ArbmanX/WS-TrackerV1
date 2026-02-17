@@ -40,9 +40,9 @@ class Circuit extends Model
         return $this->belongsTo(Region::class);
     }
 
-    public function ssJobs(): HasMany
+    public function assessments(): HasMany
     {
-        return $this->hasMany(SsJob::class);
+        return $this->hasMany(Assessment::class);
     }
 
     /** @param Builder<Circuit> $query */

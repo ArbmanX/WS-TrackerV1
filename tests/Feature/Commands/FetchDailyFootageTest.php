@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\SsJob;
+use App\Models\Assessment;
 use App\Services\WorkStudio\Assessments\Queries\DailyFootageQuery;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
@@ -23,11 +23,11 @@ function fakeDailyFootageResponse(?array $overrideData = null): array
 }
 
 /**
- * Create an SsJob matching the default filters (ACTIV, scope_year, assessment job_type).
+ * Create an Assessment matching the default filters (ACTIV, scope_year, assessment job_type).
  */
-function createMatchingJob(array $overrides = []): SsJob
+function createMatchingJob(array $overrides = []): Assessment
 {
-    return SsJob::factory()->create(array_merge([
+    return Assessment::factory()->create(array_merge([
         'status' => 'ACTIV',
         'scope_year' => config('ws_assessment_query.scope_year'),
         'job_type' => 'Assessment Dx',
@@ -209,10 +209,10 @@ test('filters jobs by assessment job_type from config', function () {
 // --jobguid Bypass
 // ──────────────────────────────────────────────────
 
-test('--jobguid bypasses ss_jobs lookup', function () {
+test('--jobguid bypasses assessments lookup', function () {
     Storage::fake();
 
-    // No SsJob records at all — should still query the API with the given GUID
+    // No Assessment records at all — should still query the API with the given GUID
     Http::fake(['*/GETQUERY' => Http::response(fakeDailyFootageResponse())]);
 
     $this->artisan('ws:fetch-daily-footage 02-07-2026 --jobguid={custom-guid-123}')
@@ -431,7 +431,7 @@ test('dry-run shows jobs without calling API', function () {
 });
 
 test('handles no matching jobs gracefully', function () {
-    // No SsJob records at all
+    // No Assessment records at all
     $this->artisan('ws:fetch-daily-footage 02-07-2026')
         ->expectsOutputToContain('No jobs found')
         ->assertSuccessful();

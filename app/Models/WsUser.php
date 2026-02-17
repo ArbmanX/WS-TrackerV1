@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class WsUser extends Model
 {
@@ -29,15 +28,5 @@ class WsUser extends Model
             'groups' => 'array',
             'last_synced_at' => 'datetime',
         ];
-    }
-
-    public function takenJobs(): HasMany
-    {
-        return $this->hasMany(SsJob::class, 'taken_by_id');
-    }
-
-    public function modifiedJobs(): HasMany
-    {
-        return $this->hasMany(SsJob::class, 'modified_by_id');
     }
 }

@@ -2,67 +2,63 @@
 
 namespace Database\Factories;
 
-use App\Models\WsUser;
+use App\Models\Circuit;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\SsJob>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Assessment>
  */
-class SsJobFactory extends Factory
+class AssessmentFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
     public function definition(): array
     {
         return [
             'job_guid' => '{'.Str::uuid()->toString().'}',
-            'circuit_id' => null,
             'parent_job_guid' => null,
-            'taken_by_id' => null,
-            'modified_by_id' => null,
+            'circuit_id' => Circuit::factory(),
             'work_order' => fake()->numerify('WO-######'),
-            'extensions' => [fake()->numerify('EXT-###')],
+            'extension' => '@',
             'job_type' => fake()->randomElement(config('ws_assessment_query.job_types.assessments', ['Assessment Dx', 'Split_Assessment'])),
             'status' => fake()->randomElement(['SA', 'ACTIV', 'QC', 'REWRK', 'CLOSE']),
             'scope_year' => (string) now()->year,
-            'edit_date' => fake()->dateTimeBetween('-30 days'),
+            'is_split' => false,
             'taken' => false,
-            'version' => fake()->numerify('#.#'),
-            'sync_version' => fake()->numerify('#.#'),
+            'taken_by_username' => null,
+            'modified_by_username' => null,
             'assigned_to' => null,
             'raw_title' => fake()->numerify('#####'),
+            'version' => fake()->numberBetween(1, 20),
+            'sync_version' => fake()->numberBetween(1, 50),
+            'cycle_type' => null,
+            'region' => null,
+            'planned_emergent' => null,
+            'voltage' => null,
+            'cost_method' => null,
+            'program_name' => null,
+            'permissioning_required' => null,
+            'percent_complete' => null,
+            'length' => null,
+            'length_completed' => null,
+            'last_edited' => null,
+            'last_edited_ole' => null,
+            'discovered_at' => now(),
             'last_synced_at' => now(),
         ];
     }
 
     /**
-     * Job with a circuit association.
+     * A split child assessment (Split_Assessment type with parent reference).
      */
-    public function withCircuit(): static
+    public function split(string $parentJobGuid, string $extension = 'C_a'): static
     {
         return $this->state(fn (array $attributes) => [
-            'circuit_id' => \App\Models\Circuit::factory(),
+            'parent_job_guid' => $parentJobGuid,
+            'job_type' => 'Split_Assessment',
+            'extension' => $extension,
         ]);
     }
 
-    /**
-     * Job taken by a WS user.
-     */
-    public function withTakenBy(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'taken' => true,
-            'taken_by_id' => WsUser::factory(),
-        ]);
-    }
-
-    /**
-     * Job with a specific status.
-     */
     public function withStatus(string $status): static
     {
         return $this->state(fn (array $attributes) => [
@@ -70,9 +66,6 @@ class SsJobFactory extends Factory
         ]);
     }
 
-    /**
-     * Job with a specific job type.
-     */
     public function withJobType(string $jobType): static
     {
         return $this->state(fn (array $attributes) => [
