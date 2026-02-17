@@ -76,7 +76,7 @@ return [
 
     'statuses' => [
 
-        'planner_concern' => ['ACTIV', 'QC', 'REWRK', 'CLOSE'],
+        'planner_concern' => ['ACTIV', 'QC', 'REWRK', 'CLOSE', 'DEF'],
 
         'all' => [
             'new' => [

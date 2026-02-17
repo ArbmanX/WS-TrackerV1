@@ -14,6 +14,7 @@ function fakeAssessmentsHeading(): array
         'PLANNEDEMERGENT', 'VOLTAGE', 'COSTMETHOD', 'PROGRAMNAME', 'PERMISSIONING_REQUIRED',
         'PRCENT', 'LENGTH', 'LENGTHCOMP',
         'EDITDATE_OLE', 'EDITDATE',
+        'SCOPE_YEAR',
     ];
 }
 
@@ -45,6 +46,7 @@ function fakeAssessmentRow(array $overrides = []): array
         'LENGTHCOMP' => 3.2,
         'EDITDATE_OLE' => 46065.75,
         'EDITDATE' => '2026-02-12 18:00:00',
+        'SCOPE_YEAR' => 2026,
     ];
 
     $merged = array_merge($defaults, $overrides);
@@ -143,6 +145,7 @@ test('maps all columns correctly from API row', function () {
         ->and($parent->extension)->toBe('@')
         ->and($parent->job_type)->toBe('Assessment Dx')
         ->and($parent->status)->toBe('ACTIV')
+        ->and($parent->scope_year)->toBe('2026')
         ->and($parent->taken)->toBeTrue()
         ->and($parent->taken_by_username)->toBe('ASPLUNDH\\jsmith')
         ->and($parent->modified_by_username)->toBe('ASPLUNDH\\jdoe')
@@ -357,21 +360,7 @@ test('--status filters to single status', function () {
 
 // ── Year filtering ───────────────────────────────────────
 
-test('--year joins xref table and filters by year', function () {
-    Http::fake(['*/GETQUERY' => Http::response(fakeAssessmentsResponse())]);
-
-    $this->artisan('ws:fetch-assessments --year=2026 --dry-run')->assertSuccessful();
-
-    Http::assertSent(function ($request) {
-        $sql = $request->data()['SQL'] ?? '';
-
-        return str_contains($sql, 'WPStartDate_Assessment_Xrefs')
-            && str_contains($sql, "COALESCE(NULLIF(SS.PJOBGUID, ''), SS.JOBGUID)")
-            && str_contains($sql, "'%2026%'");
-    });
-});
-
-test('omits xref join when no --year provided', function () {
+test('always joins xref table and selects scope year', function () {
     Http::fake(['*/GETQUERY' => Http::response(fakeAssessmentsResponse())]);
 
     $this->artisan('ws:fetch-assessments --dry-run')->assertSuccessful();
@@ -379,13 +368,39 @@ test('omits xref join when no --year provided', function () {
     Http::assertSent(function ($request) {
         $sql = $request->data()['SQL'] ?? '';
 
-        return ! str_contains($sql, 'WPStartDate_Assessment_Xrefs');
+        return str_contains($sql, 'WPStartDate_Assessment_Xrefs')
+            && str_contains($sql, "COALESCE(NULLIF(SS.PJOBGUID, ''), SS.JOBGUID)")
+            && str_contains($sql, 'SCOPE_YEAR');
+    });
+});
+
+test('--year adds xref year filter to query', function () {
+    Http::fake(['*/GETQUERY' => Http::response(fakeAssessmentsResponse())]);
+
+    $this->artisan('ws:fetch-assessments --year=2026 --dry-run')->assertSuccessful();
+
+    Http::assertSent(function ($request) {
+        $sql = $request->data()['SQL'] ?? '';
+
+        return str_contains($sql, "'%2026%'");
+    });
+});
+
+test('omits year filter when no --year provided', function () {
+    Http::fake(['*/GETQUERY' => Http::response(fakeAssessmentsResponse())]);
+
+    $this->artisan('ws:fetch-assessments --dry-run')->assertSuccessful();
+
+    Http::assertSent(function ($request) {
+        $sql = $request->data()['SQL'] ?? '';
+
+        return ! str_contains($sql, 'WP_STARTDATE LIKE');
     });
 });
 
 // ── Circuit property update ──────────────────────────────
 
-test('updates circuit properties with jobguids for scope year', function () {
+test('updates circuit properties with jobguids grouped by scope year from xref', function () {
     $circuit = Circuit::factory()->create([
         'line_name' => '12705',
         'properties' => ['raw_line_name' => '12705', '2026' => ['total_miles' => 8.24]],
@@ -393,7 +408,7 @@ test('updates circuit properties with jobguids for scope year', function () {
 
     Http::fake(['*/GETQUERY' => Http::response(fakeAssessmentsResponse())]);
 
-    $this->artisan('ws:fetch-assessments --year=2026')->assertSuccessful();
+    $this->artisan('ws:fetch-assessments')->assertSuccessful();
 
     $circuit->refresh();
     $yearData = $circuit->properties['2026'];
@@ -401,6 +416,21 @@ test('updates circuit properties with jobguids for scope year', function () {
         ->and($yearData['total_miles'])->toBe(8.24)
         ->and($yearData['jobguids'])->toContain('{aaa-111-111-111}')
         ->and($yearData['jobguids'])->toContain('{aaa-222-222-222}');
+});
+
+test('stores null scope_year when xref has no WP_STARTDATE', function () {
+    createMatchingCircuit();
+
+    $rows = [
+        fakeAssessmentRow(['SCOPE_YEAR' => null]),
+    ];
+
+    Http::fake(['*/GETQUERY' => Http::response(fakeAssessmentsResponse($rows))]);
+
+    $this->artisan('ws:fetch-assessments')->assertSuccessful();
+
+    $assessment = Assessment::where('job_guid', '{aaa-111-111-111}')->first();
+    expect($assessment->scope_year)->toBeNull();
 });
 
 // ── Error handling ───────────────────────────────────────

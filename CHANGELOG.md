@@ -20,7 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Extension depth sorting for parent-first FK ordering
   - `is_split` flagging on parent Assessment Dx records with split children
   - Failed circuit resolution logged to `storage/logs/failed-assessment-fetch.log`
-  - 19 tests (69 assertions) in `FetchAssessmentsCommandTest.php`
+  - Scope year derived per-row from `WPStartDate_Assessment_Xrefs.WP_STARTDATE` (not config)
+  - 21 tests (74 assertions) in `FetchAssessmentsCommandTest.php`
 
 ### Removed
 - `FetchSsJobs` command, `SsJob` model, `SsJobFactory`, `ss_jobs` table

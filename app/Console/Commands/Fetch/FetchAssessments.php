@@ -52,7 +52,7 @@ class FetchAssessments extends Command
             return self::SUCCESS;
         }
 
-        $this->upsertAssessments($rows, $year);
+        $this->upsertAssessments($rows);
 
         return self::SUCCESS;
     }
@@ -67,6 +67,9 @@ class FetchAssessments extends Command
         $jobTypes = WSHelpers::toSqlInClause(config('ws_assessment_query.job_types.assessments'));
         $editDateCast = WSSQLCaster::cast('VEGJOB.EDITDATE');
 
+        $scopeYearExpr = "CASE WHEN xref.WP_STARTDATE IS NULL OR xref.WP_STARTDATE = '' THEN NULL "
+            ."ELSE YEAR(CAST(REPLACE(REPLACE(xref.WP_STARTDATE, '/Date(', ''), ')/', '') AS DATE)) END";
+
         $sql = 'SELECT SS.JOBGUID, SS.PJOBGUID, SS.WO, SS.EXT, SS.JOBTYPE, SS.STATUS, '
             .'SS.TAKEN, SS.TAKENBY, SS.MODIFIEDBY, SS.VERSION, SS.SYNCHVERSN, '
             .'SS.ASSIGNEDTO, SS.TITLE, '
@@ -75,17 +78,16 @@ class FetchAssessments extends Command
             .'VEGJOB.PROGRAMNAME, VEGJOB.PERMISSIONING_REQUIRED, '
             .'VEGJOB.PRCENT, VEGJOB.LENGTH, VEGJOB.LENGTHCOMP, '
             .'VEGJOB.EDITDATE AS EDITDATE_OLE, '
-            ."{$editDateCast} AS EDITDATE "
+            ."{$editDateCast} AS EDITDATE, "
+            ."{$scopeYearExpr} AS SCOPE_YEAR "
             .'FROM SS '
-            .'INNER JOIN VEGJOB ON VEGJOB.JOBGUID = SS.JOBGUID ';
+            .'INNER JOIN VEGJOB ON VEGJOB.JOBGUID = SS.JOBGUID '
+            .'LEFT JOIN WPStartDate_Assessment_Xrefs xref '
+            ."ON xref.Assess_JOBGUID = COALESCE(NULLIF(SS.PJOBGUID, ''), SS.JOBGUID) "
+            ."WHERE SS.JOBTYPE IN ({$jobTypes}) ";
 
         if ($year) {
-            $sql .= 'INNER JOIN WPStartDate_Assessment_Xrefs xref '
-                ."ON xref.Assess_JOBGUID = COALESCE(NULLIF(SS.PJOBGUID, ''), SS.JOBGUID) "
-                ."WHERE xref.WP_STARTDATE LIKE '%{$year}%' "
-                ."AND SS.JOBTYPE IN ({$jobTypes}) ";
-        } else {
-            $sql .= "WHERE SS.JOBTYPE IN ({$jobTypes}) ";
+            $sql .= "AND xref.WP_STARTDATE LIKE '%{$year}%' ";
         }
 
         if ($status) {
@@ -166,10 +168,9 @@ class FetchAssessments extends Command
         }
     }
 
-    private function upsertAssessments(Collection $rows, ?string $year): void
+    private function upsertAssessments(Collection $rows): void
     {
         $circuitMap = $this->buildCircuitMap();
-        $scopeYear = $year ?? config('ws_assessment_query.scope_year');
         $failLogger = $this->buildFailLogger();
 
         // Sort by extension depth — parents (@, len 1) before children (C_a, C_ba, etc.)
@@ -198,7 +199,7 @@ class FetchAssessments extends Command
                 continue;
             }
 
-            $attributes = $this->mapRowToAttributes($row, $circuitId, $scopeYear);
+            $attributes = $this->mapRowToAttributes($row, $circuitId);
 
             $assessment = Assessment::firstOrNew(['job_guid' => $row['JOBGUID']]);
             $isNew = ! $assessment->exists;
@@ -222,13 +223,13 @@ class FetchAssessments extends Command
         $this->info("Assessments synced: {$created} created, {$updated} updated, {$skipped} skipped.");
 
         $this->flagSplitParents();
-        $this->updateCircuitJobGuids($scopeYear);
+        $this->updateCircuitJobGuids();
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function mapRowToAttributes(array $row, int $circuitId, string $scopeYear): array
+    private function mapRowToAttributes(array $row, int $circuitId): array
     {
         // Parent assessments (EXT = @) are roots — always null parent_job_guid
         $ext = $row['EXT'] ?? '@';
@@ -243,6 +244,8 @@ class FetchAssessments extends Command
                 // Skip unparseable dates — OLE float is the reliable fallback
             }
         }
+
+        $scopeYear = ! empty($row['SCOPE_YEAR']) ? (string) $row['SCOPE_YEAR'] : null;
 
         return [
             'parent_job_guid' => $parentGuid,
@@ -320,32 +323,35 @@ class FetchAssessments extends Command
         return $circuitMap[$rawTitle] ?? null;
     }
 
-    private function updateCircuitJobGuids(string $year): void
+    private function updateCircuitJobGuids(): void
     {
-        $assessmentsByCircuit = Assessment::whereNotNull('circuit_id')
-            ->where('scope_year', $year)
-            ->get()
-            ->groupBy('circuit_id');
+        $assessments = Assessment::whereNotNull('circuit_id')
+            ->whereNotNull('scope_year')
+            ->get();
 
         $updatedCount = 0;
 
-        foreach ($assessmentsByCircuit as $circuitId => $assessments) {
+        $assessments->groupBy('circuit_id')->each(function (Collection $circuitAssessments, int $circuitId) use (&$updatedCount) {
             $circuit = Circuit::find($circuitId);
 
             if (! $circuit) {
-                continue;
+                return;
             }
 
             $properties = $circuit->properties ?? [];
-            $yearData = $properties[$year] ?? [];
-            $yearData['jobguids'] = $assessments->pluck('job_guid')->values()->all();
-            $properties[$year] = $yearData;
+
+            $circuitAssessments->groupBy('scope_year')->each(function (Collection $yearAssessments, string $year) use (&$properties) {
+                $yearData = $properties[$year] ?? [];
+                $yearData['jobguids'] = $yearAssessments->pluck('job_guid')->values()->all();
+                $properties[$year] = $yearData;
+            });
+
             $circuit->properties = $properties;
             $circuit->save();
             $updatedCount++;
-        }
+        });
 
-        $this->info("Updated jobguids on {$updatedCount} circuits for year {$year}.");
+        $this->info("Updated jobguids on {$updatedCount} circuits.");
     }
 
     private function parseTaken(mixed $value): bool
