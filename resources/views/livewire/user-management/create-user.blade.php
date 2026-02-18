@@ -59,53 +59,43 @@
                         {{-- Name & Email — Two Columns --}}
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {{-- Name --}}
-                            <div class="form-control">
-                                <label class="label" for="name-input">
-                                    <span class="label-text font-medium">Full Name</span>
-                                </label>
+                            <fieldset class="fieldset">
+                                <legend class="fieldset-legend font-medium">Full Name</legend>
                                 <input
                                     id="name-input"
                                     type="text"
                                     wire:model="name"
                                     placeholder="John Smith"
-                                    class="input input-bordered w-full @error('name') input-error @enderror"
+                                    class="input w-full @error('name') input-error @enderror"
                                 />
                                 @error('name')
-                                    <label class="label">
-                                        <span class="label-text-alt text-error">{{ $message }}</span>
-                                    </label>
+                                    <p class="label text-error">{{ $message }}</p>
                                 @enderror
-                            </div>
+                            </fieldset>
 
                             {{-- Email --}}
-                            <div class="form-control">
-                                <label class="label" for="email-input">
-                                    <span class="label-text font-medium">Email Address</span>
-                                </label>
+                            <fieldset class="fieldset">
+                                <legend class="fieldset-legend font-medium">Email Address</legend>
                                 <input
                                     id="email-input"
                                     type="email"
                                     wire:model="email"
                                     placeholder="john@example.com"
-                                    class="input input-bordered w-full @error('email') input-error @enderror"
+                                    class="input w-full @error('email') input-error @enderror"
                                 />
                                 @error('email')
-                                    <label class="label">
-                                        <span class="label-text-alt text-error">{{ $message }}</span>
-                                    </label>
+                                    <p class="label text-error">{{ $message }}</p>
                                 @enderror
-                            </div>
+                            </fieldset>
                         </div>
 
                         {{-- Role --}}
-                        <div class="form-control">
-                            <label class="label" for="role-select">
-                                <span class="label-text font-medium">Role</span>
-                            </label>
+                        <fieldset class="fieldset">
+                            <legend class="fieldset-legend font-medium">Role</legend>
                             <select
                                 id="role-select"
                                 wire:model="role"
-                                class="select select-bordered w-full @error('role') select-error @enderror"
+                                class="select w-full @error('role') select-error @enderror"
                             >
                                 <option value="">-- Select a role --</option>
                                 @foreach($availableRoles as $availableRole)
@@ -113,14 +103,12 @@
                                 @endforeach
                             </select>
                             @error('role')
-                                <label class="label">
-                                    <span class="label-text-alt text-error">{{ $message }}</span>
-                                </label>
+                                <p class="label text-error">{{ $message }}</p>
                             @enderror
-                        </div>
+                        </fieldset>
 
                         {{-- Submit --}}
-                        <div class="form-control mt-6">
+                        <div class="mt-6">
                             <button
                                 type="submit"
                                 class="btn btn-primary btn-wide"
@@ -154,7 +142,7 @@
                             <input
                                 type="text"
                                 placeholder="Filter users..."
-                                class="input input-bordered input-sm w-44"
+                                class="input input-sm w-44"
                                 disabled
                             />
                         </div>

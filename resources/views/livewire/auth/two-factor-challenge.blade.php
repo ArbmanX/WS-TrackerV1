@@ -46,7 +46,7 @@
                                     type="text"
                                     maxlength="1"
                                     x-ref="code_{{ $i }}"
-                                    class="input input-bordered w-12 h-12 text-center text-xl"
+                                    class="input w-12 h-12 text-center text-xl"
                                     @input="
                                         $event.target.value = $event.target.value.replace(/[^0-9]/g, '');
                                         if ($event.target.value.length === 1 && $refs.code_{{ $i + 1 }}) {
@@ -70,7 +70,7 @@
 
                     <div x-show="showRecoveryInput">
                         <div class="my-5">
-                            <div class="form-control w-full">
+                            <fieldset class="fieldset w-full">
                                 <input
                                     type="text"
                                     name="recovery_code"
@@ -78,10 +78,10 @@
                                     x-bind:required="showRecoveryInput"
                                     autocomplete="one-time-code"
                                     x-model="recovery_code"
-                                    class="input input-bordered w-full @error('recovery_code') input-error @enderror"
+                                    class="input w-full @error('recovery_code') input-error @enderror"
                                     placeholder="{{ __('Recovery code') }}"
                                 />
-                            </div>
+                            </fieldset>
                         </div>
 
                         @error('recovery_code')

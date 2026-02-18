@@ -46,7 +46,7 @@
         <div class="flex-none flex items-center gap-2">
             {{-- Quick theme selector (plain JS — no Alpine/Livewire on this page) --}}
             <select
-                class="select select-sm select-bordered w-40"
+                class="select select-sm w-40"
                 onchange="document.documentElement.setAttribute('data-theme', this.value); localStorage.setItem('ws-theme', this.value);"
             >
                 @foreach(config('themes.categories') as $category)

@@ -12,7 +12,7 @@
         wire:model="{{ $wireModel }}"
         id="{{ $id }}"
         :type="show ? 'text' : 'password'"
-        class="input input-bordered w-full pr-10 @if($error) input-error @endif"
+        class="input w-full pr-10 @if($error) input-error @endif"
         required
         autocomplete="{{ $autocomplete }}"
         placeholder="{{ $placeholder }}"

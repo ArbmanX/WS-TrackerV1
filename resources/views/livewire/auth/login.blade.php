@@ -9,34 +9,28 @@
             @csrf
 
             <!-- Email Address -->
-            <div class="form-control w-full">
-                <label class="label" for="email">
-                    <span class="label-text">{{ __('Email address') }}</span>
-                </label>
+            <fieldset class="fieldset w-full">
+                <legend class="fieldset-legend">{{ __('Email address') }}</legend>
                 <input
                     id="email"
                     name="email"
                     type="email"
                     value="{{ old('email') }}"
-                    class="input input-bordered w-full @error('email') input-error @enderror"
+                    class="input w-full @error('email') input-error @enderror"
                     required
                     autofocus
                     autocomplete="email"
                     placeholder="email@example.com"
                 />
                 @error('email')
-                    <label class="label">
-                        <span class="label-text-alt text-error">{{ $message }}</span>
-                    </label>
+                    <p class="label text-error">{{ $message }}</p>
                 @enderror
-            </div>
+            </fieldset>
 
             <!-- Password -->
-            <div class="form-control w-full">
+            <fieldset class="fieldset w-full">
                 <div class="flex items-center justify-between">
-                    <label class="label" for="password">
-                        <span class="label-text">{{ __('Password') }}</span>
-                    </label>
+                    <legend class="fieldset-legend">{{ __('Password') }}</legend>
                     @if (Route::has('password.request'))
                         <a href="{{ route('password.request') }}" wire:navigate class="link link-primary text-sm">
                             {{ __('Forgot your password?') }}
@@ -47,25 +41,21 @@
                     id="password"
                     name="password"
                     type="password"
-                    class="input input-bordered w-full @error('password') input-error @enderror"
+                    class="input w-full @error('password') input-error @enderror"
                     required
                     autocomplete="current-password"
                     placeholder="{{ __('Password') }}"
                 />
                 @error('password')
-                    <label class="label">
-                        <span class="label-text-alt text-error">{{ $message }}</span>
-                    </label>
+                    <p class="label text-error">{{ $message }}</p>
                 @enderror
-            </div>
+            </fieldset>
 
             <!-- Remember Me -->
-            <div class="form-control">
-                <label class="label cursor-pointer justify-start gap-2">
-                    <input type="checkbox" name="remember" class="checkbox checkbox-sm" {{ old('remember') ? 'checked' : '' }} />
-                    <span class="label-text">{{ __('Remember me') }}</span>
-                </label>
-            </div>
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" name="remember" class="checkbox checkbox-sm" {{ old('remember') ? 'checked' : '' }} />
+                <span class="text-sm">{{ __('Remember me') }}</span>
+            </label>
 
             <button type="submit" class="btn btn-primary w-full" data-test="login-button">
                 {{ __('Log in') }}

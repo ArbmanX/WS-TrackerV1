@@ -11,62 +11,52 @@
             <input type="hidden" name="token" value="{{ request()->route('token') }}">
 
             <!-- Email Address -->
-            <div class="form-control w-full">
-                <label class="label" for="email">
-                    <span class="label-text">{{ __('Email') }}</span>
-                </label>
+            <fieldset class="fieldset w-full">
+                <legend class="fieldset-legend">{{ __('Email') }}</legend>
                 <input
                     id="email"
                     name="email"
                     type="email"
                     value="{{ request('email') }}"
-                    class="input input-bordered w-full @error('email') input-error @enderror"
+                    class="input w-full @error('email') input-error @enderror"
                     required
                     autocomplete="email"
                 />
                 @error('email')
-                    <label class="label">
-                        <span class="label-text-alt text-error">{{ $message }}</span>
-                    </label>
+                    <p class="label text-error">{{ $message }}</p>
                 @enderror
-            </div>
+            </fieldset>
 
             <!-- Password -->
-            <div class="form-control w-full">
-                <label class="label" for="password">
-                    <span class="label-text">{{ __('Password') }}</span>
-                </label>
+            <fieldset class="fieldset w-full">
+                <legend class="fieldset-legend">{{ __('Password') }}</legend>
                 <input
                     id="password"
                     name="password"
                     type="password"
-                    class="input input-bordered w-full @error('password') input-error @enderror"
+                    class="input w-full @error('password') input-error @enderror"
                     required
                     autocomplete="new-password"
                     placeholder="{{ __('Password') }}"
                 />
                 @error('password')
-                    <label class="label">
-                        <span class="label-text-alt text-error">{{ $message }}</span>
-                    </label>
+                    <p class="label text-error">{{ $message }}</p>
                 @enderror
-            </div>
+            </fieldset>
 
             <!-- Confirm Password -->
-            <div class="form-control w-full">
-                <label class="label" for="password_confirmation">
-                    <span class="label-text">{{ __('Confirm password') }}</span>
-                </label>
+            <fieldset class="fieldset w-full">
+                <legend class="fieldset-legend">{{ __('Confirm password') }}</legend>
                 <input
                     id="password_confirmation"
                     name="password_confirmation"
                     type="password"
-                    class="input input-bordered w-full"
+                    class="input w-full"
                     required
                     autocomplete="new-password"
                     placeholder="{{ __('Confirm password') }}"
                 />
-            </div>
+            </fieldset>
 
             <button type="submit" class="btn btn-primary w-full" data-test="reset-password-button">
                 {{ __('Reset password') }}

@@ -10,25 +10,21 @@
         <form method="POST" action="{{ route('password.confirm.store') }}" class="flex flex-col gap-6">
             @csrf
 
-            <div class="form-control w-full">
-                <label class="label" for="password">
-                    <span class="label-text">{{ __('Password') }}</span>
-                </label>
+            <fieldset class="fieldset w-full">
+                <legend class="fieldset-legend">{{ __('Password') }}</legend>
                 <input
                     id="password"
                     name="password"
                     type="password"
-                    class="input input-bordered w-full @error('password') input-error @enderror"
+                    class="input w-full @error('password') input-error @enderror"
                     required
                     autocomplete="current-password"
                     placeholder="{{ __('Password') }}"
                 />
                 @error('password')
-                    <label class="label">
-                        <span class="label-text-alt text-error">{{ $message }}</span>
-                    </label>
+                    <p class="label text-error">{{ $message }}</p>
                 @enderror
-            </div>
+            </fieldset>
 
             <button type="submit" class="btn btn-primary w-full" data-test="confirm-password-button">
                 {{ __('Confirm') }}

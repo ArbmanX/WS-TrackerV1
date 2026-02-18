@@ -27,35 +27,27 @@
 
     <form wire:submit="validateWorkStudio" class="flex flex-col gap-6">
         <!-- WorkStudio Username -->
-        <div class="form-control w-full">
-            <label class="label" for="ws_username">
-                <span class="label-text">{{ __('WorkStudio Username') }}</span>
-            </label>
+        <fieldset class="fieldset w-full">
+            <legend class="fieldset-legend">{{ __('WorkStudio Username') }}</legend>
             <input
                 wire:model="ws_username"
                 id="ws_username"
                 type="text"
-                class="input input-bordered w-full @error('ws_username') input-error @enderror"
+                class="input w-full @error('ws_username') input-error @enderror"
                 required
                 autofocus
                 placeholder="DOMAIN\username"
                 @if($isValidating) disabled @endif
             />
-            <label class="label">
-                <span class="label-text-alt text-base-content/60">{{ __('Example: ASPLUNDH\\jsmith') }}</span>
-            </label>
+            <p class="label text-base-content/60">{{ __('Example: ASPLUNDH\\jsmith') }}</p>
             @error('ws_username')
-                <label class="label">
-                    <span class="label-text-alt text-error">{{ $message }}</span>
-                </label>
+                <p class="label text-error">{{ $message }}</p>
             @enderror
-        </div>
+        </fieldset>
 
         <!-- WorkStudio Password -->
-        <div class="form-control w-full">
-            <label class="label" for="ws_password">
-                <span class="label-text">{{ __('WorkStudio Password') }}</span>
-            </label>
+        <fieldset class="fieldset w-full">
+            <legend class="fieldset-legend">{{ __('WorkStudio Password') }}</legend>
             <x-ui.password-input
                 id="ws_password"
                 wireModel="ws_password"
@@ -64,11 +56,9 @@
                 :error="$errors->first('ws_password')"
             />
             @error('ws_password')
-                <label class="label">
-                    <span class="label-text-alt text-error">{{ $message }}</span>
-                </label>
+                <p class="label text-error">{{ $message }}</p>
             @enderror
-        </div>
+        </fieldset>
 
         <!-- Info Box -->
         <div class="bg-base-200 rounded-lg p-4">

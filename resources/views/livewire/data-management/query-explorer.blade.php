@@ -21,7 +21,7 @@
     <div class="card bg-base-100 shadow-sm mb-6">
         <div class="card-body">
             {{-- Tab Navigation --}}
-            <div role="tablist" class="tabs tabs-bordered mb-4">
+            <div role="tablist" class="tabs tabs-border mb-4">
                 <button
                     wire:click="$set('mode', 'builder')"
                     role="tab"
@@ -46,14 +46,12 @@
                     {{-- Row 1: Table + Fields --}}
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {{-- Table --}}
-                        <div class="form-control">
-                            <label class="label" for="table-select">
-                                <span class="label-text font-medium">Table</span>
-                            </label>
+                        <fieldset class="fieldset">
+                            <legend class="fieldset-legend font-medium">Table</legend>
                             <select
                                 id="table-select"
                                 wire:model.live="table"
-                                class="select select-bordered w-full"
+                                class="select w-full"
                             >
                                 <option value="">— Select a table —</option>
                                 @foreach($this->commonTables as $key => $label)
@@ -66,65 +64,57 @@
                                     type="text"
                                     wire:model.blur="table"
                                     placeholder="Enter table name"
-                                    class="input input-bordered w-full mt-2"
+                                    class="input w-full mt-2"
                                 />
                             @endif
-                        </div>
+                        </fieldset>
 
                         {{-- Fields --}}
-                        <div class="form-control">
-                            <label class="label" for="fields-input">
-                                <span class="label-text font-medium">Fields</span>
-                            </label>
+                        <fieldset class="fieldset">
+                            <legend class="fieldset-legend font-medium">Fields</legend>
                             <input
                                 id="fields-input"
                                 type="text"
                                 wire:model="fields"
                                 placeholder="* or comma-separated columns"
-                                class="input input-bordered w-full"
+                                class="input w-full"
                             />
-                            <label class="label">
-                                <span class="label-text-alt text-base-content/50">Use * for all columns, or list specific ones: COL1, COL2</span>
-                            </label>
-                        </div>
+                            <p class="label text-base-content/50">Use * for all columns, or list specific ones: COL1, COL2</p>
+                        </fieldset>
                     </div>
 
                     {{-- Row 2: TOP + WHERE --}}
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         {{-- TOP --}}
-                        <div class="form-control">
-                            <label class="label" for="top-input">
-                                <span class="label-text font-medium">TOP (limit)</span>
-                            </label>
+                        <fieldset class="fieldset">
+                            <legend class="fieldset-legend font-medium">TOP (limit)</legend>
                             <input
                                 id="top-input"
                                 type="number"
                                 wire:model="top"
                                 min="1"
                                 max="500"
-                                class="input input-bordered w-full"
+                                class="input w-full"
                             />
                             @error('top')
-                                <label class="label">
-                                    <span class="label-text-alt text-error">{{ $message }}</span>
-                                </label>
+                                <p class="label text-error">{{ $message }}</p>
                             @enderror
-                        </div>
+                        </fieldset>
 
                         {{-- WHERE --}}
-                        <div class="form-control md:col-span-3">
-                            <label class="label" for="where-input">
-                                <span class="label-text font-medium">WHERE clause</span>
-                                <span class="label-text-alt text-base-content/50">Optional</span>
-                            </label>
+                        <fieldset class="fieldset md:col-span-3">
+                            <div class="flex items-center justify-between">
+                                <legend class="fieldset-legend font-medium">WHERE clause</legend>
+                                <span class="text-xs text-base-content/50">Optional</span>
+                            </div>
                             <input
                                 id="where-input"
                                 type="text"
                                 wire:model="whereClause"
                                 placeholder="e.g. STATUS = 'ACTIV' AND TAKEN = 1"
-                                class="input input-bordered w-full"
+                                class="input w-full"
                             />
-                        </div>
+                        </fieldset>
                     </div>
 
                     {{-- Actions --}}
@@ -158,20 +148,18 @@
             @if($mode === 'saved')
                 <form wire:submit="runQuery" class="space-y-4">
                     {{-- Query Selector --}}
-                    <div class="form-control">
-                        <label class="label">
-                            <span class="label-text font-medium">Select Query</span>
-                        </label>
+                    <fieldset class="fieldset">
+                        <legend class="fieldset-legend font-medium">Select Query</legend>
                         <select
                             wire:model.live="selectedSavedQuery"
-                            class="select select-bordered w-full"
+                            class="select w-full"
                         >
                             <option value="">— Choose a saved query —</option>
                             @foreach($this->savedQueries as $key => $query)
                                 <option value="{{ $key }}">{{ $query['name'] }}</option>
                             @endforeach
                         </select>
-                    </div>
+                    </fieldset>
 
                     @if($selectedSavedQuery && isset($this->savedQueries[$selectedSavedQuery]))
                         @php $query = $this->savedQueries[$selectedSavedQuery]; @endphp
@@ -182,32 +170,28 @@
                         {{-- TOP + Parameters --}}
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {{-- TOP --}}
-                            <div class="form-control">
-                                <label class="label">
-                                    <span class="label-text font-medium">TOP (limit)</span>
-                                </label>
+                            <fieldset class="fieldset">
+                                <legend class="fieldset-legend font-medium">TOP (limit)</legend>
                                 <input
                                     type="number"
                                     wire:model="top"
                                     min="1"
                                     max="500"
-                                    class="input input-bordered w-full"
+                                    class="input w-full"
                                 />
-                            </div>
+                            </fieldset>
 
                             {{-- Dynamic Parameter Inputs --}}
                             @foreach($query['params'] as $paramKey => $paramConfig)
-                                <div class="form-control">
-                                    <label class="label">
-                                        <span class="label-text font-medium">{{ $paramConfig['label'] }}</span>
-                                    </label>
+                                <fieldset class="fieldset">
+                                    <legend class="fieldset-legend font-medium">{{ $paramConfig['label'] }}</legend>
                                     <input
                                         type="text"
                                         wire:model="queryParams.{{ $paramKey }}"
                                         placeholder="{{ $paramConfig['placeholder'] }}"
-                                        class="input input-bordered w-full font-mono"
+                                        class="input w-full font-mono"
                                     />
-                                </div>
+                                </fieldset>
                             @endforeach
                         </div>
 

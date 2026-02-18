@@ -9,25 +9,21 @@
             @csrf
 
             <!-- Email Address -->
-            <div class="form-control w-full">
-                <label class="label" for="email">
-                    <span class="label-text">{{ __('Email Address') }}</span>
-                </label>
+            <fieldset class="fieldset w-full">
+                <legend class="fieldset-legend">{{ __('Email Address') }}</legend>
                 <input
                     id="email"
                     name="email"
                     type="email"
-                    class="input input-bordered w-full @error('email') input-error @enderror"
+                    class="input w-full @error('email') input-error @enderror"
                     required
                     autofocus
                     placeholder="email@example.com"
                 />
                 @error('email')
-                    <label class="label">
-                        <span class="label-text-alt text-error">{{ $message }}</span>
-                    </label>
+                    <p class="label text-error">{{ $message }}</p>
                 @enderror
-            </div>
+            </fieldset>
 
             <button type="submit" class="btn btn-primary w-full" data-test="email-password-reset-link-button">
                 {{ __('Email password reset link') }}

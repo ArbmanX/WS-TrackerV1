@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Theme picker now reads categories from config (no hardcoded lists)
 
 ### Changed
+- **DaisyUI v4 → v5 cleanup** (2026-02-18)
+  - Removed `input-bordered` / `select-bordered` classes across 10 files (borders are default in v5)
+  - Migrated `form-control` / `label-text` / `label-text-alt` to `fieldset` / `fieldset-legend` / `label` pattern across 9 files
+  - Renamed `tabs-bordered` → `tabs-border` in query explorer
 - **FetchCircuits** — skip circuits with unknown regions instead of creating with null region_id; added progress bar and fail logger
 - **FetchAssessments** — circuit properties now group jobguids by cycle_type within scope year; added last_trim/next_trim calculation
 

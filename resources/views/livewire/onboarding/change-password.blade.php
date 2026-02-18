@@ -6,10 +6,8 @@
 
     <form wire:submit="setPassword" class="flex flex-col gap-6">
         <!-- New Password -->
-        <div class="form-control w-full">
-            <label class="label" for="password">
-                <span class="label-text">{{ __('New Password') }}</span>
-            </label>
+        <fieldset class="fieldset w-full">
+            <legend class="fieldset-legend">{{ __('New Password') }}</legend>
             <x-ui.password-input
                 id="password"
                 wireModel="password"
@@ -19,24 +17,20 @@
                 :autofocus="true"
             />
             @error('password')
-                <label class="label">
-                    <span class="label-text-alt text-error">{{ $message }}</span>
-                </label>
+                <p class="label text-error">{{ $message }}</p>
             @enderror
-        </div>
+        </fieldset>
 
         <!-- Confirm Password -->
-        <div class="form-control w-full">
-            <label class="label" for="password_confirmation">
-                <span class="label-text">{{ __('Confirm Password') }}</span>
-            </label>
+        <fieldset class="fieldset w-full">
+            <legend class="fieldset-legend">{{ __('Confirm Password') }}</legend>
             <x-ui.password-input
                 id="password_confirmation"
                 wireModel="password_confirmation"
                 placeholder="{{ __('Confirm your new password') }}"
                 autocomplete="new-password"
             />
-        </div>
+        </fieldset>
 
         <!-- Password Requirements -->
         <div class="text-sm text-base-content/70">
