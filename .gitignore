@@ -21,11 +21,11 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
-/.claude
-/_bmad
-/CLAUDE-*
-/.mcp.json
-
+.claude
+_bmad
+CLAUDE-*
+.mcp.json
+.playwright-mcp
 
 # Laravel Dusk
 .env.dusk.local
