@@ -83,7 +83,9 @@ class FetchAssessments extends Command
             .'FROM SS '
             .'INNER JOIN VEGJOB ON VEGJOB.JOBGUID = SS.JOBGUID '
             .'LEFT JOIN WPStartDate_Assessment_Xrefs xref '
-            ."ON xref.Assess_JOBGUID = COALESCE(NULLIF(SS.PJOBGUID, ''), SS.JOBGUID) "
+            .'ON xref.Assess_JOBGUID = CASE '
+            .'WHEN SS.EXT = \'@\' THEN SS.JOBGUID '
+            ."ELSE COALESCE(NULLIF(SS.PJOBGUID, ''), SS.JOBGUID) END "
             ."WHERE SS.JOBTYPE IN ({$jobTypes}) ";
 
         if ($year) {
@@ -332,6 +334,7 @@ class FetchAssessments extends Command
         $updatedCount = 0;
 
         $assessments->groupBy('circuit_id')->each(function (Collection $circuitAssessments, int $circuitId) use (&$updatedCount) {
+            /** @var \App\Models\Circuit $circuit */
             $circuit = Circuit::find($circuitId);
 
             if (! $circuit) {
@@ -340,17 +343,30 @@ class FetchAssessments extends Command
 
             $properties = $circuit->properties ?? [];
 
-            $circuitAssessments->groupBy('scope_year')->each(function (Collection $yearAssessments, string $year) use (&$properties) {
-                $yearData = $properties[$year] ?? [];
-                $yearData['jobguids'] = $yearAssessments->pluck('job_guid')->values()->all();
-                $properties[$year] = $yearData;
-            });
+            $properties = $properties + $circuitAssessments->groupBy('scope_year')
+                ->map(
+                    fn ($items) => $items
+                        ->groupBy('cycle_type')
+                        ->map(
+                            fn ($group) => $group
+                                ->pluck('job_guid')
+                                ->values()
+                                ->all()
+                        )->toArray()
+                )->toArray();
+
+            $lastTrim = Carbon::create(collect($properties)
+                ->filter(fn ($value, $key) => is_numeric($key) && is_array($value) && isset($value['Cycle Maintenance - Trim']))
+                ->keys()
+                ->max(), 1, 1);
+            $nextTrim = $lastTrim->copy()->addYears(5);
 
             $circuit->properties = $properties;
+            $circuit->last_trim = $lastTrim;
+            $circuit->next_trim = $nextTrim;
             $circuit->save();
             $updatedCount++;
         });
-
         $this->info("Updated jobguids on {$updatedCount} circuits.");
     }
 

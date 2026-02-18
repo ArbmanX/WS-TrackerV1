@@ -51,3 +51,7 @@ require __DIR__.'/workstudioAPI.php';
 require __DIR__.'/data-management.php';
 require __DIR__.'/user-management.php';
 require __DIR__.'/planner-metrics.php';
+
+if (app()->environment('local')) {
+    require __DIR__.'/dev.php';
+}

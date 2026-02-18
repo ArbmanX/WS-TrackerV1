@@ -400,10 +400,10 @@ test('omits year filter when no --year provided', function () {
 
 // ── Circuit property update ──────────────────────────────
 
-test('updates circuit properties with jobguids grouped by scope year from xref', function () {
+test('updates circuit properties with jobguids grouped by cycle type and scope year', function () {
     $circuit = Circuit::factory()->create([
         'line_name' => '12705',
-        'properties' => ['raw_line_name' => '12705', '2026' => ['total_miles' => 8.24]],
+        'properties' => ['raw_line_name' => '12705'],
     ]);
 
     Http::fake(['*/GETQUERY' => Http::response(fakeAssessmentsResponse())]);
@@ -412,10 +412,9 @@ test('updates circuit properties with jobguids grouped by scope year from xref',
 
     $circuit->refresh();
     $yearData = $circuit->properties['2026'];
-    expect($yearData)->toHaveKey('jobguids')
-        ->and($yearData['total_miles'])->toBe(8.24)
-        ->and($yearData['jobguids'])->toContain('{aaa-111-111-111}')
-        ->and($yearData['jobguids'])->toContain('{aaa-222-222-222}');
+    expect($yearData)->toHaveKey('Annual')
+        ->and($yearData['Annual'])->toContain('{aaa-111-111-111}')
+        ->and($yearData['Annual'])->toContain('{aaa-222-222-222}');
 });
 
 test('stores null scope_year when xref has no WP_STARTDATE', function () {

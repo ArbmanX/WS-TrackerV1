@@ -43,7 +43,7 @@
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
         <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
+        <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600|fira-code:400,600" rel="stylesheet" />
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
 
@@ -81,15 +81,15 @@
                 height: 6px;
             }
             .custom-scrollbar::-webkit-scrollbar-track {
-                background: oklch(var(--b2));
+                background: var(--color-base-200);
                 border-radius: 3px;
             }
             .custom-scrollbar::-webkit-scrollbar-thumb {
-                background: oklch(var(--bc) / 0.2);
+                background: color-mix(in oklch, var(--color-base-content) 20%, transparent);
                 border-radius: 3px;
             }
             .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-                background: oklch(var(--bc) / 0.3);
+                background: color-mix(in oklch, var(--color-base-content) 30%, transparent);
             }
         </style>
     </head>

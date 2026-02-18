@@ -37,44 +37,41 @@ test('seed creates circuit records with region mapping', function () {
     $this->artisan('ws:fetch-circuits --seed')
         ->assertSuccessful();
 
-    expect(Circuit::count())->toBe(3);
+    // Unknown region circuits are skipped (only 2 of 3 have valid regions)
+    expect(Circuit::count())->toBe(2);
 
     $circuit1 = Circuit::where('line_name', 'CIRCUIT-001')->first();
     expect($circuit1->region->display_name)->toBe('Harrisburg');
 
-    // Unknown region maps to null
+    // Unknown region circuit is not created
     $circuit3 = Circuit::where('line_name', 'CIRCUIT-003')->first();
-    expect($circuit3->region_id)->toBeNull();
+    expect($circuit3)->toBeNull();
 });
 
-test('seed initializes properties with scope year key', function () {
+test('seed initializes properties with raw_line_name', function () {
     $this->seed(RegionSeeder::class);
 
     Http::fake(['*/GETQUERY' => Http::response(fakeSampleResponse())]);
 
-    $this->artisan('ws:fetch-circuits --seed --year=2026')
+    $this->artisan('ws:fetch-circuits --seed')
         ->assertSuccessful();
 
     $circuit = Circuit::first();
     expect($circuit->properties)->toBeArray()
-        ->and($circuit->properties)->toHaveKey('2026')
-        ->and($circuit->properties['2026'])->toHaveKey('total_miles');
+        ->and($circuit->properties)->toHaveKey('raw_line_name');
 });
 
-test('seed preserves existing year keys on re-run', function () {
+test('seed updates existing circuit on re-run', function () {
     $this->seed(RegionSeeder::class);
 
     Http::fake(['*/GETQUERY' => Http::response(fakeSampleResponse())]);
 
-    // First fetch for 2025
-    $this->artisan('ws:fetch-circuits --seed --year=2025');
+    $this->artisan('ws:fetch-circuits --seed');
 
-    // Second fetch for 2026
-    $this->artisan('ws:fetch-circuits --seed --year=2026');
+    // Re-run should not duplicate
+    $this->artisan('ws:fetch-circuits --seed');
 
-    $circuit = Circuit::first();
-    expect($circuit->properties)->toHaveKey('2025')
-        ->and($circuit->properties)->toHaveKey('2026');
+    expect(Circuit::count())->toBe(2);
 });
 
 test('save creates data file', function () {

@@ -8,6 +8,7 @@ use App\Services\WorkStudio\Client\ApiCredentialManager;
 use App\Services\WorkStudio\Shared\Helpers\WSHelpers;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class FetchCircuits extends Command
 {
@@ -150,20 +151,36 @@ class FetchCircuits extends Command
      */
     private function seedCircuits(array $circuits, string $year): void
     {
+        $failLogger = $this->buildFailLogger();
+
         $regionMap = Region::pluck('id', 'display_name')->all();
 
         $created = 0;
         $updated = 0;
         $skipped = 0;
 
+        $count = count($circuits);
+        $this->info("Seeding {$count} circuits into database...");
+
+        $bar = $this->output->createProgressBar($count);
+        $bar->start();
+
         foreach ($circuits as $circuit) {
             $regionId = $regionMap[$circuit['region'] ?? ''] ?? null;
+
+            if (! $regionId) {
+                $failLogger->warning("Skipping circuit with unknown region: {$circuit['line_name']} ({$circuit['region']})");
+
+                $skipped++;
+                $bar->advance();
+
+                continue;
+            }
 
             $existing = Circuit::where('line_name', $circuit['line_name'])->first();
 
             if ($existing) {
                 $properties = $existing->properties ?? [];
-                $properties[$year] = ['total_miles' => $circuit['total_miles']];
                 $properties['raw_line_name'] = $circuit['raw_line_name'] ?? null;
 
                 $existing->region_id = $regionId;
@@ -172,8 +189,10 @@ class FetchCircuits extends Command
                 if ($existing->isDirty()) {
                     $existing->last_seen_at = now();
                     $existing->save();
+                    $bar->advance();
                     $updated++;
                 } else {
+                    $bar->advance();
                     $skipped++;
                 }
             } else {
@@ -182,14 +201,24 @@ class FetchCircuits extends Command
                     'region_id' => $regionId,
                     'properties' => [
                         'raw_line_name' => $circuit['raw_line_name'] ?? null,
-                        $year => ['total_miles' => $circuit['total_miles']],
                     ],
                     'last_seen_at' => now(),
                 ]);
+                $bar->advance();
                 $created++;
             }
         }
-
+        $bar->finish();
+        $this->newLine();
         $this->info("Seeded circuits: {$created} created, {$updated} updated, {$skipped} unchanged.");
+    }
+
+    private function buildFailLogger(): \Psr\Log\LoggerInterface
+    {
+        return Log::build([
+            'driver' => 'single',
+            'path' => storage_path('logs/failed-circuit-fetch.log'),
+            'level' => 'debug',
+        ]);
     }
 }

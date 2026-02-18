@@ -18,8 +18,12 @@
 
 @php
     $themes = config('themes.available', []);
-    $featuredThemes = ['corporate', 'light', 'dark'];
-    $expandedThemes = ['cupcake', 'emerald', 'retro', 'garden', 'winter', 'autumn', 'silk', 'synthwave', 'cyberpunk', 'dracula', 'night', 'forest', 'coffee'];
+    $categories = config('themes.categories', []);
+    $featuredThemes = $categories['featured']['themes'] ?? ['corporate', 'light', 'dark'];
+    $expandedThemes = array_merge(
+        $categories['light']['themes'] ?? [],
+        $categories['dark']['themes'] ?? [],
+    );
 @endphp
 
 <div {{ $attributes->merge(['class' => 'space-y-4']) }}>

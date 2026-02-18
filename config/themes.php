@@ -28,11 +28,11 @@ return [
         ],
         'light' => [
             'label' => 'Light Themes',
-            'themes' => ['cupcake', 'emerald', 'retro', 'garden', 'winter', 'autumn', 'silk'],
+            'themes' => ['cupcake', 'bumblebee', 'emerald', 'retro', 'valentine', 'garden', 'aqua', 'lofi', 'pastel', 'fantasy', 'wireframe', 'cmyk', 'autumn', 'acid', 'lemonade', 'winter', 'nord', 'caramellatte', 'silk'],
         ],
         'dark' => [
             'label' => 'Dark Themes',
-            'themes' => ['synthwave', 'cyberpunk', 'dracula', 'night', 'forest', 'coffee'],
+            'themes' => ['synthwave', 'cyberpunk', 'halloween', 'forest', 'black', 'luxury', 'dracula', 'business', 'night', 'coffee', 'dim', 'sunset', 'abyss'],
         ],
     ],
 
@@ -41,7 +41,7 @@ return [
     | Available Themes
     |--------------------------------------------------------------------------
     |
-    | All available DaisyUI themes with metadata for the picker.
+    | All available DaisyUI 5 themes with metadata for the picker.
     | 'colorScheme' determines if theme is light or dark (for system preference).
     |
     */
@@ -69,6 +69,11 @@ return [
             'colorScheme' => 'light',
             'description' => 'Soft and pastel',
         ],
+        'bumblebee' => [
+            'name' => 'Bumblebee',
+            'colorScheme' => 'light',
+            'description' => 'Yellow and black',
+        ],
         'emerald' => [
             'name' => 'Emerald',
             'colorScheme' => 'light',
@@ -79,20 +84,75 @@ return [
             'colorScheme' => 'light',
             'description' => 'Vintage vibes',
         ],
+        'valentine' => [
+            'name' => 'Valentine',
+            'colorScheme' => 'light',
+            'description' => 'Pink and romantic',
+        ],
         'garden' => [
             'name' => 'Garden',
             'colorScheme' => 'light',
             'description' => 'Natural greens',
+        ],
+        'aqua' => [
+            'name' => 'Aqua',
+            'colorScheme' => 'light',
+            'description' => 'Ocean blues',
+        ],
+        'lofi' => [
+            'name' => 'Lofi',
+            'colorScheme' => 'light',
+            'description' => 'Minimal monochrome',
+        ],
+        'pastel' => [
+            'name' => 'Pastel',
+            'colorScheme' => 'light',
+            'description' => 'Soft pastels',
+        ],
+        'fantasy' => [
+            'name' => 'Fantasy',
+            'colorScheme' => 'light',
+            'description' => 'Purple magic',
+        ],
+        'wireframe' => [
+            'name' => 'Wireframe',
+            'colorScheme' => 'light',
+            'description' => 'Sketch-like wireframe',
+        ],
+        'cmyk' => [
+            'name' => 'CMYK',
+            'colorScheme' => 'light',
+            'description' => 'Print color model',
+        ],
+        'autumn' => [
+            'name' => 'Autumn',
+            'colorScheme' => 'light',
+            'description' => 'Warm earth tones',
+        ],
+        'acid' => [
+            'name' => 'Acid',
+            'colorScheme' => 'light',
+            'description' => 'Bright neon',
+        ],
+        'lemonade' => [
+            'name' => 'Lemonade',
+            'colorScheme' => 'light',
+            'description' => 'Fresh citrus',
         ],
         'winter' => [
             'name' => 'Winter',
             'colorScheme' => 'light',
             'description' => 'Cool blues',
         ],
-        'autumn' => [
-            'name' => 'Autumn',
+        'nord' => [
+            'name' => 'Nord',
             'colorScheme' => 'light',
-            'description' => 'Warm earth tones',
+            'description' => 'Arctic minimalism',
+        ],
+        'caramellatte' => [
+            'name' => 'Caramel Latte',
+            'colorScheme' => 'light',
+            'description' => 'Warm caramel tones',
         ],
         'silk' => [
             'name' => 'Silk',
@@ -111,25 +171,60 @@ return [
             'colorScheme' => 'dark',
             'description' => 'Futuristic yellow',
         ],
-        'dracula' => [
-            'name' => 'Dracula',
+        'halloween' => [
+            'name' => 'Halloween',
             'colorScheme' => 'dark',
-            'description' => 'Popular dark scheme',
-        ],
-        'night' => [
-            'name' => 'Night',
-            'colorScheme' => 'dark',
-            'description' => 'Deep dark blue',
+            'description' => 'Spooky orange',
         ],
         'forest' => [
             'name' => 'Forest',
             'colorScheme' => 'dark',
             'description' => 'Dark greens',
         ],
+        'black' => [
+            'name' => 'Black',
+            'colorScheme' => 'dark',
+            'description' => 'Pure black OLED',
+        ],
+        'luxury' => [
+            'name' => 'Luxury',
+            'colorScheme' => 'dark',
+            'description' => 'Gold and dark',
+        ],
+        'dracula' => [
+            'name' => 'Dracula',
+            'colorScheme' => 'dark',
+            'description' => 'Popular dark scheme',
+        ],
+        'business' => [
+            'name' => 'Business',
+            'colorScheme' => 'dark',
+            'description' => 'Professional dark',
+        ],
+        'night' => [
+            'name' => 'Night',
+            'colorScheme' => 'dark',
+            'description' => 'Deep dark blue',
+        ],
         'coffee' => [
             'name' => 'Coffee',
             'colorScheme' => 'dark',
             'description' => 'Warm browns',
+        ],
+        'dim' => [
+            'name' => 'Dim',
+            'colorScheme' => 'dark',
+            'description' => 'Muted and subtle',
+        ],
+        'sunset' => [
+            'name' => 'Sunset',
+            'colorScheme' => 'dark',
+            'description' => 'Warm sunset hues',
+        ],
+        'abyss' => [
+            'name' => 'Abyss',
+            'colorScheme' => 'dark',
+            'description' => 'Deep ocean dark',
         ],
     ],
 

@@ -10,6 +10,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Planner Card Component** (2026-02-18)
+  - Reusable `<x-planner.card>` Blade component with avatar, status badge, progress bar, and sparkline mini-bar chart
+  - Custom CSS for `.progress-bar-track`, `.progress-bar-fill`, `.mini-bars`, `.mini-bar` in `app.css`
+  - `font-code` theme variable for Fira Code monospace font
+- **Dev Preview Endpoint** (2026-02-18)
+  - `/dev/preview` route for authless component previewing (local env only)
+  - Standalone preview page with theme selector (all 35 DaisyUI themes)
+  - `routes/dev.php` loaded conditionally via `app()->environment('local')`
+- **All 35 DaisyUI 5 Themes** (2026-02-18)
+  - Added 19 missing themes: bumblebee, valentine, halloween, aqua, lofi, pastel, fantasy, wireframe, black, luxury, cmyk, business, acid, lemonade, dim, nord, sunset, caramellatte, abyss
+  - Updated `config/themes.php` with full metadata for all themes
+  - Theme picker now reads categories from config (no hardcoded lists)
+
+### Changed
+- **FetchCircuits** — skip circuits with unknown regions instead of creating with null region_id; added progress bar and fail logger
+- **FetchAssessments** — circuit properties now group jobguids by cycle_type within scope year; added last_trim/next_trim calculation
+
+### Fixed
+- DaisyUI v4 CSS variable syntax (`oklch(var(--b2))`) updated to v5 (`var(--color-base-200)`) in app-shell scrollbar styles
+- Updated FetchCircuitsCommandTest and FetchAssessmentsCommandTest to match new behavior
+
 - **FetchAssessments Command** (2026-02-16)
   - New `ws:fetch-assessments` Artisan command replacing `ws:fetch-jobs` / `FetchSsJobs`
   - New `assessments` table with self-referential FK for split assessment hierarchy
