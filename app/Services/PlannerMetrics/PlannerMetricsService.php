@@ -86,6 +86,7 @@ class PlannerMetricsService implements PlannerMetricsServiceInterface
             $quotaPercent = $quotaTarget > 0 ? round(($periodMiles / $quotaTarget) * 100, 1) : 0;
             $gapMiles = max(0, round($quotaTarget - $periodMiles, 1));
             $streakWeeks = $this->calculateStreak($assessments, $quota);
+            $dailyMiles = $this->calculateDailyMiles($assessments, $offset);
             $healthSignal = $this->resolveHealthSignal($username);
 
             unset($assessments);
@@ -111,6 +112,7 @@ class PlannerMetricsService implements PlannerMetricsServiceInterface
                 'overall_percent' => $healthSignal['percent_complete'],
                 'active_assessment_count' => $healthSignal['active_assessment_count'],
                 'status' => $status,
+                'daily_miles' => $dailyMiles,
                 'circuits' => $healthSignal['circuits'],
             ];
         }
@@ -402,6 +404,42 @@ class PlannerMetricsService implements PlannerMetricsServiceInterface
         }
 
         return $total;
+    }
+
+    /**
+     * Bucket daily_footage_miles by day-of-week within the week window.
+     *
+     * @return list<array{day: string, miles: float}>
+     */
+    private function calculateDailyMiles(array $assessments, int $offset = 0): array
+    {
+        $now = CarbonImmutable::now();
+        [$start] = $this->getDateWindow('week', $now, $offset);
+        $startDate = CarbonImmutable::parse($start);
+        $dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+        $buckets = [];
+        for ($i = 0; $i < 7; $i++) {
+            $date = $startDate->addDays($i);
+            $buckets[$date->format('Y-m-d')] = [
+                'day' => $dayNames[$date->dayOfWeek],
+                'miles' => 0.0,
+            ];
+        }
+
+        foreach ($assessments as $assessment) {
+            foreach ($assessment['daily_metrics'] ?? [] as $metric) {
+                $date = $metric['completion_date'] ?? null;
+                if ($date && isset($buckets[$date])) {
+                    $buckets[$date]['miles'] += (float) ($metric['daily_footage_miles'] ?? 0);
+                }
+            }
+        }
+
+        return array_values(array_map(fn (array $day) => [
+            'day' => $day['day'],
+            'miles' => round($day['miles'], 2),
+        ], $buckets));
     }
 
     private function calculateQuotaTarget(string $period, float $weeklyQuota, int $offset = 0): float

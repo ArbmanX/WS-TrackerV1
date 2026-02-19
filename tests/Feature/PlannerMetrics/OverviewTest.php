@@ -67,17 +67,20 @@ test('it displays planner data in unified view', function () {
     Livewire::actingAs(createMetricsTestUser())
         ->test(Overview::class)
         ->assertSee('J Smith')
-        ->assertSee('4.3')
-        ->assertSee('6.5 mi');
+        ->assertSee('4.3/6.5')
+        ->assertSee('Progressing');
 });
 
-test('it shows health indicators inline with quota data', function () {
-    mockUnifiedService([sampleUnifiedData(['pending_over_threshold' => 5, 'overall_percent' => 72.3])]);
+test('it shows status badge matching planner status', function () {
+    mockUnifiedService([
+        sampleUnifiedData(['status' => 'success']),
+        sampleUnifiedData(['username' => 'bob', 'display_name' => 'Bob B', 'status' => 'error']),
+    ]);
 
     Livewire::actingAs(createMetricsTestUser())
         ->test(Overview::class)
-        ->assertSee('5 aging')
-        ->assertSee('72.3% complete');
+        ->assertSee('On Track')
+        ->assertSee('Behind');
 });
 
 test('it shows empty state when no planner data exists', function () {
@@ -119,12 +122,12 @@ test('it sorts cards by gap_miles when sortBy=attention', function () {
         ->assertSeeInOrder(['Big Gap', 'Small Gap']);
 });
 
-test('it shows days_since_last_edit on planner rows', function () {
-    mockUnifiedService([sampleUnifiedData(['days_since_last_edit' => 8])]);
+test('it shows planner initials on card', function () {
+    mockUnifiedService([sampleUnifiedData(['display_name' => 'tgibson'])]);
 
     Livewire::actingAs(createMetricsTestUser())
         ->test(Overview::class)
-        ->assertSee('Edit 8d ago');
+        ->assertSee('TG');
 });
 
 test('it validates invalid sortBy param and falls back to default', function () {
@@ -194,12 +197,13 @@ test('it displays stat cards when planners exist', function () {
         ->assertSee('Team Miles');
 });
 
-test('it shows streak badge for planners with streaks', function () {
-    mockUnifiedService([sampleUnifiedData(['streak_weeks' => 4])]);
+test('it renders planner card with quota progress', function () {
+    mockUnifiedService([sampleUnifiedData(['period_miles' => 5.2, 'quota_target' => 6.5, 'status' => 'warning'])]);
 
     Livewire::actingAs(createMetricsTestUser())
         ->test(Overview::class)
-        ->assertSee('4wk');
+        ->assertSee('5.2/6.5')
+        ->assertSee('Progressing');
 });
 
 test('it constrains layout to max-w-5xl', function () {

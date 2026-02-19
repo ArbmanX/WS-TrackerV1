@@ -87,7 +87,39 @@
             @else
                 <div class="space-y-3">
                     @foreach($this->planners as $planner)
-                        @include('livewire.planner-metrics._planner-row', ['planner' => $planner])
+                        @php
+                            $username = $planner['username'];
+                            $displayName = $planner['display_name'];
+                            $initials = strtoupper(mb_substr($displayName, 0, 2));
+                            $statusLabel = match($planner['status']) {
+                                'success' => 'On Track',
+                                'warning' => 'Progressing',
+                                'error' => 'Behind',
+                                default => '',
+                            };
+                            $isExpanded = $this->expandedPlanner === $username;
+                        @endphp
+
+                        <div wire:key="planner-{{ $username }}">
+                            <x-planner.card
+                                :name="$displayName"
+                                :initials="$initials"
+                                :status="$planner['status']"
+                                :statusLabel="$statusLabel"
+                                :periodMiles="$planner['period_miles']"
+                                :quotaTarget="$planner['quota_target']"
+                                :dailyMiles="$planner['daily_miles'] ?? []"
+                                wire:click="toggleAccordion({{ \Illuminate\Support\Js::from($username) }})"
+                            />
+
+                            @if($isExpanded)
+                                <div class="mt-2" wire:key="accordion-{{ $username }}">
+                                    @include('livewire.planner-metrics._circuit-accordion', [
+                                        'circuits' => $this->expandedCircuits,
+                                    ])
+                                </div>
+                            @endif
+                        </div>
                     @endforeach
                 </div>
             @endif

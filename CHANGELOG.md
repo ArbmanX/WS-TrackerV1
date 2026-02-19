@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added migration path comments for gradual refactoring from separate config files
 
 ### Changed
+- **Planner Metrics Overview** (2026-02-18)
+  - Replaced `_planner-row` partial with `<x-planner.card>` component in overview
+  - Added daily miles bucketing by day-of-week in `PlannerMetricsService`
+  - Updated tests for card-based UI (status badges, initials, quota progress)
 - **Assessment Query Exclusions** (2026-02-18)
   - Added `Proactive Data Directed Maintenance`, `Q4P`, `VM Detection` to excluded assessment types
   - Reordered exclusion list for clarity
