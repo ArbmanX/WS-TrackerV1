@@ -10,6 +10,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Navigation & Hub Page Architecture** (2026-02-18)
+  - Architecture design document for navigation system and hub pages
+  - Macro task breakdown for phased implementation
+  - Excalidraw data flow and navigation flow diagrams
+- **Unified WorkStudio Config** (2026-02-18)
+  - Consolidated regions, cache, data collection, assessments, and planner metrics into `config/workstudio.php`
+  - Added migration path comments for gradual refactoring from separate config files
+
+### Changed
+- **Assessment Query Exclusions** (2026-02-18)
+  - Added `Proactive Data Directed Maintenance`, `Q4P`, `VM Detection` to excluded assessment types
+  - Reordered exclusion list for clarity
+
+### Added
 - **Planner Card Component** (2026-02-18)
   - Reusable `<x-planner.card>` Blade component with avatar, status badge, progress bar, and sparkline mini-bar chart
   - Custom CSS for `.progress-bar-track`, `.progress-bar-fill`, `.mini-bars`, `.mini-bar` in `app.css`

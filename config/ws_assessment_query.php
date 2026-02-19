@@ -37,10 +37,14 @@ return [
         ],
         // Types excluded from assessment queries (used in NOT IN filters)
         'excluded_from_assessments' => [
-            'Reactive',
-            'Storm Follow Up',
-            'Misc. Project Work',
             'PUC-STORM FOLLOW UP',
+            'NON-PUC STORM',
+            'Storm Follow Up',
+            'Reactive',
+            'Misc. Project Work',
+            'Proactive Data Directed Maintenance',
+            'Q4P',
+            'VM Detection',
         ],
     ],
 
