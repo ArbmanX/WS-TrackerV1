@@ -1,4 +1,4 @@
-<div class="max-w-5xl mx-auto space-y-6">
+<div class="space-y-6">
     {{-- Header --}}
     <div>
         <h1 class="text-2xl font-bold">Planner Metrics</h1>
@@ -8,6 +8,11 @@
     {{-- Stat Cards --}}
     @if(!empty($this->planners))
         @include('livewire.planner-metrics._stat-cards')
+    @endif
+
+    {{-- Week Production Chart --}}
+    @if(!empty($this->planners))
+        @include('livewire.planner-metrics._week-chart')
     @endif
 
     {{-- Controls Row --}}
@@ -85,41 +90,67 @@
                     </div>
                 </div>
             @else
+                @php $rows = array_chunk($this->planners, 3); @endphp
                 <div class="space-y-3">
-                    @foreach($this->planners as $planner)
-                        @php
-                            $username = $planner['username'];
-                            $displayName = $planner['display_name'];
-                            $initials = strtoupper(mb_substr($displayName, 0, 2));
-                            $statusLabel = match($planner['status']) {
-                                'success' => 'On Track',
-                                'warning' => 'Progressing',
-                                'error' => 'Behind',
-                                default => '',
-                            };
-                            $isExpanded = $this->expandedPlanner === $username;
-                        @endphp
+                    @foreach($rows as $row)
+                        @php $rowHasExpanded = collect($row)->contains('username', $this->expandedPlanner); @endphp
 
-                        <div wire:key="planner-{{ $username }}">
-                            <x-planner.card
-                                :name="$displayName"
-                                :initials="$initials"
-                                :status="$planner['status']"
-                                :statusLabel="$statusLabel"
-                                :periodMiles="$planner['period_miles']"
-                                :quotaTarget="$planner['quota_target']"
-                                :dailyMiles="$planner['daily_miles'] ?? []"
-                                wire:click="toggleAccordion({{ \Illuminate\Support\Js::from($username) }})"
-                            />
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            @foreach($row as $planner)
+                                @php
+                                    $username = $planner['username'];
+                                    $displayName = $planner['display_name'];
+                                    $initials = strtoupper(mb_substr($displayName, 0, 2));
+                                    $statusLabel = match($planner['status']) {
+                                        'success' => 'On Track',
+                                        'warning' => 'Progressing',
+                                        'error' => 'Behind',
+                                        default => '',
+                                    };
+                                    $isExpanded = $this->expandedPlanner === $username;
+                                @endphp
 
-                            @if($isExpanded)
-                                <div class="mt-2" wire:key="accordion-{{ $username }}">
-                                    @include('livewire.planner-metrics._circuit-accordion', [
-                                        'circuits' => $this->expandedCircuits,
-                                    ])
+                                <div wire:key="planner-{{ $username }}">
+                                    <x-planner.card
+                                        :name="$displayName"
+                                        :initials="$initials"
+                                        :status="$planner['status']"
+                                        :statusLabel="$statusLabel"
+                                        :periodMiles="$planner['period_miles']"
+                                        :quotaTarget="$planner['quota_target']"
+                                        :dailyMiles="$planner['daily_miles'] ?? []"
+                                        wire:click="toggleAccordion({{ \Illuminate\Support\Js::from($username) }})"
+                                        @class(['ring-2 ring-primary' => $isExpanded])
+                                    />
                                 </div>
-                            @endif
+                            @endforeach
                         </div>
+
+                        {{-- Circuit detail panel — appears right after the row containing the expanded card --}}
+                        @if($rowHasExpanded && $this->expandedPlanner)
+                            <div
+                                class="bg-base-100/80 backdrop-blur-sm border border-base-content/10 rounded-box shadow-lg p-4"
+                                wire:key="accordion-{{ $this->expandedPlanner }}"
+                            >
+                                <div class="flex items-center gap-2 mb-3">
+                                    <h3 class="text-sm font-semibold">
+                                        {{ collect($row)->firstWhere('username', $this->expandedPlanner)['display_name'] ?? '' }}
+                                        &mdash; Circuits
+                                    </h3>
+                                    <button
+                                        type="button"
+                                        wire:click="toggleAccordion({{ \Illuminate\Support\Js::from($this->expandedPlanner) }})"
+                                        class="btn btn-xs btn-ghost btn-circle ml-auto"
+                                        aria-label="Close"
+                                    >
+                                        <x-heroicon-m-x-mark class="size-3.5" />
+                                    </button>
+                                </div>
+                                @include('livewire.planner-metrics._circuit-accordion', [
+                                    'circuits' => $this->expandedCircuits,
+                                ])
+                            </div>
+                        @endif
                     @endforeach
                 </div>
             @endif

@@ -12,7 +12,7 @@
 @if(count($circuits) > 0)
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         @foreach($circuits as $circuit)
-            <div class="card card-compact bg-base-200">
+            <div class="card card-compact bg-base-100/60 backdrop-blur-sm border border-base-content/10">
                 <div class="card-body">
                     <div class="flex items-start justify-between">
                         <div>

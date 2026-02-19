@@ -82,6 +82,8 @@ class Overview extends Component
             return [];
         }
 
+        // dd($planner['circuits']);
+
         return $planner['circuits'] ?? [];
     }
 

@@ -55,7 +55,7 @@
     $dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 @endphp
 
-<div {{ $attributes->merge(['class' => 'bg-base-200 border border-base-300 rounded-box p-4 flex items-center gap-4 transition-colors hover:border-primary cursor-pointer']) }}>
+<div {{ $attributes->merge(['class' => 'bg-base-100/80 backdrop-blur-sm border border-base-content/10 rounded-box p-4 flex items-center gap-4 shadow-md transition-all duration-150 hover:shadow-lg hover:-translate-y-0.5 hover:border-primary cursor-pointer']) }}>
     {{-- Avatar --}}
     <div class="avatar avatar-placeholder">
         <div

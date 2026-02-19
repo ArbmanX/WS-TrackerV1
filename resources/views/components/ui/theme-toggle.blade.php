@@ -52,7 +52,7 @@
         x-transition:leave="transition ease-in duration-75"
         x-transition:leave-start="opacity-100 scale-100"
         x-transition:leave-end="opacity-0 scale-95"
-        class="dropdown-content z-50 mt-2 w-56 rounded-box bg-base-200 p-2 shadow-lg"
+        class="dropdown-content z-50 mt-2 w-56 max-h-[70vh] overflow-y-auto rounded-box bg-base-200 p-2 shadow-lg"
         @click.stop
     >
         {{-- System Option --}}
