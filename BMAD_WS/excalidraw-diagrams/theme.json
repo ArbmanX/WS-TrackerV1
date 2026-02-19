@@ -1,0 +1,53 @@
+{
+  "name": "just-black-neon",
+  "description": "Neon-on-dark theme matching tmux config",
+  "canvas": {
+    "background": "#0a0a12",
+    "theme": "dark"
+  },
+  "colors": {
+    "process": {
+      "background": "#0a0a12",
+      "border": "#00ffff",
+      "text": "#00ffff"
+    },
+    "dataStore": {
+      "background": "#0a0a12",
+      "border": "#39ff14",
+      "text": "#39ff14"
+    },
+    "externalEntity": {
+      "background": "#0a0a12",
+      "border": "#ff66ff",
+      "text": "#ff66ff"
+    },
+    "dataFlow": {
+      "stroke": "#00aaff",
+      "label": "#b0b4c4"
+    },
+    "groupLabel": {
+      "color": "#ffff00"
+    },
+    "highlight": {
+      "stroke": "#ff8800",
+      "text": "#ff8800"
+    },
+    "warning": {
+      "stroke": "#ff3366",
+      "text": "#ff3366"
+    }
+  },
+  "palette": {
+    "cyan": "#00ffff",
+    "green": "#39ff14",
+    "magenta": "#ff66ff",
+    "yellow": "#ffff00",
+    "orange": "#ff8800",
+    "red": "#ff3366",
+    "blue": "#00aaff",
+    "fg": "#b0b4c4",
+    "bg": "#000000",
+    "darkBg": "#0a0a0a",
+    "darkerBg": "#0a0a12"
+  }
+}
