@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Hub Page Framework — M02** (2026-02-19)
+  - `<x-hub.layout>` — reusable page wrapper with title, subtitle, `stats`/`actions` slots, 2-col responsive card grid
+  - `<x-hub.card>` — navigation card with icon, title, summary, metric badge (`badge-soft`), hover accent border + arrow indicator
+  - `<x-hub.card-skeleton>` — loading skeleton matching card dimensions
+  - `<x-hub.empty-state>` — empty state with icon, title, description, optional action slot
+  - `.hub-card` CSS — left border accent, shadow elevation, lift on hover, disabled state
+  - Dev preview sections for all hub component variants
 - **Role-Keyed Sidebar Navigation — M01** (2026-02-19)
   - `config/navigation.php` with hub links per role (sudo-admin, manager, general-foreman, planner, user)
   - Role resolution via priority-ordered lookup against Spatie roles

@@ -155,6 +155,97 @@
             </div>
         </section>
 
+        {{-- ============================================================ --}}
+        {{-- HUB LAYOUT + CARD COMPONENTS                                  --}}
+        {{-- ============================================================ --}}
+        <section>
+            <h2 class="text-lg font-bold mb-1">Hub Layout + Cards</h2>
+            <p class="text-base-content/60 text-sm mb-4">
+                <code class="badge badge-ghost badge-sm">&lt;x-hub.layout&gt;</code>
+                <code class="badge badge-ghost badge-sm ml-1">&lt;x-hub.card&gt;</code>
+            </p>
+
+            <x-hub.layout
+                title="Operations Hub"
+                subtitle="Regional assessment tracking and planner performance"
+            >
+                <x-slot:stats>
+                    <x-ui.stat-card label="Active Assessments" value="1,247" icon="bolt" color="primary" size="sm" />
+                    <x-ui.stat-card label="Total Miles" value="842" suffix="mi" icon="map" size="sm" />
+                    <x-ui.stat-card label="Progress" value="68" suffix="%" icon="chart-bar" color="success" size="sm" />
+                    <x-ui.stat-card label="Active Planners" value="14" icon="users" size="sm" />
+                </x-slot:stats>
+
+                <x-hub.card
+                    title="Dashboard"
+                    summary="Regional overview with circuit assessment progress across all regions."
+                    icon="chart-bar"
+                    href="#"
+                    color="primary"
+                    :metric="4"
+                    metricLabel="regions"
+                />
+
+                <x-hub.card
+                    title="Planner Metrics"
+                    summary="Weekly planner performance, quota tracking, and daily production breakdowns."
+                    icon="users"
+                    href="#"
+                    color="secondary"
+                    :metric="3"
+                    metricLabel="warnings"
+                    metricColor="warning"
+                />
+
+                <x-hub.card
+                    title="Assessments"
+                    summary="Browse and search all circuit assessments with filtering and detail views."
+                    icon="clipboard-document-list"
+                    href="#"
+                    color="accent"
+                    :metric="1247"
+                    metricLabel="total"
+                />
+
+                <x-hub.card
+                    title="Monitoring"
+                    summary="Real-time system health, ghost detection alerts, and live activity feeds."
+                    icon="signal"
+                    href="#"
+                    :metric="2"
+                    metricLabel="alerts"
+                    metricColor="error"
+                />
+            </x-hub.layout>
+        </section>
+
+        {{-- ============================================================ --}}
+        {{-- HUB CARD VARIANTS                                             --}}
+        {{-- ============================================================ --}}
+        <section>
+            <h2 class="text-lg font-bold mb-1">Hub Card States</h2>
+            <p class="text-base-content/60 text-sm mb-4">Disabled + Skeleton + Empty state</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <x-hub.card
+                    title="Admin Panel"
+                    summary="User management, roles, and system configuration."
+                    icon="shield-check"
+                    :disabled="true"
+                />
+
+                <x-hub.card-skeleton />
+            </div>
+
+            <div class="mt-4">
+                <x-hub.empty-state
+                    icon="map"
+                    title="No Regions Available"
+                    description="There are no active regions to display. Check back after data has been synced."
+                />
+            </div>
+        </section>
+
         {{-- Add more component sections here as needed --}}
 
     </main>

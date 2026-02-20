@@ -46,6 +46,30 @@
     pointer-events: none;
 }
 
+/* Hub card: navigation cards on landing pages */
+.hub-card {
+    text-decoration: none;
+    color: inherit;
+    border-left: 3px solid transparent;
+    transition: border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
+}
+.hub-card:hover:not(.hub-card-disabled) {
+    border-left-color: var(--color-primary);
+    box-shadow:
+        0 4px 6px -1px color-mix(in oklch, var(--color-base-content) 6%, transparent),
+        0 2px 4px -2px color-mix(in oklch, var(--color-base-content) 4%, transparent);
+    transform: translateY(-1px);
+}
+.hub-card:active:not(.hub-card-disabled) {
+    transform: translateY(0);
+    transition-duration: 80ms;
+}
+.hub-card-disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
 /* Planner card: custom progress bar */
 .progress-bar-track {
     flex: 1;
