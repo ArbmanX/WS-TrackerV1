@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Planner Metrics test fixtures** (2026-02-19)
+  - Added missing `daily_miles` key to `sampleUnifiedData()` and `accordionPlannerData()` test helpers — mock drift after week-chart partial was added
+  - Updated stale `max-w-5xl` layout assertion to match current `space-y-6` root element
+  - Removed leftover `dd()` comment from Overview component
+  - Archived completed session handoff and spec documents
+
 ### Added
 - **Hub Page Framework — M02** (2026-02-19)
   - `<x-hub.layout>` — reusable page wrapper with title, subtitle, `stats`/`actions` slots, 2-col responsive card grid

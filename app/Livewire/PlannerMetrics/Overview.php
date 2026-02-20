@@ -82,8 +82,7 @@ class Overview extends Component
             return [];
         }
 
-        // dd($planner['circuits']);
-
+        // TODO this should only return assessments where taken by field is equal to the planner username, but the service doesn't support that yet
         return $planner['circuits'] ?? [];
     }
 

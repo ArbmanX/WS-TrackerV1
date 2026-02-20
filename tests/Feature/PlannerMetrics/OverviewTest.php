@@ -43,6 +43,15 @@ function sampleUnifiedData(array $overrides = []): array
         'overall_percent' => 68.0,
         'active_assessment_count' => 3,
         'status' => 'warning',
+        'daily_miles' => [
+            ['day' => 'Sun', 'miles' => 0.0],
+            ['day' => 'Mon', 'miles' => 1.2],
+            ['day' => 'Tue', 'miles' => 0.8],
+            ['day' => 'Wed', 'miles' => 1.5],
+            ['day' => 'Thu', 'miles' => 0.8],
+            ['day' => 'Fri', 'miles' => 0.0],
+            ['day' => 'Sat', 'miles' => 0.0],
+        ],
         'circuits' => [],
     ], $overrides);
 }
@@ -206,10 +215,10 @@ test('it renders planner card with quota progress', function () {
         ->assertSee('Progressing');
 });
 
-test('it constrains layout to max-w-5xl', function () {
+test('it renders with space-y-6 root layout', function () {
     mockUnifiedService();
 
     Livewire::actingAs(createMetricsTestUser())
         ->test(Overview::class)
-        ->assertSeeHtml('max-w-5xl mx-auto');
+        ->assertSeeHtml('class="space-y-6"');
 });

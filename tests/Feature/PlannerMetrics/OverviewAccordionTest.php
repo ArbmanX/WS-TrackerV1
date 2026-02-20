@@ -43,6 +43,15 @@ function accordionPlannerData(array $overrides = []): array
         'overall_percent' => 51.5,
         'active_assessment_count' => 2,
         'status' => 'warning',
+        'daily_miles' => [
+            ['day' => 'Sun', 'miles' => 0.0],
+            ['day' => 'Mon', 'miles' => 1.0],
+            ['day' => 'Tue', 'miles' => 0.5],
+            ['day' => 'Wed', 'miles' => 1.5],
+            ['day' => 'Thu', 'miles' => 1.0],
+            ['day' => 'Fri', 'miles' => 0.0],
+            ['day' => 'Sat', 'miles' => 0.0],
+        ],
         'circuits' => [
             [
                 'job_guid' => '{11111111-1111-1111-1111-111111111111}',
