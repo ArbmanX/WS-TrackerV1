@@ -5,209 +5,198 @@
 {{--
     Sidebar Navigation Component
 
-    Responsive sidebar using DaisyUI drawer:
-    - Mobile (<768px): Drawer overlay, hamburger toggle
-    - Tablet (768-1024px): Collapsed to icons only
-    - Desktop (>1024px): Expanded, collapsible to icons
+    Role-keyed hub navigation. Each role gets a curated set of hub links
+    defined in config/navigation.php. Settings is pinned to the bottom.
 
-    Uses Alpine.js $store.sidebar for state management.
+    Responsive behavior (via Alpine $store.sidebar):
+    - Mobile (<768px): Drawer overlay, hamburger toggle
+    - Tablet (768-1024px): Collapsed to icons only, expand on hover
+    - Desktop (>1024px): Expanded, collapsible to icons
 
     Usage:
     <x-layout.sidebar :currentRoute="Route::currentRouteName()" />
 --}}
 
 @php
-    $navigation = [
-        [
-            'section' => 'Dashboard',
-            'items' => [
-                [
-                    'label' => 'Overview',
-                    'route' => 'dashboard',
-                    'icon' => 'chart-bar',
-                    'permission' => 'view-dashboard',
-                ],
-            ],
-        ],
-        [
-            'section' => 'Planner Metrics',
-            'items' => [
-                [
-                    'label' => 'Overview',
-                    'route' => 'planner-metrics.overview',
-                    'icon' => 'users',
-                ],
-            ],
-        ],
-        [
-            'section' => 'Data Management',
-            'permission' => 'access-data-management',
-            'items' => [
-                [
-                    'label' => 'Cache Controls',
-                    'route' => 'data-management.cache',
-                    'icon' => 'server-stack',
-                    'permission' => 'access-data-management',
-                ],
-                [
-                    'label' => 'Query Explorer',
-                    'route' => 'data-management.query-explorer',
-                    'icon' => 'code-bracket',
-                    'permission' => 'execute-queries',
-                ],
-            ],
-        ],
-        [
-            'section' => 'User Management',
-            'permission' => 'manage-users',
-            'items' => [
-                [
-                    'label' => 'Create User',
-                    'route' => 'user-management.create',
-                    'icon' => 'user-plus',
-                    'permission' => 'manage-users',
-                ],
-                [
-                    'label' => 'Edit Users',
-                    'route' => 'user-management.edit',
-                    'icon' => 'pencil-square',
-                    'permission' => 'manage-users',
-                ],
-                [
-                    'label' => 'User Activity',
-                    'route' => 'user-management.activity',
-                    'icon' => 'clock',
-                    'permission' => 'manage-users',
-                ],
-                [
-                    'label' => 'User Settings',
-                    'route' => 'user-management.settings',
-                    'icon' => 'cog-6-tooth',
-                    'permission' => 'manage-users',
-                ],
-            ],
-        ],
-    ];
+    $rolePriority = config('navigation.role_priority', []);
+    $fallback = config('navigation.fallback_role', 'user');
+    $userRole = $fallback;
 
-    // Helper to check if route is active
-    $isActive = fn($route) => $currentRoute === $route;
+    if (auth()->check()) {
+        $userRoles = auth()->user()->getRoleNames();
+        $userRole = collect($rolePriority)->first(fn ($role) => $userRoles->contains($role)) ?? $fallback;
+    }
+
+    $hubs = config("navigation.hubs.{$userRole}", []);
+    $settings = config('navigation.settings');
 @endphp
 
 {{-- Sidebar Container --}}
 <aside
     x-data
-    class="h-full bg-base-200 transition-all duration-300"
+    class="nav-rail h-full bg-base-200 transition-all duration-300 flex flex-col"
     :class="$store.sidebar.widthClass"
     @mouseenter="$store.sidebar.hoverEnter()"
     @mouseleave="$store.sidebar.hoverLeave()"
 >
-    {{-- Logo Section --}}
-    <div class="flex h-16 items-center gap-3 px-4">
+    {{-- Logo --}}
+    <div class="flex h-16 items-center gap-3 px-4 shrink-0">
         <a
             href="{{ route('dashboard') }}"
             wire:navigate
             class="flex items-center gap-3"
         >
-            {{-- Logo Icon --}}
             <div class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-content">
                 <x-ui.icon name="bolt" size="lg" variant="solid" />
             </div>
-            {{-- Logo Text (hidden when collapsed) --}}
             <span
                 x-show="$store.sidebar.showLabels"
                 x-transition:enter="transition-opacity duration-200"
                 x-transition:enter-start="opacity-0"
                 x-transition:enter-end="opacity-100"
-                class="text-lg font-bold"
+                class="text-lg font-bold tracking-tight"
             >
                 WS-Tracker
             </span>
         </a>
     </div>
 
-    <div class="divider my-0 px-4"></div>
+    <div class="divider my-0 mx-3"></div>
 
-    {{-- Navigation Menu --}}
-    <nav class="p-2">
-        <ul class="menu menu-sm gap-1">
-            @foreach($navigation as $section)
+    {{-- Hub Links (scrollable) --}}
+    <nav class="flex-1 overflow-y-auto px-3 py-3 custom-scrollbar" aria-label="Main navigation">
+        <ul class="flex flex-col gap-1" role="list">
+            @foreach($hubs as $hub)
                 @php
-                    $sectionPermission = $section['permission'] ?? null;
+                    $permission = $hub['permission'] ?? null;
+                    $canAccess = !$permission || auth()->user()?->can($permission);
+                    $routeExists = Route::has($hub['route']);
+                    $active = $currentRoute === $hub['route'];
+                    $disabled = !$routeExists;
                 @endphp
 
-                @if(!$sectionPermission || auth()->user()?->can($sectionPermission))
-                    {{-- Section Title --}}
-                    <li
-                        x-show="$store.sidebar.showLabels"
-                        class="menu-title mt-4 first:mt-0"
-                    >
-                        {{ $section['section'] }}
-                    </li>
-
-                    {{-- Section Items --}}
-                    @foreach($section['items'] as $item)
-                        @php
-                            $itemPermission = $item['permission'] ?? null;
-                        @endphp
-
-                        @if(!$itemPermission || auth()->user()?->can($itemPermission))
-                            @php
-                                $active = $isActive($item['route'] ?? '');
-                                $routeExists = Route::has($item['route'] ?? '');
-                            @endphp
-
-                            <li>
-                                @if($routeExists)
-                                    <a
-                                        href="{{ route($item['route']) }}"
-                                        wire:navigate
-                                        @class([
-                                            'flex items-center gap-3',
-                                            'menu-active' => $active,
-                                        ])
-                                    >
-                                        <x-ui.tooltip
-                                            :text="$item['label']"
-                                            position="right"
-                                            x-show="!$store.sidebar.showLabels"
-                                        >
-                                            <x-ui.icon :name="$item['icon']" size="md" />
-                                        </x-ui.tooltip>
-                                        <x-ui.icon
-                                            :name="$item['icon']"
-                                            size="md"
-                                            x-show="$store.sidebar.showLabels"
-                                        />
-                                        <span x-show="$store.sidebar.showLabels">
-                                            {{ $item['label'] }}
-                                        </span>
-                                    </a>
-                                @else
-                                    {{-- Route doesn't exist yet - show disabled --}}
-                                    <span class="flex items-center gap-3 opacity-50 cursor-not-allowed">
-                                        <x-ui.icon :name="$item['icon']" size="md" />
-                                        <span x-show="$store.sidebar.showLabels">
-                                            {{ $item['label'] }}
-                                        </span>
-                                    </span>
-                                @endif
-                            </li>
+                @if($canAccess)
+                    <li>
+                        @if($disabled)
+                            {{-- Route not built yet — disabled hub --}}
+                            <span
+                                class="nav-hub-item nav-hub-disabled"
+                                aria-disabled="true"
+                            >
+                                <x-ui.tooltip
+                                    :text="$hub['label'] . ' — coming soon'"
+                                    position="right"
+                                    x-show="!$store.sidebar.showLabels"
+                                >
+                                    <x-ui.icon :name="$hub['icon']" size="md" />
+                                </x-ui.tooltip>
+                                <x-ui.icon
+                                    :name="$hub['icon']"
+                                    size="md"
+                                    x-show="$store.sidebar.showLabels"
+                                />
+                                <span x-show="$store.sidebar.showLabels" class="truncate">
+                                    {{ $hub['label'] }}
+                                </span>
+                            </span>
+                        @else
+                            {{-- Active hub link --}}
+                            <a
+                                href="{{ route($hub['route']) }}"
+                                wire:navigate
+                                @class([
+                                    'nav-hub-item',
+                                    'nav-hub-active' => $active,
+                                ])
+                                @if($active) aria-current="page" @endif
+                            >
+                                <x-ui.tooltip
+                                    :text="$hub['label']"
+                                    position="right"
+                                    x-show="!$store.sidebar.showLabels"
+                                >
+                                    <x-ui.icon :name="$hub['icon']" size="md" />
+                                </x-ui.tooltip>
+                                <x-ui.icon
+                                    :name="$hub['icon']"
+                                    size="md"
+                                    x-show="$store.sidebar.showLabels"
+                                />
+                                <span x-show="$store.sidebar.showLabels" class="truncate">
+                                    {{ $hub['label'] }}
+                                </span>
+                            </a>
                         @endif
-                    @endforeach
+                    </li>
                 @endif
             @endforeach
         </ul>
     </nav>
 
+    {{-- Settings (pinned bottom) --}}
+    @if($settings)
+        <div class="shrink-0 border-t px-3 py-2" style="border-color: color-mix(in oklch, var(--color-base-content) 10%, transparent);">
+            @php
+                $settingsRouteExists = Route::has($settings['route']);
+                $settingsActive = $currentRoute === $settings['route'];
+            @endphp
+
+            @if($settingsRouteExists)
+                <a
+                    href="{{ route($settings['route']) }}"
+                    wire:navigate
+                    @class([
+                        'nav-hub-item',
+                        'nav-hub-active' => $settingsActive,
+                    ])
+                >
+                    <x-ui.tooltip
+                        :text="$settings['label']"
+                        position="right"
+                        x-show="!$store.sidebar.showLabels"
+                    >
+                        <x-ui.icon :name="$settings['icon']" size="md" />
+                    </x-ui.tooltip>
+                    <x-ui.icon
+                        :name="$settings['icon']"
+                        size="md"
+                        x-show="$store.sidebar.showLabels"
+                    />
+                    <span x-show="$store.sidebar.showLabels" class="truncate">
+                        {{ $settings['label'] }}
+                    </span>
+                </a>
+            @else
+                <span class="nav-hub-item nav-hub-disabled" aria-disabled="true">
+                    <x-ui.tooltip
+                        :text="$settings['label'] . ' — coming soon'"
+                        position="right"
+                        x-show="!$store.sidebar.showLabels"
+                    >
+                        <x-ui.icon :name="$settings['icon']" size="md" />
+                    </x-ui.tooltip>
+                    <x-ui.icon
+                        :name="$settings['icon']"
+                        size="md"
+                        x-show="$store.sidebar.showLabels"
+                    />
+                    <span x-show="$store.sidebar.showLabels" class="truncate">
+                        {{ $settings['label'] }}
+                    </span>
+                </span>
+            @endif
+        </div>
+    @endif
+
     {{-- Collapse Toggle (Desktop Only) --}}
     <div
-        class="absolute bottom-4 left-0 right-0 px-2"
+        class="shrink-0 px-3 pb-3"
         x-show="$store.sidebar.breakpoint === 'desktop'"
     >
         <button
             type="button"
             @click="$store.sidebar.toggleCollapse()"
-            class="btn btn-ghost btn-sm w-full justify-start gap-3"
+            class="nav-hub-item w-full justify-center opacity-60 hover:opacity-100"
         >
             <x-ui.icon
                 name="chevron-double-left"
@@ -219,7 +208,7 @@
                 size="md"
                 x-show="$store.sidebar.isCollapsed"
             />
-            <span x-show="$store.sidebar.showLabels">
+            <span x-show="$store.sidebar.showLabels" class="truncate">
                 Collapse
             </span>
         </button>

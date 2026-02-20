@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Role-Keyed Sidebar Navigation — M01** (2026-02-19)
+  - `config/navigation.php` with hub links per role (sudo-admin, manager, general-foreman, planner, user)
+  - Role resolution via priority-ordered lookup against Spatie roles
+  - Settings link pinned to sidebar bottom, separate from hub list
+  - Disabled state (35% opacity) for routes not yet built
+  - Custom `.nav-hub-item` CSS with left accent bar active state
 - **Navigation & Hub Page Architecture** (2026-02-18)
   - Architecture design document for navigation system and hub pages
   - Macro task breakdown for phased implementation
