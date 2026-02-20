@@ -41,7 +41,8 @@ class FetchAssessments extends Command
         $this->info("Found {$rows->count()} assessments from API.");
 
         if ($rows->isEmpty()) {
-            $this->warn('No assessments returned from API.');
+            
+            $this->warn('No assessments were returned so all existing assessments are up-to-date.');
 
             return self::SUCCESS;
         }
@@ -68,25 +69,25 @@ class FetchAssessments extends Command
         $editDateCast = WSSQLCaster::cast('VEGJOB.EDITDATE');
 
         $scopeYearExpr = "CASE WHEN xref.WP_STARTDATE IS NULL OR xref.WP_STARTDATE = '' THEN NULL "
-            ."ELSE YEAR(CAST(REPLACE(REPLACE(xref.WP_STARTDATE, '/Date(', ''), ')/', '') AS DATE)) END";
+            . "ELSE YEAR(CAST(REPLACE(REPLACE(xref.WP_STARTDATE, '/Date(', ''), ')/', '') AS DATE)) END";
 
         $sql = 'SELECT SS.JOBGUID, SS.PJOBGUID, SS.WO, SS.EXT, SS.JOBTYPE, SS.STATUS, '
-            .'SS.TAKEN, SS.TAKENBY, SS.MODIFIEDBY, SS.VERSION, SS.SYNCHVERSN, '
-            .'SS.ASSIGNEDTO, SS.TITLE, '
-            .'VEGJOB.CYCLETYPE, VEGJOB.REGION, '
-            .'VEGJOB.PLANNEDEMERGENT, VEGJOB.VOLTAGE, VEGJOB.COSTMETHOD, '
-            .'VEGJOB.PROGRAMNAME, VEGJOB.PERMISSIONING_REQUIRED, '
-            .'VEGJOB.PRCENT, VEGJOB.LENGTH, VEGJOB.LENGTHCOMP, '
-            .'VEGJOB.EDITDATE AS EDITDATE_OLE, '
-            ."{$editDateCast} AS EDITDATE, "
-            ."{$scopeYearExpr} AS SCOPE_YEAR "
-            .'FROM SS '
-            .'INNER JOIN VEGJOB ON VEGJOB.JOBGUID = SS.JOBGUID '
-            .'LEFT JOIN WPStartDate_Assessment_Xrefs xref '
-            .'ON xref.Assess_JOBGUID = CASE '
-            .'WHEN SS.EXT = \'@\' THEN SS.JOBGUID '
-            ."ELSE COALESCE(NULLIF(SS.PJOBGUID, ''), SS.JOBGUID) END "
-            ."WHERE SS.JOBTYPE IN ({$jobTypes}) ";
+            . 'SS.TAKEN, SS.TAKENBY, SS.MODIFIEDBY, SS.VERSION, SS.SYNCHVERSN, '
+            . 'SS.ASSIGNEDTO, SS.TITLE, '
+            . 'VEGJOB.CYCLETYPE, VEGJOB.REGION, '
+            . 'VEGJOB.PLANNEDEMERGENT, VEGJOB.VOLTAGE, VEGJOB.COSTMETHOD, '
+            . 'VEGJOB.PROGRAMNAME, VEGJOB.PERMISSIONING_REQUIRED, '
+            . 'VEGJOB.PRCENT, VEGJOB.LENGTH, VEGJOB.LENGTHCOMP, '
+            . 'VEGJOB.EDITDATE AS EDITDATE_OLE, '
+            . "{$editDateCast} AS EDITDATE, "
+            . "{$scopeYearExpr} AS SCOPE_YEAR "
+            . 'FROM SS '
+            . 'INNER JOIN VEGJOB ON VEGJOB.JOBGUID = SS.JOBGUID '
+            . 'LEFT JOIN WPStartDate_Assessment_Xrefs xref '
+            . 'ON xref.Assess_JOBGUID = CASE '
+            . 'WHEN SS.EXT = \'@\' THEN SS.JOBGUID '
+            . "ELSE COALESCE(NULLIF(SS.PJOBGUID, ''), SS.JOBGUID) END "
+            . "WHERE SS.JOBTYPE IN ({$jobTypes}) ";
 
         if ($year) {
             $sql .= "AND xref.WP_STARTDATE LIKE '%{$year}%' ";
@@ -99,11 +100,17 @@ class FetchAssessments extends Command
             $sql .= "AND SS.STATUS IN ({$statuses}) ";
         }
 
-        if (! $full) {
-            $maxOle = Assessment::max('last_edited_ole');
+        $assessments = Assessment::query();
+
+        if ($assessments->count() > 0 || ! $full) {
+
+            $this->info("Existing assessments in database: {$assessments->count()}");
+
+            $maxOle = $assessments->max('last_edited_ole');
+            $maxEditDate = $assessments->max('last_edited');
             if ($maxOle !== null) {
                 $sql .= "AND VEGJOB.EDITDATE > {$maxOle} ";
-                $this->info("Incremental sync: fetching records with EDITDATE > {$maxOle}");
+                $this->info("Incremental sync: fetching records with EDITDATE > {$maxEditDate} (OLE float > {$maxOle})");
             }
         }
 
@@ -115,6 +122,8 @@ class FetchAssessments extends Command
             'SQL' => $sql,
         ];
 
+        $this->info("Sending API request to {$baseUrl}/GETQUERY with SQL:\n{$sql}");
+
         try {
             /** @var \Illuminate\Http\Client\Response $response */
             $response = Http::withBasicAuth($credentials['username'], $credentials['password'])
@@ -123,6 +132,8 @@ class FetchAssessments extends Command
                 ->post("{$baseUrl}/GETQUERY", $payload);
 
             $data = $response->json();
+
+            $this->info("API responded, checking status and data");
 
             if (! $data) {
                 $this->error("Empty response (HTTP {$response->status()}).");
@@ -144,7 +155,7 @@ class FetchAssessments extends Command
 
             $headings = $data['Heading'];
 
-            return collect($data['Data'])->map(fn (array $row) => array_combine($headings, $row));
+            return collect($data['Data'])->map(fn(array $row) => array_combine($headings, $row));
         } catch (\Throwable $e) {
             $this->error("API request failed: {$e->getMessage()}");
 
@@ -154,7 +165,7 @@ class FetchAssessments extends Command
 
     private function displayPreview(Collection $rows): void
     {
-        $preview = $rows->take(20)->map(fn (array $row) => [
+        $preview = $rows->take(20)->map(fn(array $row) => [
             $row['JOBGUID'],
             $row['WO'],
             $row['EXT'],
@@ -166,7 +177,7 @@ class FetchAssessments extends Command
         $this->table(['job_guid', 'work_order', 'ext', 'job_type', 'status', 'title'], $preview->toArray());
 
         if ($rows->count() > 20) {
-            $this->info('Showing first 20 of '.$rows->count().' assessments.');
+            $this->info('Showing first 20 of ' . $rows->count() . ' assessments.');
         }
     }
 
@@ -176,7 +187,7 @@ class FetchAssessments extends Command
         $failLogger = $this->buildFailLogger();
 
         // Sort by extension depth — parents (@, len 1) before children (C_a, C_ba, etc.)
-        $sorted = $rows->sortBy(fn (array $row) => strlen($row['EXT'] ?? ''));
+        $sorted = $rows->sortBy(fn(array $row) => strlen($row['EXT'] ?? ''));
 
         $bar = $this->output->createProgressBar($sorted->count());
         $bar->start();
@@ -345,10 +356,10 @@ class FetchAssessments extends Command
 
             $properties = $properties + $circuitAssessments->groupBy('scope_year')
                 ->map(
-                    fn ($items) => $items
+                    fn($items) => $items
                         ->groupBy('cycle_type')
                         ->map(
-                            fn ($group) => $group
+                            fn($group) => $group
                                 ->pluck('job_guid')
                                 ->values()
                                 ->all()
@@ -356,7 +367,7 @@ class FetchAssessments extends Command
                 )->toArray();
 
             $lastTrim = Carbon::create(collect($properties)
-                ->filter(fn ($value, $key) => is_numeric($key) && is_array($value) && isset($value['Cycle Maintenance - Trim']))
+                ->filter(fn($value, $key) => is_numeric($key) && is_array($value) && isset($value['Cycle Maintenance - Trim']))
                 ->keys()
                 ->max(), 1, 1);
             $nextTrim = $lastTrim->copy()->addYears(5);
