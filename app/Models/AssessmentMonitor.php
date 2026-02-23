@@ -34,7 +34,7 @@ class AssessmentMonitor extends Model
             'latest_snapshot' => 'array',
             'first_snapshot_date' => 'date',
             'last_snapshot_date' => 'date',
-            'total_miles' => 'decimal:4',
+            'total_miles' => 'decimal:2',
         ];
     }
 

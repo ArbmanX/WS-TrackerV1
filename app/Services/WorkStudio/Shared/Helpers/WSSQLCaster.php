@@ -66,6 +66,6 @@ class WSSQLCaster
      */
     private static function oleDatetimeSql(string $column, string $format): string
     {
-        return "FORMAT(CAST(CAST({$column} AS DATETIME) AT TIME ZONE 'UTC' AT TIME ZONE 'Eastern Standard Time' AS DATETIME), '{$format}')";
+        return "FORMAT(CAST(CAST({$column} - 2 AS DATETIME) AT TIME ZONE 'UTC' AT TIME ZONE 'Eastern Standard Time' AS DATETIME), '{$format}')";
     }
 }

@@ -39,6 +39,8 @@ return [
         'rework' => ['value' => 'REWRK', 'caption' => 'Rework'],
         'deferral' => ['value' => 'DEF', 'caption' => 'Deferral'],
         'closed' => ['value' => 'CLOSE', 'caption' => 'Closed'],
+        'planner_concern' => ['ACTIV', 'QC', 'REWRK', 'CLOSE', 'DEF'],
+
     ],
 
     /*
@@ -308,7 +310,7 @@ return [
         ],
 
         'job_types' => [
-            'assessments' => [
+            'assessments_dx' => [
                 'Assessment Dx',
                 'Split_Assessment',
             ],
@@ -334,32 +336,32 @@ return [
             ],
         ],
 
-        'statuses' => [
-            'planner_concern' => ['ACTIV', 'QC', 'REWRK', 'CLOSE', 'DEF'],
+        // 'statuses' => [
+        //     'planner_concern' => ['ACTIV', 'QC', 'REWRK', 'CLOSE', 'DEF'],
 
-            'all' => [
-                'new' => [
-                    'value' => 'SA',
-                    'caption' => 'New',
-                ],
-                'active' => [
-                    'value' => 'ACTIV',
-                    'caption' => 'In Progress',
-                ],
-                'qc' => [
-                    'value' => 'QC',
-                    'caption' => 'Pending Quality Control - You Will Be Notified If Any Changes Made.
-                      -- Any Units Are Failed, Or If It Is Sent To Rework,
-                      You Will Be Notified As Well',
-                ],
-                'rework' => [
-                    'value' => 'REWRK',
-                    'caption' => 'Sent To Rework - Check Audit Notes & Pending Permissions',
-                ],
-                'deferral' => ['value' => 'DEF', 'caption' => 'Deferral'],
-                'closed' => ['value' => 'CLOSE', 'caption' => 'Closed'],
-            ],
-        ],
+        //     'all' => [
+        //         'new' => [
+        //             'value' => 'SA',
+        //             'caption' => 'New',
+        //         ],
+        //         'active' => [
+        //             'value' => 'ACTIV',
+        //             'caption' => 'In Progress',
+        //         ],
+        //         'qc' => [
+        //             'value' => 'QC',
+        //             'caption' => 'Pending Quality Control - You Will Be Notified If Any Changes Made.
+        //               -- Any Units Are Failed, Or If It Is Sent To Rework,
+        //               You Will Be Notified As Well',
+        //         ],
+        //         'rework' => [
+        //             'value' => 'REWRK',
+        //             'caption' => 'Sent To Rework - Check Audit Notes & Pending Permissions',
+        //         ],
+        //         'deferral' => ['value' => 'DEF', 'caption' => 'Deferral'],
+        //         'closed' => ['value' => 'CLOSE', 'caption' => 'Closed'],
+        //     ],
+        // ],
 
         // VEGUNIT.PERMSTAT values — single source of truth for permission status strings.
         // 'Pending' also includes NULL and empty string in query logic.

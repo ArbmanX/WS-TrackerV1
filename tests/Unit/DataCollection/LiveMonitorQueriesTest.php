@@ -99,7 +99,7 @@ test('getDailySnapshot casts EDITDATE via OLE datetime for edit recency', functi
         ->toContain('last_edit_date')
         ->toContain('last_edit_by')
         ->toContain('VU.EDITDATE')
-        ->toContain('CAST(VU.EDITDATE AS DATETIME)');
+        ->toContain('CAST(VU.EDITDATE - 2 AS DATETIME)');
 });
 
 // ─── Aging Units ────────────────────────────────────────────────────────────

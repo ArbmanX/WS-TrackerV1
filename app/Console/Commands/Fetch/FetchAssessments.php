@@ -65,7 +65,7 @@ class FetchAssessments extends Command
     {
         $credentials = app(ApiCredentialManager::class)->getServiceAccountCredentials();
         $baseUrl = rtrim((string) config('workstudio.base_url'), '/');
-        $jobTypes = WSHelpers::toSqlInClause(config('ws_assessment_query.job_types.assessments'));
+        $jobTypes = WSHelpers::toSqlInClause(config('workstudio.assessments.job_types.assessments_dx'));
         $editDateCast = WSSQLCaster::cast('VEGJOB.EDITDATE');
 
         $scopeYearExpr = "CASE WHEN xref.WP_STARTDATE IS NULL OR xref.WP_STARTDATE = '' THEN NULL "
@@ -96,7 +96,7 @@ class FetchAssessments extends Command
         if ($status) {
             $sql .= "AND SS.STATUS = '{$status}' ";
         } else {
-            $statuses = WSHelpers::toSqlInClause(config('ws_assessment_query.statuses.planner_concern'));
+            $statuses = WSHelpers::toSqlInClause(config('workstudio.statuses.planner_concern'));
             $sql .= "AND SS.STATUS IN ({$statuses}) ";
         }
 
@@ -122,7 +122,7 @@ class FetchAssessments extends Command
             'SQL' => $sql,
         ];
 
-        $this->info("Sending API request to {$baseUrl}/GETQUERY with SQL:\n{$sql}");
+        $this->info("Sending API request to {$baseUrl}/GETQUERY");
 
         try {
             /** @var \Illuminate\Http\Client\Response $response */

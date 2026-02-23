@@ -6,16 +6,16 @@ use App\Services\WorkStudio\Shared\Helpers\WSHelpers;
 
 class ActivityQueries extends AbstractQueryBuilder
 {
-    public function getAllAssessmentsDailyActivities(): string
+    public function 
+    getAllAssessmentsDailyActivities(): string
     {
         $scopeYear = self::extractYearFromMsDate('WPStartDate_Assessment_Xrefs.WP_STARTDATE');
-        $statusSql = '('.WSHelpers::toSqlInClause(config('ws_assessment_query.statuses.planner_concern')).')';
+        // $statusSql = '('.WSHelpers::toSqlInClause(config('workstudio.statuses.planner_concern')).')';
 
         $lastSync = self::formatToEasternTime('SS.EDITDATE');
         $dailyRecords = self::dailyRecordsQuery('SS.JOBGUID', false);
         $from = $this->baseFromClause();
         $where = $this->baseWhereClause([
-            'statusSql' => $statusSql,
             'includeExcludedUsers' => false,
         ]);
 

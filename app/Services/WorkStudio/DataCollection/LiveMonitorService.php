@@ -35,6 +35,7 @@ class LiveMonitorService
             return ['snapshots' => 0, 'new' => 0, 'closed' => 0];
         }
 
+        // TODO should we be checking for closed assesments too 
         $activeAssessments = collect($allAssessments)
             ->filter(fn (array $a) => in_array($a['Status'] ?? '', ['ACTIV', 'QC', 'REWRK']));
 
@@ -82,6 +83,7 @@ class LiveMonitorService
 
         $workTypes = json_decode($row['work_type_breakdown'] ?? '[]', true) ?: [];
 
+        // TODO the edit date is wrong 
         $lastEditDate = $this->parseDdoDate($row['last_edit_date'] ?? null);
         $daysSinceEdit = $lastEditDate
             ? Carbon::parse($lastEditDate)->diffInDays(Carbon::today())
@@ -200,6 +202,7 @@ class LiveMonitorService
 
     private function buildServiceContext(): UserQueryContext
     {
+        // TODO this should come from the signed user, config should be for admins 
         return new UserQueryContext(
             resourceGroups: config('workstudio_resource_groups.all', []),
             contractors: config('ws_assessment_query.contractors', ['Asplundh']),

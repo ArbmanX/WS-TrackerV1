@@ -41,12 +41,10 @@ test('cast date field returns column unchanged', function () {
     expect(WSSQLCaster::cast('V.CREATEDATE'))->toBe('V.CREATEDATE');
 });
 
-test('cast does not include -2 day offset', function () {
+test('cast includes -2 day offset for OLE-to-SQL epoch correction', function () {
     $sql = WSSQLCaster::cast('SS.EDITDATE');
 
-    expect($sql)
-        ->not->toContain('DATEADD')
-        ->not->toContain('-2');
+    expect($sql)->toContain('- 2');
 });
 
 test('cast handles all registered ole_datetime fields', function (string $field) {

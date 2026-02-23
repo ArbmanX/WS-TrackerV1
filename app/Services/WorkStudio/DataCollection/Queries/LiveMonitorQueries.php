@@ -76,6 +76,8 @@ class LiveMonitorQueries extends AbstractQueryBuilder
             THEN 1 ELSE 0 END), 0) * 100
     AS DECIMAL(5,1)) AS compliance_percent,
 
+
+    -- TODO something is wrong with the edit date its 2 days ahead I think 
     -- Edit recency (EDITDATE is OLE Automation float — cast to datetime)
     MAX(CASE WHEN VU.EDITDATE IS NOT NULL AND VU.EDITDATE != '' AND VU.EDITDATE != 0
         THEN {$castEditDate} END) AS last_edit_date,

@@ -9,9 +9,9 @@ Build reusable layout and components that all hub pages share. Every hub is a ca
 
 ## Micro Tasks
 
-- [ ] Hub page layout template (title, optional stat cards row, card grid area)
-- [ ] Reusable `<x-hub.card>` component (icon, title, summary text, metric badge, link)
-- [ ] Reusable `<x-hub.stat-card>` component (label, value, trend indicator)
-- [ ] Responsive grid: 2-col on desktop, 1-col on mobile
-- [ ] Empty/loading states for cards
-- [ ] Consistent card sizing and spacing across all hubs
+- [X] Hub page layout template (title, optional stat cards row, card grid area)
+- [X] Reusable `<x-hub.card>` component (icon, title, summary text, metric badge, link)
+- [X] Reusable `<x-hub.stat-card>` component (label, value, trend indicator)
+- [X] Responsive grid: 2-col on desktop, 1-col on mobile
+- [X] Empty/loading states for cards
+- [X] Consistent card sizing and spacing across all hubs
