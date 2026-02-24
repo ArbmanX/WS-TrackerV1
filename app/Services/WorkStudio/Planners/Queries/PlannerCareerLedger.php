@@ -32,15 +32,19 @@ class PlannerCareerLedger extends AbstractQueryBuilder
             $yearFilter = "AND WPStartDate_Assessment_Xrefs.WP_STARTDATE LIKE '%{$scopeYear}%'";
         }
 
+        // need to collect an array of user ids here or just usernames since multiple users can be on the same job
+        // this will ultimately be used to query the full career data for each user, so we can do incremental updates based on EDITDATE
+        // this will also require admin or manager  invervention to assign the assessments to the correct planner if they are not already.
+        // users can also be assigned prior to the assessment even being started but we still want to capture contributors.
         return "SELECT DISTINCT VU.FRSTR_USER, VU.JOBGUID
-FROM VEGUNIT VU
-INNER JOIN SS ON SS.JOBGUID = VU.JOBGUID
-{$xrefJoin}
-WHERE VU.FRSTR_USER IN ({$usersSql})
-    AND SS.EXT = '@'
-    AND VU.ASSDDATE IS NOT NULL
-    AND VU.ASSDDATE != ''
-    {$yearFilter}";
+            FROM VEGUNIT VU
+            INNER JOIN SS ON SS.JOBGUID = VU.JOBGUID
+            {$xrefJoin}
+                WHERE VU.FRSTR_USER IN ({$usersSql})
+                AND SS.EXT = '@'
+                AND VU.ASSDDATE IS NOT NULL
+                AND VU.ASSDDATE != ''
+                {$yearFilter}";
     }
 
     /**
@@ -60,11 +64,13 @@ WHERE VU.FRSTR_USER IN ({$usersSql})
         $guidsSql = WSHelpers::toSqlInClause($jobGuids);
 
         return "SELECT
-    SS.JOBGUID,
-    CONVERT(VARCHAR(23), CAST(VEGJOB.EDITDATE AS DATETIME), 126) AS edit_date
-FROM SS
-INNER JOIN VEGJOB ON VEGJOB.JOBGUID = SS.JOBGUID
-WHERE SS.JOBGUID IN ({$guidsSql})";
+        SS.JOBGUID,
+        CONVERT(VARCHAR(23), 
+            CAST(VEGJOB.EDITDATE AS DATETIME), 126) 
+            AS edit_date
+        FROM SS
+        INNER JOIN VEGJOB ON VEGJOB.JOBGUID = SS.JOBGUID
+        WHERE SS.JOBGUID IN ({$guidsSql})";
     }
 
     /**

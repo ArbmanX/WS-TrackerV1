@@ -26,7 +26,7 @@ class ExportPlannerCareer extends Command
 
         $scopeYear = null;
         if ($this->option('scope-year')) {
-            $scopeYear = (int) (config('ws_assessment_query.scope_year') ?: date('Y'));
+            $scopeYear = (int) (config('workstudio.assessments.scope_year') ?: date('Y'));
         }
 
         $domain = strtolower($this->extractDomain($users[0]));

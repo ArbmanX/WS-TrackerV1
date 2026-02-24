@@ -38,9 +38,9 @@ class GetQueryService
 
         try {
             /** @var \Illuminate\Http\Client\Response $response */
-            $response = Http::withBasicAuth($credentials['username'], $credentials['password'])
+            $response = Http::workstudio()
+                ->withBasicAuth($credentials['username'], $credentials['password'])
                 ->timeout(120)
-                ->connectTimeout(30)
                 ->withOptions(['on_stats' => function (\GuzzleHttp\TransferStats $stats) {
                     $transferTime = $stats->getTransferTime(); // seconds
                     logger()->info("Transfer time: {$transferTime}s");

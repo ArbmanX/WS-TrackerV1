@@ -31,13 +31,11 @@
 
 ## Session Start
 
-1. Check `docs/wip.md` — if active work, resume or ask user
-2. Check `docs/session-handoffs/` for handoff files
-3. Check `docs/TODO.md` for status tracking
-4. MEMORY.md has architecture, gotchas, patterns (auto-loaded — don't re-read)
+1. MEMORY.md has architecture, gotchas, patterns (auto-loaded — don't re-read)
 
 ## Scope Discipline — Hard Rules
 
+- **Use Work Studio module workflows and agents. . /bmad:ws.** There are several specific work studio agents and workflows that should be employed when necessary. Assigning tasks to these agents in the background to explore concepts and gain knowledge with all planning. Assign approraite tasks to the appropriate agents and workflows.
 - **Plan and implement are SEPARATE sessions.** Never do both in one session. Planning produces a doc in `docs/`. User must clear context before implementation begins. The implementation session reads the plan — it does not create one.
 - **Review every plan at least once** before finalizing. Use `/bmad:bmm:workflows:party-mode` or relevant agents to critique, find gaps, and suggest alternatives before the plan is marked ready.
 - **Minimize scope ruthlessly.** Every feature request should touch the fewest files possible. If a request is too large:

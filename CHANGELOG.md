@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **FetchAssessments Service Layer Refactor** (2026-02-23)
+  - Extracted inline SQL from `FetchAssessments` command into standalone `FetchAssessmentQueries` query class
+  - `GetQueryService::executeQuery()` now uses `Http::workstudio()` macro (SSL, config-driven timeouts)
+  - Command delegates API calls through `GetQueryService::executeAndHandle()` instead of raw HTTP
+  - Fixed `--full` flag bug — incremental EDITDATE filter was applied even with `--full` when DB had records
+  - Added `--users` flag (stub — implementation deferred)
+  - Added `buildFetchByJobGuids()` for JOBGUID-scoped queries (no status/year/type filtering)
+  - 5 new tests (26 total, 84 assertions)
+
 ### Fixed
 - **Planner Metrics test fixtures** (2026-02-19)
   - Added missing `daily_miles` key to `sampleUnifiedData()` and `accordionPlannerData()` test helpers — mock drift after week-chart partial was added

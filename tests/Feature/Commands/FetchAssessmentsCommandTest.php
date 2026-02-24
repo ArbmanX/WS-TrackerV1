@@ -468,3 +468,51 @@ test('stores OLE float alongside converted timestamp', function () {
     expect($assessment->last_edited_ole)->toBe(46065.75)
         ->and($assessment->last_edited)->not->toBeNull();
 });
+
+// ── --users flag ─────────────────────────────────────────
+
+test('--users flag passes usernames to command without error', function () {
+    Http::fake(['*/GETQUERY' => Http::response(fakeAssessmentsResponse())]);
+
+    $this->artisan('ws:fetch-assessments --users=alice --dry-run')
+        ->assertSuccessful();
+});
+
+test('--users flag accepts multiple values', function () {
+    Http::fake(['*/GETQUERY' => Http::response(fakeAssessmentsResponse())]);
+
+    $this->artisan('ws:fetch-assessments --users=alice --users=bob --dry-run')
+        ->assertSuccessful();
+});
+
+// ── FetchAssessmentQueries unit tests ────────────────────
+
+test('buildFetchByJobGuids filters only by provided GUIDs', function () {
+    $sql = \App\Services\WorkStudio\Assessments\Queries\FetchAssessmentQueries::buildFetchByJobGuids(
+        ['{11111111-1111-1111-1111-111111111111}', '{22222222-2222-2222-2222-222222222222}']
+    );
+
+    expect($sql)->toContain("SS.JOBGUID IN ('{11111111-1111-1111-1111-111111111111}', '{22222222-2222-2222-2222-222222222222}')")
+        ->and($sql)->not->toContain('SS.STATUS =')
+        ->and($sql)->not->toContain('SS.STATUS IN')
+        ->and($sql)->not->toContain('SS.JOBTYPE IN')
+        ->and($sql)->not->toContain('VEGJOB.EDITDATE >')
+        ->and($sql)->not->toContain('WP_STARTDATE LIKE')
+        ->and($sql)->toContain('ORDER BY SS.JOBGUID');
+});
+
+test('buildFetchQuery includes incremental filter when maxEditDateOle provided', function () {
+    $sql = \App\Services\WorkStudio\Assessments\Queries\FetchAssessmentQueries::buildFetchQuery(
+        null, null, 46060.0
+    );
+
+    expect($sql)->toContain('VEGJOB.EDITDATE > 46060');
+});
+
+test('buildFetchQuery omits incremental filter when maxEditDateOle is null', function () {
+    $sql = \App\Services\WorkStudio\Assessments\Queries\FetchAssessmentQueries::buildFetchQuery(
+        null, null, null
+    );
+
+    expect($sql)->not->toContain('VEGJOB.EDITDATE >');
+});
