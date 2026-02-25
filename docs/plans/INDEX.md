@@ -15,7 +15,7 @@
 
 | # | Task | File | Status |
 |---|---|---|---|
-| M3 | Dashboard Hub | [M03](./M03-dashboard-hub.md) | **done** (2026-02-24) |
+| M3 | Dashboard Hub | [M03](./M03-dashboard-hub.md) | planned |
 | M4 | Planners Hub | [M04](./M04-planners-hub.md) | planned |
 | M6 | Assessments Hub | [M06](./M06-assessments-hub.md) | planned |
 | M10 | Monitoring Hub + Ghost Detail | [M10](./M10-monitoring-hub.md) | planned |
