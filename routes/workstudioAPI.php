@@ -1,6 +1,5 @@
 <?php
 
-use App\Livewire\Dashboard\Hub;
 use App\Livewire\Dashboard\Overview;
 use App\Services\WorkStudio\Client\GetQueryService;
 use App\Services\WorkStudio\Shared\ValueObjects\UserQueryContext;
@@ -11,13 +10,9 @@ use Illuminate\Support\Facades\Route;
 | Dashboard Routes
 |--------------------------------------------------------------------------
 */
-Route::get('dashboard', Hub::class)
+Route::get('dashboard', Overview::class)
     ->middleware(['auth', 'verified', 'onboarding'])
     ->name('dashboard');
-
-Route::get('dashboard/regional-overview', Overview::class)
-    ->middleware(['auth', 'verified', 'onboarding'])
-    ->name('dashboard.regional-overview');
 
 /*
 |--------------------------------------------------------------------------

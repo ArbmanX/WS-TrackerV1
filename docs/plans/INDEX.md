@@ -8,8 +8,8 @@
 
 | # | Task | File | Status |
 |---|---|---|---|
-| M1 | Sidebar & Navigation System | [M01](./M01-sidebar-navigation-system.md) | **done** (2026-02-19) |
-| M2 | Hub Page Framework | [M02](./M02-hub-page-framework.md) | **done** (2026-02-19) |
+| M1 | Sidebar & Navigation System | [M01](./M01-sidebar-navigation-system.md) | planned |
+| M2 | Hub Page Framework | [M02](./M02-hub-page-framework.md) | planned |
 
 ### Hub Pages (parallel after M2)
 
