@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Dashboard Hub — M03** (2026-02-24)
+  - New `Dashboard\Hub` Livewire page component at `/dashboard` with 6 data cards
+  - Planner Snapshot card — team quota breakdown (on track / at risk / behind) with ratio bar
+  - Assessment Pipeline card — status distribution bars (Active / QC / Rework / Closed)
+  - Regional Summary card — per-region progress bars from CachedQueryService
+  - Scope Year Progress card — completion % by assessment year from local DB
+  - Alerts card — priority-sorted alerts (P0 ghost takeovers, P1 stale planners, P2 aging permits)
+  - Recent Activity card — last 24h assessment syncs with status badges
+  - Old Overview component preserved at `/dashboard/regional-overview`
+  - Updated milestone INDEX.md — M1 and M2 marked done
+
 ### Changed
 - **FetchAssessments Service Layer Refactor** (2026-02-23)
   - Extracted inline SQL from `FetchAssessments` command into standalone `FetchAssessmentQueries` query class
