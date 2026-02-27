@@ -32,6 +32,7 @@ class AssessmentFactory extends Factory
             'sync_version' => fake()->numberBetween(1, 50),
             'cycle_type' => null,
             'region' => null,
+            'contractor' => null,
             'planned_emergent' => null,
             'voltage' => null,
             'cost_method' => null,

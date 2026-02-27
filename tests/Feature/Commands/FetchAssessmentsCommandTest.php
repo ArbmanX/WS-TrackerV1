@@ -10,7 +10,7 @@ function fakeAssessmentsHeading(): array
         'JOBGUID', 'PJOBGUID', 'WO', 'EXT', 'JOBTYPE', 'STATUS',
         'TAKEN', 'TAKENBY', 'MODIFIEDBY', 'VERSION', 'SYNCHVERSN',
         'ASSIGNEDTO', 'TITLE',
-        'CYCLETYPE', 'REGION',
+        'CYCLETYPE', 'REGION', 'CONTRACTOR',
         'PLANNEDEMERGENT', 'VOLTAGE', 'COSTMETHOD', 'PROGRAMNAME', 'PERMISSIONING_REQUIRED',
         'PRCENT', 'LENGTH', 'LENGTHCOMP',
         'EDITDATE_OLE', 'EDITDATE',
@@ -36,6 +36,7 @@ function fakeAssessmentRow(array $overrides = []): array
         'TITLE' => '12705',
         'CYCLETYPE' => 'Annual',
         'REGION' => 'EAST',
+        'CONTRACTOR' => 'Asplundh',
         'PLANNEDEMERGENT' => 'Planned',
         'VOLTAGE' => 69.0,
         'COSTMETHOD' => 'TM',
@@ -153,6 +154,7 @@ test('maps all columns correctly from API row', function () {
         ->and($parent->sync_version)->toBe(10)
         ->and($parent->cycle_type)->toBe('Annual')
         ->and($parent->region)->toBe('EAST')
+        ->and($parent->contractor)->toBe('Asplundh')
         ->and($parent->planned_emergent)->toBe('Planned')
         ->and($parent->voltage)->toBe(69.0)
         ->and($parent->cost_method)->toBe('TM')

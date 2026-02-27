@@ -25,9 +25,13 @@ class LiveMonitorService
      *
      * @return array{snapshots: int, new: int, closed: int}
      */
-    public function runDailySnapshot(): array
+    public function runDailySnapshot($console): array
     {
+
+        
+        $console->info('Starting daily live monitor snapshot');
         $context = $this->buildServiceContext();
+        $console->info('Fetching active assessments from API');
         $assessments = $this->queryService->getDailyActivitiesForAllAssessments($context);
         $allAssessments = $assessments->first();
 
@@ -46,7 +50,7 @@ class LiveMonitorService
             if (! $jobGuid) {
                 continue;
             }
-
+            $console->info("Snapshotting assessment {$jobGuid}");
             $isNew = ! AssessmentMonitor::where('job_guid', $jobGuid)->exists();
             $this->snapshotAssessment($jobGuid, $assessment);
 
@@ -55,7 +59,7 @@ class LiveMonitorService
                 $stats['new']++;
             }
         }
-
+        $console->info("Finished snapshotting active assessments");
         $closed = $this->detectClosedAssessments($activeAssessments->pluck('Job_GUID')->filter()->values());
         $stats['closed'] = $closed->count();
 
@@ -202,13 +206,14 @@ class LiveMonitorService
 
     private function buildServiceContext(): UserQueryContext
     {
-        // TODO this should come from the signed user, config should be for admins 
+        // TODO this should come from the signed in user, config should be for admins 
         return new UserQueryContext(
-            resourceGroups: config('workstudio_resource_groups.all', []),
-            contractors: config('ws_assessment_query.contractors', ['Asplundh']),
-            domain: strtoupper(config('ws_assessment_query.contractors.0', 'ASPLUNDH')),
+            resourceGroups: config('workstudio.regions.all', []),
+            contractors: config('workstudio.assessments.contractors', ['Asplundh']),
+            domain: strtoupper(config('workstudio.assessments.contractors.0', 'ASPLUNDH')),
             username: 'service',
             userId: 0,
         );
     }
 }
+ 

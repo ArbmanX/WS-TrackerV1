@@ -32,6 +32,7 @@ class Assessment extends Model
         'sync_version',
         'cycle_type',
         'region',
+        'contractor',
         'planned_emergent',
         'voltage',
         'cost_method',

@@ -44,7 +44,7 @@ class FetchCircuits extends Command
         }
 
         if ($this->option('seed')) {
-            $seedYear = $year ?? config('ws_assessment_query.scope_year');
+            $seedYear = $year ?? config('workstudio.assessments.scope_year');
             $this->seedCircuits($rows->toArray(), $seedYear);
         }
 
@@ -61,7 +61,7 @@ class FetchCircuits extends Command
     private function fetchFromApi(?string $year): ?\Illuminate\Support\Collection
     {
         $credentials = app(ApiCredentialManager::class)->getServiceAccountCredentials();
-        $jobTypes = WSHelpers::toSqlInClause(config('ws_assessment_query.job_types.assessments'));
+        $jobTypes = WSHelpers::toSqlInClause(config('workstudio.assessments.job_types.assessments_dx'));
         $baseUrl = rtrim((string) config('workstudio.base_url'), '/');
 
         $sql = 'SELECT DISTINCT VEGJOB.LINENAME AS line_name, VEGJOB.REGION AS region, VEGJOB.LENGTH as total_miles '
@@ -84,6 +84,7 @@ class FetchCircuits extends Command
             'SQL' => $sql,
         ];
 
+        // TODO refactor to use workstudio service class
         try {
             /** @var \Illuminate\Http\Client\Response $response */
             $response = Http::withBasicAuth($credentials['username'], $credentials['password'])
