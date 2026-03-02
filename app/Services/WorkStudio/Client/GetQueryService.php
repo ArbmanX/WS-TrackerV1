@@ -2,7 +2,9 @@
 
 namespace App\Services\WorkStudio\Client;
 
+use App\Services\WorkStudio\Assessments\Queries\AggregateQueries;
 use App\Services\WorkStudio\Assessments\Queries\AssessmentQueries;
+use App\Services\WorkStudio\Assessments\Queries\CircuitQueries;
 use App\Services\WorkStudio\Shared\ValueObjects\UserQueryContext;
 use Exception;
 use Illuminate\Support\Collection;
@@ -146,7 +148,7 @@ class GetQueryService
 
     public function getSystemWideMetrics(UserQueryContext $context): Collection
     {
-        $queries = new AssessmentQueries($context);
+        $queries = new AggregateQueries($context); 
         $sql = $queries->systemWideDataQuery();
 
         return $this->executeAndHandle($sql, $context->userId);
@@ -183,6 +185,22 @@ class GetQueryService
     {
         $queries = new AssessmentQueries($context);
         $sql = $queries->getActiveAssessmentsOrderedByOldest($limit);
+
+        return $this->executeAndHandle($sql, $context->userId);
+    }
+
+    public function getCircuitMetrics(UserQueryContext $context): Collection
+    {
+        $queries = new CircuitQueries($context);
+        $sql = $queries->groupedByCircuitDataQuery();
+
+        return $this->executeAndHandle($sql, $context->userId);
+    }
+
+    public function getCircuitByJobGuid(UserQueryContext $context, string $jobGuid): Collection
+    {
+        $queries = new CircuitQueries($context);
+        $sql = $queries->getAllByJobGuid($jobGuid);
 
         return $this->executeAndHandle($sql, $context->userId);
     }

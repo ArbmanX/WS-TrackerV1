@@ -2,8 +2,10 @@
 
 namespace App\Console\Commands\Fetch;
 
+use App\Console\Commands\Traits\GetsDailyFootage;
 use App\Models\Assessment;
 use App\Models\Circuit;
+use App\Models\PlannerDailyRecord;
 use App\Services\WorkStudio\Assessments\Queries\FetchAssessmentQueries;
 use App\Services\WorkStudio\Client\GetQueryService;
 use Illuminate\Console\Command;
@@ -13,6 +15,8 @@ use Illuminate\Support\Facades\Log;
 
 class FetchAssessments extends Command
 {
+    use GetsDailyFootage;
+
     protected $signature = 'ws:fetch-assessments
         {--year= : Scope to a specific year (omit for all years)}
         {--status= : Filter by status (e.g. ACTIV, CLOSE). Omit for planner_concern defaults}
@@ -21,9 +25,12 @@ class FetchAssessments extends Command
         {--users=* : Filter by username(s). Accepts multiple values}';
 
     protected $description = 'Fetch assessments from WorkStudio API and upsert into assessments table';
+    public int $chunkSize = 200;
 
     public function handle(GetQueryService $queryService): int
     {
+
+        $failLogger = $this->buildFailLogger();
         $year = $this->option('year');
         $status = $this->option('status');
         $full = $this->option('full');
@@ -33,39 +40,78 @@ class FetchAssessments extends Command
         $this->info($year ? "Fetching assessments for year: {$year}" : 'Fetching all assessments (no year filter)');
 
         if (! empty($users)) {
+
             FetchAssessmentQueries::forUsers($users, $year);
         }
 
-        $rows = $this->fetchFromApi($queryService, $year, $status, $full);
+        $assessments = $this->fetchFromApi($queryService, $year, $status, $full);
 
-        if ($rows === null) {
-            return self::FAILURE;
-        }
+        $this->info("Found {$assessments->count()} assessments from API.");
 
-        $this->info("Found {$rows->count()} assessments from API.");
+        if ($assessments->isEmpty()) {
 
-        if ($rows->isEmpty()) {
+            $failLogger->info('No assessments were returned so all existing assessments are up-to-date.');
 
-            $this->warn('No assessments were returned so all existing assessments are up-to-date.');
+            $this->info('No assessments to sync. Exiting.');
 
             return self::SUCCESS;
         }
+
+        $jobGuids = $assessments->filter(function ($row) {
+
+            return  in_array($row['CONTRACTOR'], ['Asplundh', 'ASPLUNDH'])
+                &&
+                $row['SCOPE_YEAR'] == '2026';
+        })->pluck('JOBGUID')->unique()->values()
+            ->all();
+
+        $jobGuidCount = count($jobGuids);
+
+        $this->info("Getting Daily Planner Records, {$jobGuidCount} individual jobs will be recorded.....");
+        $dailyFootage = $this->getDailyFootageInChunks(
+            $queryService,
+            $jobGuids,
+            $this->chunkSize
+        );
+
 
         if ($dryRun) {
-            $this->displayPreview($rows);
+            $this->displayPreview($assessments);
 
             return self::SUCCESS;
         }
 
-        $this->upsertAssessments($rows);
+        $this->upsertAssessments($assessments);
+
+        $syncResults = PlannerDailyRecord::syncFromApi($dailyFootage);
+
+        $this->info(implode(', ', $syncResults));
+
+        $this->newLine();
+
+        $this->info('Time to grab some more details about the Assessments... ');
+
+        $additionalAssessmentMetrics = $this->getAdditionalMetrics($jobGuids);
+
+        dd($additionalAssessmentMetrics);
 
         return self::SUCCESS;
     }
 
     /**
-     * @return Collection<int, array<string, mixed>>|null
+     * Fetch assessment rows from the WorkStudio GETQUERY API.
+     *
+     * Uses incremental sync by default: queries only records edited after
+     * the latest EDITDATE OLE float already stored locally. When --full
+     * is passed (or no local data exists yet), fetches everything.
+     *
+     * @param  GetQueryService  $queryService  HTTP client wrapper for the DDOProtocol API
+     * @param  ?string  $year     Scope year filter (null = all years)
+     * @param  ?string  $status   Status filter, e.g. 'ACTIV' (null = planner_concern defaults)
+     * @param  bool     $full     When true, skip incremental delta and re-fetch all records
+     * @return Collection<int, array<string, mixed>>  Raw API rows keyed by column name
      */
-    private function fetchFromApi(GetQueryService $queryService, ?string $year, ?string $status, bool $full): ?Collection
+    private function fetchFromApi(GetQueryService $queryService, ?string $year, ?string $status, bool $full): Collection
     {
         $maxEditDateOle = null;
 
@@ -74,32 +120,19 @@ class FetchAssessments extends Command
 
             if ($maxEditDateOle !== null) {
                 $maxEditDate = Assessment::max('last_edited');
-                $this->info('Existing assessments in database: '.Assessment::count());
-                $this->info("Incremental sync: fetching records with EDITDATE > {$maxEditDate} (OLE float > {$maxEditDateOle})");
+                $this->info("Incremental sync: fetching records edited since {$maxEditDate}");
+                $this->info('Existing assessments in database: ' . Assessment::count());
             }
         }
 
         $sql = FetchAssessmentQueries::buildFetchQuery($year, $status, $maxEditDateOle);
 
-        $baseUrl = rtrim((string) config('workstudio.base_url'), '/');
-        $this->info("Sending API request to {$baseUrl}/GETQUERY");
-
-        try {
-            $rows = $queryService->executeAndHandle($sql);
-
-            $this->info('API responded, checking status and data');
-
-            return $rows;
-        } catch (\Throwable $e) {
-            $this->error("API request failed: {$e->getMessage()}");
-
-            return null;
-        }
+        return $queryService->executeAndHandle($sql);
     }
 
     private function displayPreview(Collection $rows): void
     {
-        $preview = $rows->take(20)->map(fn (array $row) => [
+        $preview = $rows->take(20)->map(fn(array $row) => [
             $row['JOBGUID'],
             $row['WO'],
             $row['EXT'],
@@ -111,17 +144,18 @@ class FetchAssessments extends Command
         $this->table(['job_guid', 'work_order', 'ext', 'job_type', 'status', 'title'], $preview->toArray());
 
         if ($rows->count() > 20) {
-            $this->info('Showing first 20 of '.$rows->count().' assessments.');
+            $this->info('Showing first 20 of ' . $rows->count() . ' assessments.');
         }
     }
 
     private function upsertAssessments(Collection $rows): void
     {
         $circuitMap = $this->buildCircuitMap();
+
         $failLogger = $this->buildFailLogger();
 
         // Sort by extension depth — parents (@, len 1) before children (C_a, C_ba, etc.)
-        $sorted = $rows->sortBy(fn (array $row) => strlen($row['EXT'] ?? ''));
+        $sorted = $rows->sortBy(fn(array $row) => strlen($row['EXT'] ?? ''));
 
         $bar = $this->output->createProgressBar($sorted->count());
         $bar->start();
@@ -149,27 +183,36 @@ class FetchAssessments extends Command
             $attributes = $this->mapRowToAttributes($row, $circuitId);
 
             $assessment = Assessment::firstOrNew(['job_guid' => $row['JOBGUID']]);
+
             $isNew = ! $assessment->exists;
 
             $assessment->fill($attributes);
+
             $assessment->last_synced_at = now();
 
             if ($isNew) {
+
                 $assessment->discovered_at = now();
+
                 $created++;
             } else {
+
                 $updated++;
             }
 
             $assessment->save();
+
             $bar->advance();
         }
 
         $bar->finish();
+
         $this->newLine(2);
+
         $this->info("Assessments synced: {$created} created, {$updated} updated, {$skipped} skipped.");
 
         $this->flagSplitParents();
+
         $this->updateCircuitJobGuids();
     }
 
@@ -211,6 +254,7 @@ class FetchAssessments extends Command
             'sync_version' => $row['SYNCHVERSN'] ?? null,
             'cycle_type' => $row['CYCLETYPE'] ?: null,
             'region' => $row['REGION'] ?: null,
+            'contractor' => $row['CONTRACTOR'] ?: null,
             'planned_emergent' => $row['PLANNEDEMERGENT'] ?: null,
             'voltage' => $row['VOLTAGE'] ?? null,
             'cost_method' => $row['COSTMETHOD'] ?: null,
@@ -272,6 +316,8 @@ class FetchAssessments extends Command
 
     private function updateCircuitJobGuids(): void
     {
+        $this->info("Updating Job / Assessment Properties on Circuits.");
+
         $assessments = Assessment::whereNotNull('circuit_id')
             ->whereNotNull('scope_year')
             ->get();
@@ -290,10 +336,10 @@ class FetchAssessments extends Command
 
             $properties = $properties + $circuitAssessments->groupBy('scope_year')
                 ->map(
-                    fn ($items) => $items
+                    fn($items) => $items
                         ->groupBy('cycle_type')
                         ->map(
-                            fn ($group) => $group
+                            fn($group) => $group
                                 ->pluck('job_guid')
                                 ->values()
                                 ->all()
@@ -301,7 +347,7 @@ class FetchAssessments extends Command
                 )->toArray();
 
             $lastTrim = Carbon::create(collect($properties)
-                ->filter(fn ($value, $key) => is_numeric($key) && is_array($value) && isset($value['Cycle Maintenance - Trim']))
+                ->filter(fn($value, $key) => is_numeric($key) && is_array($value) && isset($value['Cycle Maintenance - Trim']))
                 ->keys()
                 ->max(), 1, 1);
             $nextTrim = $lastTrim->copy()->addYears(5);

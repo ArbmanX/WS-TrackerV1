@@ -246,6 +246,101 @@
             </div>
         </section>
 
+        {{-- ============================================================ --}}
+        {{-- REGIONAL MOMENTUM SNAPSHOT                                   --}}
+        {{-- ============================================================ --}}
+        <section>
+            <h2 class="text-lg font-bold mb-1">Regional Momentum Snapshot</h2>
+            <p class="text-base-content/60 text-sm mb-4">
+                Shows short-cycle gains/losses, recent pacing, and last sync context so planners can spot accelerating or stalling corridors without leaving the overview.
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                @foreach ([
+                    ['region' => 'North Region', 'delta' => '+6%', 'color' => 'success', 'progress' => 68, 'active' => 12],
+                    ['region' => 'South Region', 'delta' => '-3%', 'color' => 'warning', 'progress' => 52, 'active' => 9],
+                    ['region' => 'West Region', 'delta' => '+11%', 'color' => 'success', 'progress' => 81, 'active' => 7],
+                ] as $card)
+                    <div class="rounded-2xl border border-base-300 bg-base-100 p-5 shadow-sm">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm uppercase tracking-wide text-base-content/60">{{ $card['region'] }}</p>
+                                <h3 class="text-lg font-semibold">Momentum</h3>
+                            </div>
+                            <span class="text-sm font-semibold text-{{ $card['color'] }}">{{ $card['delta'] }}</span>
+                        </div>
+                        <p class="text-xs text-base-content/70 mt-2">3-day pace vs. target window</p>
+                        <div class="mt-4 space-y-1">
+                            <div class="flex items-center justify-between text-xs text-base-content/70">
+                                <span>Progress through window</span>
+                                <span>{{ $card['progress'] }}%</span>
+                            </div>
+                            <div class="h-1.5 rounded-full bg-base-300">
+                                <div class="h-full rounded-full bg-primary" style="width: {{ $card['progress'] }}%"></div>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex items-center justify-between text-[0.7rem] text-base-content/60">
+                            <span>Last sync 10m ago</span>
+                            <span>{{ $card['active'] }} active planners</span>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </section>
+
+        {{-- ============================================================ --}}
+        {{-- ACTION PULSE PANEL                                           --}}
+        {{-- ============================================================ --}}
+        <section>
+            <h2 class="text-lg font-bold mb-1">Action Pulse</h2>
+            <p class="text-base-content/60 text-sm mb-4">
+                Places quick filters, CTA buttons, and a short status stack so dispatchers can respond to trouble spots surfaced by the overview without navigating away.
+            </p>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div class="rounded-2xl border border-base-300 bg-base-100 p-6 shadow-sm flex flex-col gap-4">
+                    <div>
+                        <p class="text-xs uppercase tracking-wide text-base-content/60">Quick filters</p>
+                        <h3 class="text-xl font-semibold">Focus Region</h3>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        @foreach (['All', 'North', 'South', 'West', 'Flagged'] as $label)
+                            <button class="btn btn-outline btn-xs" type="button">{{ $label }}</button>
+                        @endforeach
+                    </div>
+                    <div class="flex flex-wrap gap-3">
+                        <button class="btn btn-primary btn-sm">Review active assessments</button>
+                        <button class="btn btn-ghost btn-sm">Open planner follow-ups</button>
+                    </div>
+                    <p class="text-xs text-base-content/70">
+                        Persisting these quick triggers beside the regional grid keeps the overview aligned with the actions users already take via the cards/callouts.
+                    </p>
+                </div>
+
+                <div class="rounded-2xl border border-base-300 bg-base-100 p-6 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xl font-semibold">Status stack</h3>
+                        <span class="text-xs text-base-content/60">Updated 2m ago</span>
+                    </div>
+                    <div class="space-y-3">
+                        @foreach ([
+                            ['label' => 'Active escalations', 'value' => 2, 'icon' => 'signal', 'color' => 'error'],
+                            ['label' => 'Regions behind pace', 'value' => 3, 'icon' => 'clock', 'color' => 'warning'],
+                            ['label' => 'Regions gaining steam', 'value' => 4, 'icon' => 'chart-bar', 'color' => 'success'],
+                        ] as $status)
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-2">
+                                <span class="text-{{ $status['color'] }}"><x-heroicon-o-{{ $status['icon'] }} class="size-4" /></span>
+                                <p class="text-sm font-medium">{{ $status['label'] }}</p>
+                            </div>
+                                <span class="text-lg font-bold text-base-content">{{ $status['value'] }}</span>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        </section>
+
         {{-- Add more component sections here as needed --}}
 
     </main>

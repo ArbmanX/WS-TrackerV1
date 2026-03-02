@@ -127,6 +127,12 @@ return [
             'path' => storage_path('logs/laravel.log'),
         ],
 
+        'daily_record_conflicts' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/daily-record-conflicts.log'),
+            'level' => 'debug',
+        ],
+
     ],
 
 ];

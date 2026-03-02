@@ -7,26 +7,27 @@ _This file contains critical rules and patterns that AI agents must follow when 
 ## Technology Stack & Versions
 
 ### Core
-- **PHP** ^8.2 + **Laravel** ^12.0 (Livewire Starter Kit base)
-- **Livewire** ^4.0 — reactive server-rendered components
+- **PHP** 8.4.16 + **Laravel** 12.49.0 (Livewire Starter Kit base)
+- **Livewire** 4.1.0 — reactive server-rendered components
 - **PostgreSQL** — application database (`pgsql` driver). Use `STRING_AGG` not `GROUP_CONCAT`
-- **Tailwind CSS** ^4.0.7 + **DaisyUI** ^5.5.14 — all 35 themes enabled
+- **Tailwind CSS** 4.1.18 + **DaisyUI** 5.5.14 — all 35 themes enabled
 - **Alpine.js** — bundled with Livewire; NOT available on authless pages
-- **Vite** ^7.0.4 with `@tailwindcss/vite` plugin
+- **Vite** 7.3.1 with `@tailwindcss/vite` plugin
 
 ### Key Dependencies
 - **Spatie Permission** v6 — RBAC with 5 roles, 7 permissions
 - **Spatie Health** ^1.34, **Activity Log**, **Response Cache** ^7.7
-- **Laravel Pulse** ^1.5 — performance monitoring
+- **Laravel Pulse** 1.5.0 — performance monitoring
 - **Blade Heroicons** ^2.6
+- **Laravel Fortify** 1.34.0 — headless authentication
 
 ### External Integration
 - **WorkStudio DDOProtocol** — raw SQL via HTTP POST (NOT a local DB)
 - SSL verification disabled in `WorkStudioServiceProvider` (P0 known issue)
 
 ### Dev Tools
-- **Pest** ^4.3 + Pest Laravel Plugin ^4.0
-- **Laravel Pint** ^1.24 (formatting) · **Dusk** ^8.3 (browser) · **Pail** ^1.2.2 (logs)
+- **Pest** 4.3.2 + Pest Laravel Plugin ^4.0
+- **Laravel Pint** 1.27.0 (formatting) · **Dusk** 8.3.4 (browser) · **Pail** ^1.2.2 (logs)
 
 ## Critical Implementation Rules
 
@@ -201,4 +202,4 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - Review quarterly for outdated rules
 - Remove rules that become obvious over time
 
-Last Updated: 2026-02-25
+Last Updated: 2026-02-27
