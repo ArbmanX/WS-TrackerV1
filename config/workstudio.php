@@ -367,7 +367,7 @@ return [
         // 'Pending' also includes NULL and empty string in query logic.
         'permission_statuses' => [
             'approved' => 'Approved',
-            'pending' => 'Pending',
+            'pending' => '',
             'no_contact' => 'No Contact',
             'refused' => 'Refused',
             'deferred' => 'Deferred',

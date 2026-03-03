@@ -2,10 +2,10 @@
 
 namespace App\Console\Commands\Fetch;
 
+use App\Console\Commands\Traits\GetsAdditionalAssessmentMetrics;
 use App\Console\Commands\Traits\GetsDailyFootage;
 use App\Models\Assessment;
 use App\Models\Circuit;
-use App\Models\PlannerDailyRecord;
 use App\Services\WorkStudio\Assessments\Queries\FetchAssessmentQueries;
 use App\Services\WorkStudio\Client\GetQueryService;
 use Illuminate\Console\Command;
@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Log;
 
 class FetchAssessments extends Command
 {
-    use GetsDailyFootage;
+    use GetsDailyFootage, GetsAdditionalAssessmentMetrics;
 
     protected $signature = 'ws:fetch-assessments
         {--year= : Scope to a specific year (omit for all years)}
@@ -81,17 +81,17 @@ class FetchAssessments extends Command
             return self::SUCCESS;
         }
 
-        $this->upsertAssessments($assessments);
+        // $this->upsertAssessments($assessments);
 
-        $syncResults = PlannerDailyRecord::syncFromApi($dailyFootage);
+        // $syncResults = PlannerDailyRecord::syncFromApi($dailyFootage);
 
-        $this->info(implode(', ', $syncResults));
+        // $this->info(implode(', ', $syncResults));
 
         $this->newLine();
 
         $this->info('Time to grab some more details about the Assessments... ');
 
-        $additionalAssessmentMetrics = $this->getAdditionalMetrics($jobGuids);
+        $additionalAssessmentMetrics = $this->getAdditionalMetrics($queryService, $jobGuids);
 
         dd($additionalAssessmentMetrics);
 
