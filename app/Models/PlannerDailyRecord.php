@@ -133,25 +133,107 @@ class PlannerDailyRecord extends Model
     {
         $now = now();
 
+        $lat = isset($row['LAT']) ? (float) $row['LAT'] : null;
+        $long = isset($row['LONG']) ? (float) $row['LONG'] : null;
+        [$lat, $long] = static::sanitizeCoordinates($lat, $long);
+
+        $spanMiles = isset($row['SPAN_MILES']) ? (float) $row['SPAN_MILES'] : null;
+        if ($spanMiles !== null && $spanMiles < 0) {
+            $spanMiles = null;
+        }
+
         return [
-            'job_guid' => $row['JOBGUID'],
-            'frstr_user' => $row['FRSTR_USER'],
-            'work_order' => $row['WO'],
-            'extension' => $row['EXT'] ?? '@',
+            'job_guid' => static::sanitizeGuid($row['JOBGUID'] ?? null),
+            'frstr_user' => static::sanitizeString($row['FRSTR_USER'] ?? null) ?? '',
+            'work_order' => trim((string) ($row['WO'] ?? '')),
+            'extension' => trim((string) ($row['EXT'] ?? '@')) ?: '@',
             'assess_date' => static::parseWsDate($row['ASSESS_DATE'] ?? null),
-            'stat_name' => (string) $row['STATNAME'],
+            'stat_name' => trim((string) ($row['STATNAME'] ?? '')),
             'sequence' => (int) ($row['SEQUENCE'] ?? 0),
-            'unit_guid' => $row['UNITGUID'] ?? null,
-            'unit' => $row['UNIT'] ?? null,
-            'lat' => $row['LAT'] ?? null,
-            'long' => $row['LONG'] ?? null,
-            'coord_source' => $row['COORD_SOURCE'] ?? null,
+            'unit_guid' => static::sanitizeGuid($row['UNITGUID'] ?? null),
+            'unit' => static::sanitizeString($row['UNIT'] ?? null),
+            'lat' => $lat,
+            'long' => $long,
+            'coord_source' => static::sanitizeString($row['COORD_SOURCE'] ?? null),
             'span_length' => $row['SPANLGTH'] ?? null,
-            'span_miles' => $row['SPAN_MILES'] ?? null,
+            'span_miles' => $spanMiles,
             'last_synced_at' => $now,
             'created_at' => $now,
             'updated_at' => $now,
         ];
+    }
+
+    /**
+     * Trim whitespace and convert empty strings to null.
+     */
+    private static function sanitizeString(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+
+        return $trimmed === '' ? null : $trimmed;
+    }
+
+    /**
+     * Sanitize a GUID: trim, empty→null, uppercase for consistency.
+     */
+    private static function sanitizeGuid(?string $value): ?string
+    {
+        $clean = static::sanitizeString($value);
+
+        return $clean !== null ? strtoupper($clean) : null;
+    }
+
+    /**
+     * Validate and repair coordinates. Rejects (0,0), detects lat/long swaps,
+     * and enforces a continental US bounding box. Invalid coords are logged
+     * and nulled so the frontend never receives garbage values.
+     *
+     * @return array{0: ?float, 1: ?float}  [lat, long] — nulled out if invalid
+     */
+    private static function sanitizeCoordinates(?float $lat, ?float $long): array
+    {
+        // Both missing — nothing to validate
+        if ($lat === null && $long === null) {
+            return [null, null];
+        }
+
+        // Partial coordinate — can't plot half a point
+        if ($lat === null || $long === null) {
+            Log::channel('daily_record_conflicts')->notice('Partial coordinate nulled', [
+                'lat' => $lat, 'long' => $long,
+            ]);
+
+            return [null, null];
+        }
+
+        // API default for "no coordinates"
+        if ($lat == 0.0 && $long == 0.0) {
+            return [null, null];
+        }
+
+        // Detect swapped lat/long: if lat looks like a longitude (negative, west)
+        // and long looks like a latitude (positive, 24-50 range), swap them
+        if ($lat < 0 && $long > 0 && $long >= 24.0 && $long <= 50.0 && $lat >= -125.0 && $lat <= -66.0) {
+            Log::channel('daily_record_conflicts')->notice('Swapped lat/long detected and corrected', [
+                'original_lat' => $lat, 'original_long' => $long,
+            ]);
+            [$lat, $long] = [$long, $lat];
+        }
+
+        // Continental US bounding box
+        if ($lat < 24.0 || $lat > 50.0 || $long < -125.0 || $long > -66.0) {
+            Log::channel('daily_record_conflicts')->notice('Coordinates outside continental US — nulled', [
+                'lat' => $lat, 'long' => $long,
+            ]);
+
+            return [null, null];
+        }
+
+        return [$lat, $long];
     }
 
     /**

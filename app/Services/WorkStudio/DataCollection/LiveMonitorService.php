@@ -25,13 +25,11 @@ class LiveMonitorService
      *
      * @return array{snapshots: int, new: int, closed: int}
      */
-    public function runDailySnapshot($console): array
+    public function runDailySnapshot($console = null): array
     {
-
-        
-        $console->info('Starting daily live monitor snapshot');
+        $console?->info('Starting daily live monitor snapshot');
         $context = $this->buildServiceContext();
-        $console->info('Fetching active assessments from API');
+        $console?->info('Fetching active assessments from API');
         $assessments = $this->queryService->getDailyActivitiesForAllAssessments($context);
         $allAssessments = $assessments->first();
 
@@ -50,7 +48,7 @@ class LiveMonitorService
             if (! $jobGuid) {
                 continue;
             }
-            $console->info("Snapshotting assessment {$jobGuid}");
+            $console?->info("Snapshotting assessment {$jobGuid}");
             $isNew = ! AssessmentMonitor::where('job_guid', $jobGuid)->exists();
             $this->snapshotAssessment($jobGuid, $assessment);
 
@@ -59,7 +57,7 @@ class LiveMonitorService
                 $stats['new']++;
             }
         }
-        $console->info("Finished snapshotting active assessments");
+        $console?->info('Finished snapshotting active assessments');
         $closed = $this->detectClosedAssessments($activeAssessments->pluck('Job_GUID')->filter()->values());
         $stats['closed'] = $closed->count();
 

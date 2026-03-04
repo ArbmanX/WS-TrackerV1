@@ -21,7 +21,7 @@ function fakeAssessmentsHeading(): array
 function fakeAssessmentRow(array $overrides = []): array
 {
     $defaults = [
-        'JOBGUID' => '{aaa-111-111-111}',
+        'JOBGUID' => '{AAAAAAAA-1111-1111-1111-111111111111}',
         'PJOBGUID' => '',
         'WO' => 'WO-001',
         'EXT' => '@',
@@ -61,8 +61,8 @@ function fakeAssessmentsResponse(?array $rows = null): array
     $rows ??= [
         fakeAssessmentRow(),
         fakeAssessmentRow([
-            'JOBGUID' => '{aaa-222-222-222}',
-            'PJOBGUID' => '{aaa-111-111-111}',
+            'JOBGUID' => '{AAAAAAAA-2222-2222-2222-222222222222}',
+            'PJOBGUID' => '{AAAAAAAA-1111-1111-1111-111111111111}',
             'EXT' => 'C_a',
             'JOBTYPE' => 'Split_Assessment',
             'TAKEN' => 'false',
@@ -77,7 +77,7 @@ function fakeAssessmentsResponse(?array $rows = null): array
             'EDITDATE' => '2026-02-13 12:00:00',
         ]),
         fakeAssessmentRow([
-            'JOBGUID' => '{bbb-333-333-333}',
+            'JOBGUID' => '{BBBBBBBB-3333-3333-3333-333333333333}',
             'WO' => 'WO-002',
             'STATUS' => 'QC',
             'TAKEN' => 'false',
@@ -141,7 +141,7 @@ test('maps all columns correctly from API row', function () {
 
     $this->artisan('ws:fetch-assessments')->assertSuccessful();
 
-    $parent = Assessment::where('job_guid', '{aaa-111-111-111}')->first();
+    $parent = Assessment::where('job_guid', '{AAAAAAAA-1111-1111-1111-111111111111}')->first();
     expect($parent->work_order)->toBe('WO-001')
         ->and($parent->extension)->toBe('@')
         ->and($parent->job_type)->toBe('Assessment Dx')
@@ -175,7 +175,7 @@ test('resolves circuit_id from raw_title against circuit properties', function (
 
     $this->artisan('ws:fetch-assessments')->assertSuccessful();
 
-    $parent = Assessment::where('job_guid', '{aaa-111-111-111}')->first();
+    $parent = Assessment::where('job_guid', '{AAAAAAAA-1111-1111-1111-111111111111}')->first();
     expect($parent->circuit_id)->toBe($circuit->id);
 });
 
@@ -186,13 +186,13 @@ test('skips records with unresolvable circuit and logs failure', function () {
     $this->artisan('ws:fetch-assessments')->assertSuccessful();
 
     // {bbb-333} has title '99999' — no matching circuit → skipped
-    expect(Assessment::where('job_guid', '{bbb-333-333-333}')->exists())->toBeFalse();
+    expect(Assessment::where('job_guid', '{BBBBBBBB-3333-3333-3333-333333333333}')->exists())->toBeFalse();
 
     // Verify log file was written
     $logPath = storage_path('logs/failed-assessment-fetch.log');
     expect(file_exists($logPath))->toBeTrue();
     $logContent = file_get_contents($logPath);
-    expect($logContent)->toContain('{bbb-333-333-333}')
+    expect($logContent)->toContain('{BBBBBBBB-3333-3333-3333-333333333333}')
         ->and($logContent)->toContain('99999');
 });
 
@@ -204,15 +204,15 @@ test('inserts parents before children via extension depth sort', function () {
     // Send child row BEFORE parent row — command should reorder by strlen(EXT)
     $rows = [
         fakeAssessmentRow([
-            'JOBGUID' => '{child-222}',
-            'PJOBGUID' => '{parent-111}',
+            'JOBGUID' => '{CCCCCCCC-2222-2222-2222-222222222222}',
+            'PJOBGUID' => '{DDDDDDDD-1111-1111-1111-111111111111}',
             'EXT' => 'C_a',
             'JOBTYPE' => 'Split_Assessment',
             'EDITDATE_OLE' => 46066.5,
             'EDITDATE' => '2026-02-13 12:00:00',
         ]),
         fakeAssessmentRow([
-            'JOBGUID' => '{parent-111}',
+            'JOBGUID' => '{DDDDDDDD-1111-1111-1111-111111111111}',
             'EXT' => '@',
             'EDITDATE_OLE' => 46065.75,
             'EDITDATE' => '2026-02-12 18:00:00',
@@ -225,9 +225,9 @@ test('inserts parents before children via extension depth sort', function () {
 
     expect(Assessment::count())->toBe(2);
 
-    $child = Assessment::where('job_guid', '{child-222}')->first();
-    expect($child->parent_job_guid)->toBe('{parent-111}')
-        ->and($child->parent->job_guid)->toBe('{parent-111}');
+    $child = Assessment::where('job_guid', '{CCCCCCCC-2222-2222-2222-222222222222}')->first();
+    expect($child->parent_job_guid)->toBe('{DDDDDDDD-1111-1111-1111-111111111111}')
+        ->and($child->parent->job_guid)->toBe('{DDDDDDDD-1111-1111-1111-111111111111}');
 });
 
 test('nullifies parent_job_guid on parent assessments with EXT @', function () {
@@ -236,8 +236,8 @@ test('nullifies parent_job_guid on parent assessments with EXT @', function () {
     // API returns an Assessment Dx with @ extension but a non-empty PJOBGUID — should be nullified
     $rows = [
         fakeAssessmentRow([
-            'JOBGUID' => '{parent-with-pjob}',
-            'PJOBGUID' => '{some-other-guid}',
+            'JOBGUID' => '{EEEEEEEE-1111-1111-1111-111111111111}',
+            'PJOBGUID' => '{FFFFFFFF-1111-1111-1111-111111111111}',
             'EXT' => '@',
             'JOBTYPE' => 'Assessment Dx',
         ]),
@@ -247,7 +247,7 @@ test('nullifies parent_job_guid on parent assessments with EXT @', function () {
 
     $this->artisan('ws:fetch-assessments')->assertSuccessful();
 
-    $assessment = Assessment::where('job_guid', '{parent-with-pjob}')->first();
+    $assessment = Assessment::where('job_guid', '{EEEEEEEE-1111-1111-1111-111111111111}')->first();
     expect($assessment->parent_job_guid)->toBeNull();
 });
 
@@ -259,11 +259,11 @@ test('flags parent assessments as is_split when they have children', function ()
 
     $this->artisan('ws:fetch-assessments')->assertSuccessful();
 
-    $parent = Assessment::where('job_guid', '{aaa-111-111-111}')->first();
+    $parent = Assessment::where('job_guid', '{AAAAAAAA-1111-1111-1111-111111111111}')->first();
     expect($parent->is_split)->toBeTrue();
 
     // Child itself is NOT flagged as is_split
-    $child = Assessment::where('job_guid', '{aaa-222-222-222}')->first();
+    $child = Assessment::where('job_guid', '{AAAAAAAA-2222-2222-2222-222222222222}')->first();
     expect($child->is_split)->toBeFalse();
 });
 
@@ -277,7 +277,7 @@ test('sets discovered_at on first insert and preserves it on update', function (
     $this->travel(-1)->hours();
     $this->artisan('ws:fetch-assessments')->assertSuccessful();
 
-    $assessment = Assessment::where('job_guid', '{aaa-111-111-111}')->first();
+    $assessment = Assessment::where('job_guid', '{AAAAAAAA-1111-1111-1111-111111111111}')->first();
     $originalDiscoveredAt = $assessment->discovered_at->copy();
     $originalSyncedAt = $assessment->last_synced_at->copy();
 
@@ -415,8 +415,8 @@ test('updates circuit properties with jobguids grouped by cycle type and scope y
     $circuit->refresh();
     $yearData = $circuit->properties['2026'];
     expect($yearData)->toHaveKey('Annual')
-        ->and($yearData['Annual'])->toContain('{aaa-111-111-111}')
-        ->and($yearData['Annual'])->toContain('{aaa-222-222-222}');
+        ->and($yearData['Annual'])->toContain('{AAAAAAAA-1111-1111-1111-111111111111}')
+        ->and($yearData['Annual'])->toContain('{AAAAAAAA-2222-2222-2222-222222222222}');
 });
 
 test('stores null scope_year when xref has no WP_STARTDATE', function () {
@@ -430,7 +430,7 @@ test('stores null scope_year when xref has no WP_STARTDATE', function () {
 
     $this->artisan('ws:fetch-assessments')->assertSuccessful();
 
-    $assessment = Assessment::where('job_guid', '{aaa-111-111-111}')->first();
+    $assessment = Assessment::where('job_guid', '{AAAAAAAA-1111-1111-1111-111111111111}')->first();
     expect($assessment->scope_year)->toBeNull();
 });
 
@@ -466,7 +466,7 @@ test('stores OLE float alongside converted timestamp', function () {
 
     $this->artisan('ws:fetch-assessments')->assertSuccessful();
 
-    $assessment = Assessment::where('job_guid', '{aaa-111-111-111}')->first();
+    $assessment = Assessment::where('job_guid', '{AAAAAAAA-1111-1111-1111-111111111111}')->first();
     expect($assessment->last_edited_ole)->toBe(46065.75)
         ->and($assessment->last_edited)->not->toBeNull();
 });

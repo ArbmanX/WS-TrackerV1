@@ -170,12 +170,7 @@ class FetchCircuits extends Command
             $regionId = $regionMap[$circuit['region'] ?? ''] ?? null;
 
             if (! $regionId) {
-                $failLogger->warning("Skipping circuit with unknown region: {$circuit['line_name']} ({$circuit['region']})");
-
-                $skipped++;
-                $bar->advance();
-
-                continue;
+                $failLogger->warning("Circuit has unknown region (seeding with null): {$circuit['line_name']} ({$circuit['region']})");
             }
 
             $existing = Circuit::where('line_name', $circuit['line_name'])->first();

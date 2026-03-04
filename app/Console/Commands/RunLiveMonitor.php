@@ -25,18 +25,16 @@ class RunLiveMonitor extends Command
             $result = $monitor->runDailySnapshot($this);
             $this->info("Snapshots: {$result['snapshots']}, New monitors: {$result['new']}, Closed: {$result['closed']}");
         }
-// TODO
-        /** Re-enable ghost detection once we have a better process for handling ownership changes and new ghost units*/
-        // if ($this->option('include-ghost')) {
-        //     $ownershipChanges = $ghost->checkForOwnershipChanges();
+        if ($this->option('include-ghost')) {
+            $ownershipChanges = $ghost->checkForOwnershipChanges();
 
-        //     $newGhosts = 0;
-        //     foreach (\App\Models\GhostOwnershipPeriod::active()->get() as $period) {
-        //         $newGhosts += $ghost->runComparison($period);
-        //     }
+            $newGhosts = 0;
+            foreach (\App\Models\GhostOwnershipPeriod::active()->get() as $period) {
+                $newGhosts += $ghost->runComparison($period);
+            }
 
-        //     $this->info("Ghost checks: {$ownershipChanges} ownership changes, {$newGhosts} new ghost units");
-        // }
+            $this->info("Ghost checks: {$ownershipChanges} ownership changes, {$newGhosts} new ghost units");
+        }
 
         return self::SUCCESS;
     }

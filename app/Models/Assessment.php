@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Assessment extends Model
 {
@@ -77,5 +78,15 @@ class Assessment extends Model
     public function children(): HasMany
     {
         return $this->hasMany(self::class, 'parent_job_guid', 'job_guid');
+    }
+
+    public function metrics(): HasOne
+    {
+        return $this->hasOne(AssessmentMetric::class, 'job_guid', 'job_guid');
+    }
+
+    public function contributors(): HasMany
+    {
+        return $this->hasMany(AssessmentContributor::class, 'job_guid', 'job_guid');
     }
 }

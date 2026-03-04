@@ -41,9 +41,9 @@ class PlannerCareerLedger extends AbstractQueryBuilder
             INNER JOIN SS ON SS.JOBGUID = VU.JOBGUID
             {$xrefJoin}
                 WHERE VU.FRSTR_USER IN ({$usersSql})
-                AND SS.EXT = '@'
                 AND VU.ASSDDATE IS NOT NULL
                 AND VU.ASSDDATE != ''
+                AND SS.EXT = '@'
                 {$yearFilter}";
     }
 

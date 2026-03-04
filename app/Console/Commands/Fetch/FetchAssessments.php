@@ -6,6 +6,7 @@ use App\Console\Commands\Traits\GetsAdditionalAssessmentMetrics;
 use App\Console\Commands\Traits\GetsDailyFootage;
 use App\Models\Assessment;
 use App\Models\Circuit;
+use App\Models\PlannerDailyRecord;
 use App\Services\WorkStudio\Assessments\Queries\FetchAssessmentQueries;
 use App\Services\WorkStudio\Client\GetQueryService;
 use Illuminate\Console\Command;
@@ -44,7 +45,14 @@ class FetchAssessments extends Command
             FetchAssessmentQueries::forUsers($users, $year);
         }
 
-        $assessments = $this->fetchFromApi($queryService, $year, $status, $full);
+        try {
+            $assessments = $this->fetchFromApi($queryService, $year, $status, $full);
+        } catch (\Exception $e) {
+            $this->error('API request failed: '.json_decode($e->getMessage(), true)['Message'] ?? $e->getMessage());
+            $failLogger->error('FetchAssessments API failure', ['error' => $e->getMessage()]);
+
+            return self::FAILURE;
+        }
 
         $this->info("Found {$assessments->count()} assessments from API.");
 
@@ -81,11 +89,11 @@ class FetchAssessments extends Command
             return self::SUCCESS;
         }
 
-        // $this->upsertAssessments($assessments);
+        $this->upsertAssessments($assessments);
 
-        // $syncResults = PlannerDailyRecord::syncFromApi($dailyFootage);
+        $syncResults = PlannerDailyRecord::syncFromApi($dailyFootage);
 
-        // $this->info(implode(', ', $syncResults));
+        $this->info(implode(', ', $syncResults));
 
         $this->newLine();
 
@@ -93,7 +101,8 @@ class FetchAssessments extends Command
 
         $additionalAssessmentMetrics = $this->getAdditionalMetrics($queryService, $jobGuids);
 
-        dd($additionalAssessmentMetrics);
+        $this->persistMetrics($additionalAssessmentMetrics);
+        $this->persistContributors($additionalAssessmentMetrics);
 
         return self::SUCCESS;
     }
@@ -126,6 +135,7 @@ class FetchAssessments extends Command
         }
 
         $sql = FetchAssessmentQueries::buildFetchQuery($year, $status, $maxEditDateOle);
+
 
         return $queryService->executeAndHandle($sql);
     }
@@ -295,11 +305,15 @@ class FetchAssessments extends Command
     {
         $map = [];
 
-        Circuit::whereNotNull('properties')->each(function (Circuit $circuit) use (&$map) {
+        Circuit::all()->each(function (Circuit $circuit) use (&$map) {
             $rawLineName = $circuit->properties['raw_line_name'] ?? null;
 
             if ($rawLineName) {
-                $map[$rawLineName] = $circuit->id;
+                $map[strtoupper($rawLineName)] = $circuit->id;
+            }
+
+            if ($circuit->line_name) {
+                $map[strtoupper($circuit->line_name)] = $circuit->id;
             }
         });
 
@@ -311,7 +325,20 @@ class FetchAssessments extends Command
      */
     private function resolveCircuitId(string $rawTitle, array $circuitMap): ?int
     {
-        return $circuitMap[$rawTitle] ?? null;
+        $upper = strtoupper($rawTitle);
+
+        if (isset($circuitMap[$upper])) {
+            return $circuitMap[$upper];
+        }
+
+        // Strip voltage prefixes and " LINE" suffix — same logic as FetchCircuits
+        $cleaned = trim(str_replace(
+            ['69/12 KV ', ' LINE', '69/12KV ', '69/12 ', '138/12 KV ', '138/12KV '],
+            '',
+            $upper
+        ));
+
+        return $circuitMap[$cleaned] ?? null;
     }
 
     private function updateCircuitJobGuids(): void

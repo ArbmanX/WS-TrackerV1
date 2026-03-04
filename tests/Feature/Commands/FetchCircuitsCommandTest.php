@@ -37,15 +37,16 @@ test('seed creates circuit records with region mapping', function () {
     $this->artisan('ws:fetch-circuits --seed')
         ->assertSuccessful();
 
-    // Unknown region circuits are skipped (only 2 of 3 have valid regions)
-    expect(Circuit::count())->toBe(2);
+    // All circuits seeded, including those with unknown regions (null region_id)
+    expect(Circuit::count())->toBe(3);
 
     $circuit1 = Circuit::where('line_name', 'CIRCUIT-001')->first();
     expect($circuit1->region->display_name)->toBe('Harrisburg');
 
-    // Unknown region circuit is not created
+    // Unknown region circuit is created with null region_id
     $circuit3 = Circuit::where('line_name', 'CIRCUIT-003')->first();
-    expect($circuit3)->toBeNull();
+    expect($circuit3)->not->toBeNull()
+        ->and($circuit3->region_id)->toBeNull();
 });
 
 test('seed initializes properties with raw_line_name', function () {
@@ -71,7 +72,7 @@ test('seed updates existing circuit on re-run', function () {
     // Re-run should not duplicate
     $this->artisan('ws:fetch-circuits --seed');
 
-    expect(Circuit::count())->toBe(2);
+    expect(Circuit::count())->toBe(3);
 });
 
 test('save creates data file', function () {
