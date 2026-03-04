@@ -82,7 +82,7 @@ export function registerThemeStore(Alpine) {
          * Check if current effective theme is dark
          */
         get isDark() {
-            const darkThemes = ['dark', 'synthwave', 'cyberpunk', 'dracula', 'night', 'forest', 'coffee'];
+            const darkThemes = ['dark', 'synthwave', 'cyberpunk', 'dracula', 'night', 'forest', 'coffee', 'ppl-dark', 'asplundh-dark', 'pennline-dark'];
             return darkThemes.includes(this.effective);
         },
 
@@ -196,21 +196,9 @@ export function registerSidebarStore(Alpine) {
             }
         },
 
-        /**
-         * Handle hover enter (expand collapsed sidebar temporarily)
-         */
-        hoverEnter() {
-            if (this.isCollapsed) {
-                this.isHovering = true;
-            }
-        },
+        hoverEnter() {},
 
-        /**
-         * Handle hover leave
-         */
-        hoverLeave() {
-            this.isHovering = false;
-        },
+        hoverLeave() {},
 
         /**
          * Get current sidebar width class
@@ -219,10 +207,10 @@ export function registerSidebarStore(Alpine) {
             if (this.breakpoint === 'mobile') {
                 return 'w-72';
             }
-            if (this.isCollapsed && !this.isHovering) {
+            if (this.isCollapsed) {
                 return 'w-16';
             }
-            return 'w-64';
+            return 'w-48';
         },
 
         /**
@@ -232,7 +220,7 @@ export function registerSidebarStore(Alpine) {
             if (this.breakpoint === 'mobile') {
                 return true;
             }
-            return !this.isCollapsed || this.isHovering;
+            return !this.isCollapsed;
         },
     });
 }

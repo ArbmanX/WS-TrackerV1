@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\PlannerMetrics\Overview;
+use App\Livewire\PlannerMetrics\Production;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -13,4 +14,5 @@ Route::middleware(['auth', 'verified', 'onboarding'])
     ->name('planner-metrics.')
     ->group(function () {
         Route::get('/', Overview::class)->name('overview');
+        Route::get('/production', Production::class)->name('production');
     });

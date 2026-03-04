@@ -26,6 +26,10 @@ return [
             'label' => 'Recommended',
             'themes' => ['corporate', 'light', 'dark'],
         ],
+        'branded' => [
+            'label' => 'Company Themes',
+            'themes' => ['ppl-light', 'ppl-dark', 'asplundh-light', 'asplundh-dark', 'pennline-light', 'pennline-dark'],
+        ],
         'light' => [
             'label' => 'Light Themes',
             'themes' => ['cupcake', 'bumblebee', 'emerald', 'retro', 'valentine', 'garden', 'aqua', 'lofi', 'pastel', 'fantasy', 'wireframe', 'cmyk', 'autumn', 'acid', 'lemonade', 'winter', 'nord', 'caramellatte', 'silk'],
@@ -61,6 +65,38 @@ return [
             'name' => 'Dark',
             'colorScheme' => 'dark',
             'description' => 'Default dark theme',
+        ],
+
+        // Company Branded Themes
+        'ppl-light' => [
+            'name' => 'PPL Electric',
+            'colorScheme' => 'light',
+            'description' => 'PPL Electric Utilities — light',
+        ],
+        'ppl-dark' => [
+            'name' => 'PPL Electric Dark',
+            'colorScheme' => 'dark',
+            'description' => 'PPL Electric Utilities — dark',
+        ],
+        'asplundh-light' => [
+            'name' => 'Asplundh',
+            'colorScheme' => 'light',
+            'description' => 'Asplundh Tree Expert — light',
+        ],
+        'asplundh-dark' => [
+            'name' => 'Asplundh Dark',
+            'colorScheme' => 'dark',
+            'description' => 'Asplundh Tree Expert — dark',
+        ],
+        'pennline-light' => [
+            'name' => 'Pennline',
+            'colorScheme' => 'light',
+            'description' => 'Penn Line Tree Service — light',
+        ],
+        'pennline-dark' => [
+            'name' => 'Pennline Dark',
+            'colorScheme' => 'dark',
+            'description' => 'Penn Line Tree Service — dark',
         ],
 
         // Light Themes

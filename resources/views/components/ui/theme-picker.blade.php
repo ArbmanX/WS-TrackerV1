@@ -20,6 +20,7 @@
     $themes = config('themes.available', []);
     $categories = config('themes.categories', []);
     $featuredThemes = $categories['featured']['themes'] ?? ['corporate', 'light', 'dark'];
+    $brandedThemes = $categories['branded']['themes'] ?? [];
     $expandedThemes = array_merge(
         $categories['light']['themes'] ?? [],
         $categories['dark']['themes'] ?? [],
@@ -73,6 +74,39 @@
             @endif
         @endforeach
     </div>
+
+    {{-- Company Themes --}}
+    @if(count($brandedThemes))
+        <div class="space-y-1">
+            <p class="text-xs font-semibold text-base-content/60 px-1">Company Themes</p>
+            <div class="grid grid-cols-3 gap-2">
+                @foreach($brandedThemes as $theme)
+                    @if(isset($themes[$theme]))
+                        <label class="flex flex-col items-center gap-1 p-2 rounded-lg border-2 cursor-pointer transition-all
+                            {{ $selected === $theme ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-base-content/20' }}">
+                            <div class="w-full h-8 rounded overflow-hidden" data-theme="{{ $theme }}">
+                                <div class="h-full bg-base-100 flex items-center justify-center gap-0.5">
+                                    <div class="w-1.5 h-1.5 rounded-full bg-primary"></div>
+                                    <div class="w-1.5 h-1.5 rounded-full bg-secondary"></div>
+                                    <div class="w-1.5 h-1.5 rounded-full bg-accent"></div>
+                                </div>
+                            </div>
+                            <input
+                                type="radio"
+                                name="theme"
+                                value="{{ $theme }}"
+                                class="hidden"
+                                {{ $selected === $theme ? 'checked' : '' }}
+                                wire:model.live="selectedTheme"
+                                x-on:change="$store.theme?.set($el.value)"
+                            />
+                            <span class="text-xs truncate w-full text-center">{{ $themes[$theme]['name'] }}</span>
+                        </label>
+                    @endif
+                @endforeach
+            </div>
+        </div>
+    @endif
 
     {{-- More Themes (Collapsible) --}}
     <div class="collapse collapse-arrow bg-base-200 rounded-lg">
