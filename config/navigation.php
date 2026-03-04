@@ -51,18 +51,32 @@ return [
 
         'sudo-admin' => [
             ['label' => 'Dashboard',   'route' => 'dashboard',                  'icon' => 'chart-bar',              'permission' => 'view-dashboard'],
-            ['label' => 'Planners',    'route' => 'planner-metrics.overview',   'icon' => 'users'],
+            ['label' => 'Planners',    'route' => 'planner-metrics.overview',   'icon' => 'users', 'children' => [
+                ['label' => 'Overview',         'route' => 'planner-metrics.overview'],
+                ['label' => 'Daily Production', 'route' => 'planner-metrics.production'],
+            ]],
             ['label' => 'Assessments', 'route' => 'assessments.index',          'icon' => 'clipboard-document-list'],
             ['label' => 'Monitoring',  'route' => 'monitoring.index',           'icon' => 'signal'],
-            ['label' => 'Admin',       'route' => 'admin.index',                'icon' => 'shield-check',           'permission' => 'manage-users'],
+            ['label' => 'Admin',       'route' => 'admin.index',                'icon' => 'shield-check',           'permission' => 'manage-users', 'children' => [
+                ['label' => 'Query Explorer', 'route' => 'data-management.query-explorer'],
+                ['label' => 'Cache Controls', 'route' => 'data-management.cache'],
+                ['label' => 'Create User',    'route' => 'user-management.create'],
+            ]],
         ],
 
         'manager' => [
             ['label' => 'Dashboard',   'route' => 'dashboard',                  'icon' => 'chart-bar',              'permission' => 'view-dashboard'],
-            ['label' => 'Planners',    'route' => 'planner-metrics.overview',   'icon' => 'users'],
+            ['label' => 'Planners',    'route' => 'planner-metrics.overview',   'icon' => 'users', 'children' => [
+                ['label' => 'Overview',         'route' => 'planner-metrics.overview'],
+                ['label' => 'Daily Production', 'route' => 'planner-metrics.production'],
+            ]],
             ['label' => 'Assessments', 'route' => 'assessments.index',          'icon' => 'clipboard-document-list'],
             ['label' => 'Monitoring',  'route' => 'monitoring.index',           'icon' => 'signal'],
-            ['label' => 'Admin',       'route' => 'admin.index',                'icon' => 'shield-check',           'permission' => 'manage-users'],
+            ['label' => 'Admin',       'route' => 'admin.index',                'icon' => 'shield-check',           'permission' => 'manage-users', 'children' => [
+                ['label' => 'Query Explorer', 'route' => 'data-management.query-explorer'],
+                ['label' => 'Cache Controls', 'route' => 'data-management.cache'],
+                ['label' => 'Create User',    'route' => 'user-management.create'],
+            ]],
         ],
 
         'general-foreman' => [

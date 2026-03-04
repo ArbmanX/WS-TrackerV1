@@ -64,15 +64,19 @@
     <div class="divider my-0 mx-3"></div>
 
     {{-- Hub Links (scrollable) --}}
-    <nav class="flex-1 overflow-y-auto px-3 py-3 custom-scrollbar" aria-label="Main navigation">
+    <nav class="flex-1 overflow-y-auto overflow-x-hidden px-3 py-3" aria-label="Main navigation">
         <ul class="flex flex-col gap-1" role="list">
             @foreach($hubs as $hub)
                 @php
                     $permission = $hub['permission'] ?? null;
                     $canAccess = !$permission || auth()->user()?->can($permission);
                     $routeExists = Route::has($hub['route']);
-                    $active = $currentRoute === $hub['route'];
-                    $disabled = !$routeExists;
+                    $children = $hub['children'] ?? [];
+                    $hasChildren = count($children) > 0;
+                    $childRoutes = collect($children)->pluck('route')->all();
+                    $childActive = in_array($currentRoute, $childRoutes);
+                    $active = $currentRoute === $hub['route'] || $childActive;
+                    $disabled = !$routeExists && !$hasChildren;
                 @endphp
 
                 @if($canAccess)
@@ -99,8 +103,82 @@
                                     {{ $hub['label'] }}
                                 </span>
                             </span>
+                        @elseif($hasChildren)
+                            {{-- Hub with sub-menu --}}
+                            <div x-data="{ open: {{ $active ? 'true' : 'false' }} }">
+                                <button
+                                    type="button"
+                                    @click="open = !open"
+                                    @class([
+                                        'nav-hub-item w-full',
+                                        'nav-hub-active' => $active,
+                                    ])
+                                >
+                                    <x-ui.tooltip
+                                        :text="$hub['label']"
+                                        position="right"
+                                        x-show="!$store.sidebar.showLabels"
+                                    >
+                                        <x-ui.icon :name="$hub['icon']" size="md" />
+                                    </x-ui.tooltip>
+                                    <x-ui.icon
+                                        :name="$hub['icon']"
+                                        size="md"
+                                        x-show="$store.sidebar.showLabels"
+                                    />
+                                    <span x-show="$store.sidebar.showLabels" class="truncate flex-1 text-left">
+                                        {{ $hub['label'] }}
+                                    </span>
+                                    <x-ui.icon
+                                        name="chevron-down"
+                                        size="sm"
+                                        x-show="$store.sidebar.showLabels"
+                                        class="transition-transform duration-200 opacity-50"
+                                        ::class="open ? 'rotate-180' : ''"
+                                    />
+                                </button>
+
+                                {{-- Sub-menu --}}
+                                <ul
+                                    x-show="open && $store.sidebar.showLabels"
+                                    x-transition:enter="transition-all duration-200 ease-out"
+                                    x-transition:enter-start="opacity-0 -translate-y-1"
+                                    x-transition:enter-end="opacity-100 translate-y-0"
+                                    x-transition:leave="transition-all duration-150 ease-in"
+                                    x-transition:leave-start="opacity-100 translate-y-0"
+                                    x-transition:leave-end="opacity-0 -translate-y-1"
+                                    class="nav-sub-menu"
+                                    role="list"
+                                >
+                                    @foreach($children as $child)
+                                        @php
+                                            $childRouteExists = Route::has($child['route']);
+                                            $childIsActive = $currentRoute === $child['route'];
+                                        @endphp
+                                        <li>
+                                            @if($childRouteExists)
+                                                <a
+                                                    href="{{ route($child['route']) }}"
+                                                    wire:navigate
+                                                    @class([
+                                                        'nav-sub-item',
+                                                        'nav-sub-active' => $childIsActive,
+                                                    ])
+                                                    @if($childIsActive) aria-current="page" @endif
+                                                >
+                                                    {{ $child['label'] }}
+                                                </a>
+                                            @else
+                                                <span class="nav-sub-item nav-sub-disabled" aria-disabled="true">
+                                                    {{ $child['label'] }}
+                                                </span>
+                                            @endif
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
                         @else
-                            {{-- Active hub link --}}
+                            {{-- Simple hub link --}}
                             <a
                                 href="{{ route($hub['route']) }}"
                                 wire:navigate

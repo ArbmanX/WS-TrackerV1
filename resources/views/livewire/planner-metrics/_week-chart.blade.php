@@ -37,16 +37,22 @@
     }
 @endphp
 
-<div class="card bg-base-100 shadow">
-    <div class="card-body p-4 sm:p-5">
-        <h3 class="text-sm font-semibold">Week Production (Miles by Planner)</h3>
+<div class="card bg-base-100 shadow-sm border border-base-content/5">
+    <div class="card-body p-4 sm:p-5 gap-3">
+        <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold flex items-center gap-2">
+                <x-heroicon-m-chart-bar-square class="size-4 text-primary" />
+                Week Production
+            </h3>
+            <span class="text-xs text-base-content/40">Miles by Planner</span>
+        </div>
 
         <div class="flex items-end overflow-x-auto">
             {{-- Y-axis labels --}}
             <div class="relative shrink-0 w-9 sm:w-11 h-36 sm:h-44">
                 @foreach($ticks as $tick)
                     <span
-                        class="absolute right-1.5 text-[10px] sm:text-xs text-base-content/50 -translate-y-1/2 tabular-nums leading-none"
+                        class="absolute right-1.5 text-[10px] sm:text-xs text-base-content/40 -translate-y-1/2 tabular-nums leading-none font-code"
                         style="bottom: {{ $yMax > 0 ? ($tick / $yMax) * 100 : 0 }}%"
                     >
                         {{ number_format($tick, $decimals) }}
@@ -55,12 +61,12 @@
             </div>
 
             {{-- Chart area --}}
-            <div class="flex-1 relative h-36 sm:h-44 border-l border-b border-base-content/15 min-w-0">
+            <div class="flex-1 relative h-36 sm:h-44 border-l border-b border-base-content/10 min-w-0">
                 {{-- Grid lines --}}
                 @foreach($ticks as $tick)
                     @if($tick > 0)
                         <div
-                            class="absolute left-0 right-0 border-b border-base-content/10 border-dashed"
+                            class="absolute left-0 right-0 border-b border-base-content/6 border-dashed"
                             style="bottom: {{ ($tick / $yMax) * 100 }}%"
                         ></div>
                     @endif
@@ -73,7 +79,7 @@
                             @foreach($plannerList as $pi => $planner)
                                 @php $miles = $planner['daily_miles'][$di]['miles'] ?? 0; @endphp
                                 <div
-                                    class="flex-1 max-w-3 rounded-t {{ $barColors[$pi % count($barColors)] }} opacity-85 hover:opacity-100 transition-opacity cursor-default"
+                                    class="flex-1 max-w-3 rounded-t {{ $barColors[$pi % count($barColors)] }} opacity-80 hover:opacity-100 transition-opacity cursor-default"
                                     style="height: {{ $yMax > 0 ? ($miles > 0 ? max(2, ($miles / $yMax) * 100) : 0) : 0 }}%"
                                     title="{{ $planner['display_name'] }}: {{ number_format($miles, 2) }} mi"
                                 ></div>
@@ -87,7 +93,7 @@
         {{-- X-axis labels --}}
         <div class="flex">
             <div class="shrink-0 w-9 sm:w-11"></div>
-            <div class="flex-1 grid grid-cols-7 text-[10px] sm:text-xs text-base-content/50">
+            <div class="flex-1 grid grid-cols-7 text-[10px] sm:text-xs text-base-content/40 font-code">
                 @foreach($days as $day)
                     <span class="text-center">{{ $day }}</span>
                 @endforeach
@@ -95,11 +101,11 @@
         </div>
 
         {{-- Legend --}}
-        <div class="flex flex-wrap gap-x-4 gap-y-1 justify-center mt-1">
+        <div class="flex flex-wrap gap-x-4 gap-y-1 justify-center border-t border-base-content/5 pt-3">
             @foreach($plannerList as $pi => $planner)
                 <div class="flex items-center gap-1.5">
                     <span class="w-2.5 h-2.5 rounded-sm shrink-0 {{ $barColors[$pi % count($barColors)] }}"></span>
-                    <span class="text-xs text-base-content/70">{{ $planner['display_name'] }}</span>
+                    <span class="text-xs text-base-content/60">{{ $planner['display_name'] }}</span>
                 </div>
             @endforeach
         </div>
