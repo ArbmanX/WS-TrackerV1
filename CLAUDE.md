@@ -21,13 +21,7 @@
 | **Generate models/migrations** | `/bmad:ws:workflows:model-generator` or `/bmad:ws:workflows:migration-generator` |
 | **Scaffold Livewire CRUD** | `/bmad:ws:workflows:livewire-scaffold` |
 | **Diagrams/wireframes** | `/bmad:bmm:workflows:create-excalidraw-diagram` (or `-wireframe`, `-dataflow`, `-flowchart`) |
-| **Brainstorm/discuss** | `/bmad:bmm:workflows:party-mode` — brings all agents into conversation |
-| **Sprint/workflow status** | `/bmad:bmm:workflows:sprint-status` or `/bmad:bmm:workflows:workflow-status` |
-| **Research** | `/bmad:bmm:workflows:research` or `/ultrathink:ultrathink` |
-| **Auth features** | `/developing-with-fortify` |
-| **Architecture decisions** | `/bmad:bmm:workflows:create-architecture` + `/bmad:bmm:agents:architect` |
-| **Create stories** | `/bmad:bmm:workflows:create-epics-and-stories` or `/bmad:bmm:workflows:create-story` |
-| **Retrospective** | `/bmad:bmm:workflows:retrospective` |
+
 
 ## Session Start
 
@@ -69,7 +63,7 @@ When user confirms "commit", "ship it", "merge", or similar — run the **full c
 
 ## Rules
 
-- **DaisyUI exclusive** — theme variables only, never hardcoded colors
+- **DaisyUI** — theme variables only, never hardcoded colors
 - **Context management:** warn at 60%; at 65% save handoff to `docs/session-handoffs/` and offer to clear
 - **Track work:** update `docs/wip.md` during work, clear after merge
 - **Code standards:** interfaces on services, constructor injection, no business logic in controllers, no `dd()`, `config()` not `env()`

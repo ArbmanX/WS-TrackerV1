@@ -222,6 +222,58 @@ class PlannerMetricsService implements PlannerMetricsServiceInterface
         return $now->dayOfWeek < $flipDayOfWeek ? -1 : 0;
     }
 
+    public function getMonthlyMilesBreakdown(int $months = 4): array
+    {
+        $files = $this->discoverCareerFiles();
+        $now = CarbonImmutable::now();
+        $results = [];
+
+        $monthWindows = [];
+        for ($i = $months - 1; $i >= 0; $i--) {
+            $monthStart = $now->subMonthsNoOverflow($i)->startOfMonth();
+            $monthEnd = $i === 0 ? $now : $monthStart->endOfMonth();
+            $monthWindows[] = [
+                'label' => $monthStart->format('M'),
+                'year' => $monthStart->year,
+                'start' => $monthStart->format('Y-m-d'),
+                'end' => $monthEnd->format('Y-m-d'),
+            ];
+        }
+
+        foreach ($files as $username => $filepath) {
+            $data = $this->loadCareerFile($filepath);
+
+            if ($data === null) {
+                continue;
+            }
+
+            $assessments = $data['assessments'] ?? [];
+            unset($data);
+
+            $monthly = [];
+            foreach ($monthWindows as $window) {
+                $miles = 0;
+                foreach ($assessments as $assessment) {
+                    foreach ($assessment['daily_metrics'] ?? [] as $metric) {
+                        $date = $metric['completion_date'] ?? null;
+                        if ($date && $date >= $window['start'] && $date <= $window['end']) {
+                            $miles += (float) ($metric['daily_footage_miles'] ?? 0);
+                        }
+                    }
+                }
+                $monthly[] = [
+                    'month' => $window['label'],
+                    'year' => $window['year'],
+                    'miles' => round($miles, 1),
+                ];
+            }
+
+            $results[$username] = $monthly;
+        }
+
+        return $results;
+    }
+
     /**
      * Discover career JSON files without loading content.
      *
