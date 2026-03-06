@@ -1,4 +1,4 @@
-<div class="space-y-4">
+    <div class="space-y-4">
     @php
         // ── System-wide totals (from WorkStudio API via CachedQueryService) ──
         $totalStats = $this->systemMetrics->first() ?? [];
