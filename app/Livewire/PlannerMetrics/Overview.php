@@ -9,7 +9,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
-#[Layout('components.layout.app-shell', ['title' => 'Planner Metrics', 'breadcrumbs' => [['label' => 'Planner Metrics']]])]
+#[Layout('components.layout.app-shell', ['title' => 'Weekly Reports', 'breadcrumbs' => [['label' => 'Weekly Reports']]])]
 class Overview extends Component
 {
     #[Url]

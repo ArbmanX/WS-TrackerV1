@@ -119,6 +119,9 @@
                     :title="$title"
                 />
 
+                {{-- Device Preview (debug only) --}}
+                <x-layout.device-preview />
+
                 {{-- Page Content --}}
                 <main class="flex-1 p-4 lg:p-6 page-content custom-scrollbar">
                     {{ $slot }}

@@ -86,4 +86,11 @@ interface PlannerMetricsServiceInterface
      * and 0 after (current week). Other periods always return 0.
      */
     public function getDefaultOffset(string $period): int;
+
+    /**
+     * Get monthly miles breakdown for each planner over the last N months.
+     *
+     * @return array<string, list<array{month: string, year: int, miles: float}>>
+     */
+    public function getMonthlyMilesBreakdown(int $months = 4): array;
 }

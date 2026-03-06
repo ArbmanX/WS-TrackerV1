@@ -11,6 +11,7 @@
  *   route      - Named route (may not exist yet — sidebar handles gracefully)
  *   icon       - Heroicon name (outline variant)
  *   permission - Optional extra permission gate (beyond role membership)
+ *   section    - If present, renders as a section header label (no link)
  */
 
 return [
@@ -50,33 +51,37 @@ return [
     'hubs' => [
 
         'sudo-admin' => [
-            ['label' => 'Dashboard',   'route' => 'dashboard',                  'icon' => 'chart-bar',              'permission' => 'view-dashboard'],
-            ['label' => 'Planners',    'route' => 'planner-metrics.overview',   'icon' => 'users', 'children' => [
-                ['label' => 'Overview',         'route' => 'planner-metrics.overview'],
-                ['label' => 'Daily Production', 'route' => 'planner-metrics.production'],
-            ]],
-            ['label' => 'Assessments', 'route' => 'assessments.index',          'icon' => 'clipboard-document-list'],
-            ['label' => 'Monitoring',  'route' => 'monitoring.index',           'icon' => 'signal'],
-            ['label' => 'Admin',       'route' => 'admin.index',                'icon' => 'shield-check',           'permission' => 'manage-users', 'children' => [
-                ['label' => 'Query Explorer', 'route' => 'data-management.query-explorer'],
-                ['label' => 'Cache Controls', 'route' => 'data-management.cache'],
-                ['label' => 'Create User',    'route' => 'user-management.create'],
-            ]],
+            ['label' => 'Dashboard',      'route' => 'dashboard',                     'icon' => 'chart-bar',              'permission' => 'view-dashboard'],
+
+            ['section' => 'Planners'],
+            ['label' => 'Weekly Reports', 'route' => 'planner-metrics.overview',      'icon' => 'users'],
+            ['label' => 'Production',     'route' => 'planner-metrics.production',    'icon' => 'chart-bar-square'],
+
+            ['section' => 'Operations'],
+            ['label' => 'Assessments',    'route' => 'assessments.index',             'icon' => 'clipboard-document-list'],
+            ['label' => 'Monitoring',     'route' => 'monitoring.index',              'icon' => 'signal'],
+
+            ['section' => 'Admin',        'permission' => 'manage-users'],
+            ['label' => 'Query Explorer', 'route' => 'data-management.query-explorer','icon' => 'magnifying-glass-circle', 'permission' => 'manage-users'],
+            ['label' => 'Cache Controls', 'route' => 'data-management.cache',         'icon' => 'arrow-path',              'permission' => 'manage-users'],
+            ['label' => 'Create User',    'route' => 'user-management.create',        'icon' => 'user-plus',               'permission' => 'manage-users'],
         ],
 
         'manager' => [
-            ['label' => 'Dashboard',   'route' => 'dashboard',                  'icon' => 'chart-bar',              'permission' => 'view-dashboard'],
-            ['label' => 'Planners',    'route' => 'planner-metrics.overview',   'icon' => 'users', 'children' => [
-                ['label' => 'Overview',         'route' => 'planner-metrics.overview'],
-                ['label' => 'Daily Production', 'route' => 'planner-metrics.production'],
-            ]],
-            ['label' => 'Assessments', 'route' => 'assessments.index',          'icon' => 'clipboard-document-list'],
-            ['label' => 'Monitoring',  'route' => 'monitoring.index',           'icon' => 'signal'],
-            ['label' => 'Admin',       'route' => 'admin.index',                'icon' => 'shield-check',           'permission' => 'manage-users', 'children' => [
-                ['label' => 'Query Explorer', 'route' => 'data-management.query-explorer'],
-                ['label' => 'Cache Controls', 'route' => 'data-management.cache'],
-                ['label' => 'Create User',    'route' => 'user-management.create'],
-            ]],
+            ['label' => 'Dashboard',      'route' => 'dashboard',                     'icon' => 'chart-bar',              'permission' => 'view-dashboard'],
+
+            ['section' => 'Planners'],
+            ['label' => 'Weekly Reports', 'route' => 'planner-metrics.overview',      'icon' => 'users'],
+            ['label' => 'Production',     'route' => 'planner-metrics.production',    'icon' => 'chart-bar-square'],
+
+            ['section' => 'Operations'],
+            ['label' => 'Assessments',    'route' => 'assessments.index',             'icon' => 'clipboard-document-list'],
+            ['label' => 'Monitoring',     'route' => 'monitoring.index',              'icon' => 'signal'],
+
+            ['section' => 'Admin',        'permission' => 'manage-users'],
+            ['label' => 'Query Explorer', 'route' => 'data-management.query-explorer','icon' => 'magnifying-glass-circle', 'permission' => 'manage-users'],
+            ['label' => 'Cache Controls', 'route' => 'data-management.cache',         'icon' => 'arrow-path',              'permission' => 'manage-users'],
+            ['label' => 'Create User',    'route' => 'user-management.create',        'icon' => 'user-plus',               'permission' => 'manage-users'],
         ],
 
         'general-foreman' => [

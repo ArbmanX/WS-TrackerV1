@@ -70,49 +70,39 @@
                 @php
                     $permission = $hub['permission'] ?? null;
                     $canAccess = !$permission || auth()->user()?->can($permission);
-                    $routeExists = Route::has($hub['route']);
-                    $children = $hub['children'] ?? [];
-                    $hasChildren = count($children) > 0;
-                    $childRoutes = collect($children)->pluck('route')->all();
-                    $childActive = in_array($currentRoute, $childRoutes);
-                    $active = $currentRoute === $hub['route'] || $childActive;
-                    $disabled = !$routeExists && !$hasChildren;
+                    $isSection = isset($hub['section']);
                 @endphp
 
                 @if($canAccess)
-                    <li>
-                        @if($disabled)
-                            {{-- Route not built yet — disabled hub --}}
+                    @if($isSection)
+                        {{-- Section header --}}
+                        <li class="mt-4 first:mt-0">
                             <span
-                                class="nav-hub-item nav-hub-disabled"
-                                aria-disabled="true"
+                                x-show="$store.sidebar.showLabels"
+                                class="px-3 text-[10px] font-bold uppercase tracking-[0.15em] text-base-content/40"
                             >
-                                <x-ui.tooltip
-                                    :text="$hub['label'] . ' — coming soon'"
-                                    position="right"
-                                    x-show="!$store.sidebar.showLabels"
-                                >
-                                    <x-ui.icon :name="$hub['icon']" size="md" />
-                                </x-ui.tooltip>
-                                <x-ui.icon
-                                    :name="$hub['icon']"
-                                    size="md"
-                                    x-show="$store.sidebar.showLabels"
-                                />
-                                <span x-show="$store.sidebar.showLabels" class="truncate">
-                                    {{ $hub['label'] }}
-                                </span>
+                                {{ $hub['section'] }}
                             </span>
-                        @elseif($hasChildren)
-                            {{-- Hub with sub-menu --}}
-                            <div x-data="{ open: {{ $active ? 'true' : 'false' }} }">
-                                <button
-                                    type="button"
-                                    @click="open = !open"
+                            <span
+                                x-show="!$store.sidebar.showLabels"
+                                class="block border-t border-base-content/10 mx-2 my-1"
+                            ></span>
+                        </li>
+                    @else
+                        @php
+                            $routeExists = Route::has($hub['route']);
+                            $active = $currentRoute === $hub['route'];
+                        @endphp
+                        <li>
+                            @if($routeExists)
+                                <a
+                                    href="{{ route($hub['route']) }}"
+                                    wire:navigate
                                     @class([
-                                        'nav-hub-item w-full',
+                                        'nav-hub-item',
                                         'nav-hub-active' => $active,
                                     ])
+                                    @if($active) aria-current="page" @endif
                                 >
                                     <x-ui.tooltip
                                         :text="$hub['label']"
@@ -126,86 +116,34 @@
                                         size="md"
                                         x-show="$store.sidebar.showLabels"
                                     />
-                                    <span x-show="$store.sidebar.showLabels" class="truncate flex-1 text-left">
+                                    <span x-show="$store.sidebar.showLabels" class="truncate">
                                         {{ $hub['label'] }}
                                     </span>
+                                </a>
+                            @else
+                                <span
+                                    class="nav-hub-item nav-hub-disabled"
+                                    aria-disabled="true"
+                                >
+                                    <x-ui.tooltip
+                                        :text="$hub['label'] . ' — coming soon'"
+                                        position="right"
+                                        x-show="!$store.sidebar.showLabels"
+                                    >
+                                        <x-ui.icon :name="$hub['icon']" size="md" />
+                                    </x-ui.tooltip>
                                     <x-ui.icon
-                                        name="chevron-down"
-                                        size="sm"
+                                        :name="$hub['icon']"
+                                        size="md"
                                         x-show="$store.sidebar.showLabels"
-                                        class="transition-transform duration-200 opacity-50"
-                                        ::class="open ? 'rotate-180' : ''"
                                     />
-                                </button>
-
-                                {{-- Sub-menu --}}
-                                <ul
-                                    x-show="open && $store.sidebar.showLabels"
-                                    x-transition:enter="transition-all duration-200 ease-out"
-                                    x-transition:enter-start="opacity-0 -translate-y-1"
-                                    x-transition:enter-end="opacity-100 translate-y-0"
-                                    x-transition:leave="transition-all duration-150 ease-in"
-                                    x-transition:leave-start="opacity-100 translate-y-0"
-                                    x-transition:leave-end="opacity-0 -translate-y-1"
-                                    class="nav-sub-menu"
-                                    role="list"
-                                >
-                                    @foreach($children as $child)
-                                        @php
-                                            $childRouteExists = Route::has($child['route']);
-                                            $childIsActive = $currentRoute === $child['route'];
-                                        @endphp
-                                        <li>
-                                            @if($childRouteExists)
-                                                <a
-                                                    href="{{ route($child['route']) }}"
-                                                    wire:navigate
-                                                    @class([
-                                                        'nav-sub-item',
-                                                        'nav-sub-active' => $childIsActive,
-                                                    ])
-                                                    @if($childIsActive) aria-current="page" @endif
-                                                >
-                                                    {{ $child['label'] }}
-                                                </a>
-                                            @else
-                                                <span class="nav-sub-item nav-sub-disabled" aria-disabled="true">
-                                                    {{ $child['label'] }}
-                                                </span>
-                                            @endif
-                                        </li>
-                                    @endforeach
-                                </ul>
-                            </div>
-                        @else
-                            {{-- Simple hub link --}}
-                            <a
-                                href="{{ route($hub['route']) }}"
-                                wire:navigate
-                                @class([
-                                    'nav-hub-item',
-                                    'nav-hub-active' => $active,
-                                ])
-                                @if($active) aria-current="page" @endif
-                            >
-                                <x-ui.tooltip
-                                    :text="$hub['label']"
-                                    position="right"
-                                    x-show="!$store.sidebar.showLabels"
-                                >
-                                    <x-ui.icon :name="$hub['icon']" size="md" />
-                                </x-ui.tooltip>
-                                <x-ui.icon
-                                    :name="$hub['icon']"
-                                    size="md"
-                                    x-show="$store.sidebar.showLabels"
-                                />
-                                <span x-show="$store.sidebar.showLabels" class="truncate">
-                                    {{ $hub['label'] }}
+                                    <span x-show="$store.sidebar.showLabels" class="truncate">
+                                        {{ $hub['label'] }}
+                                    </span>
                                 </span>
-                            </a>
-                        @endif
-                    </li>
+                            @endif
+                        </li>
+                    @endif
                 @endif
             @endforeach
         </ul>

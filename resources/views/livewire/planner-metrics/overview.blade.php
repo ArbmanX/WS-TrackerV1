@@ -1,8 +1,8 @@
-<div class="space-y-5" x-data="{ showChart: true }">
+<div class="space-y-5">
     {{-- Header + Period Navigation --}}
     <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-            <h1 class="text-2xl font-bold tracking-tight">Planner Metrics</h1>
+            <h1 class="text-2xl font-bold tracking-tight">Weekly Reports</h1>
             <p class="text-sm text-base-content/50">Weekly performance overview</p>
         </div>
 
@@ -66,28 +66,7 @@
             </button>
         </div>
 
-        @if(!empty($this->planners))
-            <button
-                type="button"
-                @click="showChart = !showChart"
-                class="btn btn-sm btn-ghost gap-1.5 text-base-content/60"
-            >
-                <x-heroicon-m-chart-bar-square class="size-4" />
-                <span x-text="showChart ? 'Hide Chart' : 'Show Chart'">Hide Chart</span>
-                <x-heroicon-m-chevron-down
-                    class="size-3 transition-transform duration-200"
-                    x-bind:class="showChart && 'rotate-180'"
-                />
-            </button>
-        @endif
     </div>
-
-    {{-- Collapsible Week Chart --}}
-    @if(!empty($this->planners))
-        <div x-show="showChart" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
-            @include('livewire.planner-metrics._week-chart')
-        </div>
-    @endif
 
     {{-- Planner Grid --}}
     <div class="relative">
