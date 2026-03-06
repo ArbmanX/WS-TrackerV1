@@ -167,6 +167,41 @@ class Production extends Component
             ->all();
     }
 
+    #[Computed]
+    public function scopeYearTopPlanners(): array
+    {
+        $now = Carbon::now();
+        $scopeStart = $now->month >= 7
+            ? Carbon::create($now->year, 7, 1)
+            : Carbon::create($now->year - 1, 7, 1);
+
+        $rows = DB::table('planner_daily_records')
+            ->select('frstr_user', DB::raw('SUM(span_miles) as total_miles'))
+            ->where('frstr_user', 'ILIKE', $this->domainFilter['like'])
+            ->whereBetween('assess_date', [$scopeStart->toDateString(), $now->toDateString()])
+            ->groupBy('frstr_user')
+            ->orderByDesc('total_miles')
+            ->limit(4)
+            ->get();
+
+        return $rows->map(fn ($r) => [
+            'display_name' => $this->formatDisplayName($r->frstr_user),
+            'total_miles' => round((float) $r->total_miles, 1),
+        ])->all();
+    }
+
+    #[Computed]
+    public function scopeYearLabel(): string
+    {
+        $now = Carbon::now();
+        $scopeStart = $now->month >= 7
+            ? Carbon::create($now->year, 7, 1)
+            : Carbon::create($now->year - 1, 7, 1);
+        $scopeEnd = $scopeStart->copy()->addYear()->subDay();
+
+        return $scopeStart->format('M Y').' - '.$scopeEnd->format('M Y');
+    }
+
     public function updatedFrom(): void
     {
         $this->clearCache();
@@ -194,6 +229,8 @@ class Production extends Component
             $this->summaryTable,
             $this->availablePlanners,
             $this->dateRange,
+            $this->scopeYearTopPlanners,
+            $this->scopeYearLabel,
         );
     }
 

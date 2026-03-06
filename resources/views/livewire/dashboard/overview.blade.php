@@ -1,167 +1,35 @@
 <div class="space-y-4">
-    {{-- ============================================================
-         MOCK DATA — Replace each block with real Livewire properties.
-         All queries below should filter to:
-           - Active assessments only (assessment.status = 'Active')
-           - In-progress work only (completed_miles > 0 OR has activity)
-           - Current contract cycle / fiscal year
-         ============================================================ --}}
     @php
-        // ── System-wide totals ──
-        // TODO: $this->systemMetrics — query should SUM miles across all
-        //       active assessments. Only include assessments where
-        //       status = 'Active' within the current contract cycle.
-        //       total_miles = SUM(assessment.total_miles)
-        //       completed_miles = SUM(assessment.completed_miles)
-        //       active_planners = COUNT(DISTINCT planner) where planner
-        //                         has activity in the current week
+        // ── System-wide totals (from WorkStudio API via CachedQueryService) ──
         $totalStats = $this->systemMetrics->first() ?? [];
         $totalMiles = $totalStats['total_miles'] ?? 0;
         $completedMiles = $totalStats['completed_miles'] ?? 0;
         $overallPercent = $totalMiles > 0 ? ($completedMiles / $totalMiles) * 100 : 0;
 
-        // ── Miles by Region (status pipeline) ──
-        // TODO: Replace with real query. Group by region, SUM miles in each
-        //       status bucket. Only include assessments where:
-        //         - assessment.status = 'Active'
-        //         - assessment.completed_miles > 0 (has work started)
-        //       Status buckets map to assessment workflow states:
-        //         not_started, in_progress, pending_qc, rework, closed
-        $milesPipelineByRegion = [
-            ['region' => 'Central',      'not_started' => 42.5,  'in_progress' => 108.3, 'pending_qc' => 65.2,  'rework' => 8.1,  'closed' => 295.9],
-            ['region' => 'Harrisburg',   'not_started' => 38.0,  'in_progress' => 95.7,  'pending_qc' => 48.6,  'rework' => 0,    'closed' => 227.7],
-            ['region' => 'Lancaster',    'not_started' => 55.2,  'in_progress' => 72.4,  'pending_qc' => 38.1,  'rework' => 12.3, 'closed' => 202.0],
-            ['region' => 'Lehigh',       'not_started' => 28.6,  'in_progress' => 88.9,  'pending_qc' => 52.0,  'rework' => 0,    'closed' => 180.5],
-            ['region' => 'Distribution', 'not_started' => 15.0,  'in_progress' => 32.1,  'pending_qc' => 18.4,  'rework' => 3.5,  'closed' => 71.0],
-        ];
+        // ── Local DB computed properties ──
+        $milesPipelineByRegion = $this->milesPipelineByRegion;
+        $permissionsSystemWide = $this->permissionsSystemWide;
+        $workTypeBreakdown = $this->workTypeBreakdown;
+        $summaryStats = $this->summaryStats;
+        $burndownSnapshots = $this->burndownSnapshots;
+        $contractEnd = $this->contractEnd;
+        $ctaAssessmentsByRegion = $this->ctaAssessmentsByRegion;
 
-        // ── Permission Status (system-wide) ──
-        // TODO: Replace with real query. COUNT permits grouped by
-        //       permission_status. Only include permits belonging to
-        //       assessments where:
-        //         - assessment.status = 'Active'
-        //         - assessment.completed_miles > 0 (in progress)
-        //       This ensures we only show permission stats for work
-        //       that is actively being planned/executed.
-        $permissionsSystemWide = [
-            ['status' => 'Approved',     'count' => 15265],
-            ['status' => 'PPL Approved', 'count' => 1085],
-            ['status' => 'Pending',      'count' => 1761],
-            ['status' => 'No Contact',   'count' => 375],
-            ['status' => 'Refused',      'count' => 91],
-            ['status' => 'Deferred',     'count' => 178],
-        ];
-
-        // ── Work Type Breakdown ──
-        // TODO: Replace with real query. SUM(quantity) grouped by work_type.
-        //       Only include work items from assessments where:
-        //         - assessment.status = 'Active'
-        //         - assessment.completed_miles > 0
-        //       Units: acres for brush/herbicide types, count for removals/VPS,
-        //       miles for trim types. See docs/specs/ for unit mapping.
-        $workTypeBreakdown = [
-            ['work_type' => 'HCB',        'label' => 'Hazard Cut Back',    'total_qty' => 29080.42],
-            ['work_type' => 'HERBNA',      'label' => 'Herbicide N/A',     'total_qty' => 61020.67],
-            ['work_type' => 'HERBA',       'label' => 'Herbicide Applied', 'total_qty' => 4489.32],
-            ['work_type' => 'MPB',         'label' => 'Mech. Power Brush', 'total_qty' => 11021.51],
-            ['work_type' => 'MPM',         'label' => 'Mech. Power Mow',   'total_qty' => 3001.92],
-            ['work_type' => 'SPB',         'label' => 'Side Prune Brush',  'total_qty' => 8091.93],
-            ['work_type' => 'SPM',         'label' => 'Side Prune Mech.',  'total_qty' => 5719.93],
-            ['work_type' => 'BRUSHTRIM',   'label' => 'Brush Trim',        'total_qty' => 2588.36],
-            ['work_type' => 'FFP-CPM',     'label' => 'FFP Cost/Mile',     'total_qty' => 30941.35],
-            ['work_type' => 'REM612',      'label' => 'Removal 6-12"',     'total_qty' => 66.00],
-            ['work_type' => 'REM1218',     'label' => 'Removal 12-18"',    'total_qty' => 25.00],
-            ['work_type' => 'VPS',         'label' => 'Veg. Problem Spot', 'total_qty' => 49.00],
-            ['work_type' => 'NW',          'label' => 'No Work',           'total_qty' => 625.00],
-        ];
-
-        // ── Summary Stats (Work Breakdown panel) ──
-        // TODO: Replace with real query. All values scoped to active
-        //       assessments (status = 'Active', completed_miles > 0).
-        //       - total_miles / completed_miles / remaining_miles: from systemMetrics
-        //       - days_remaining: calculated from contract end date (currently hardcoded June 30)
-        //       - herbicide_acres: SUM(qty) WHERE work_type IN ('HERBA','HERBNA') — units: acres
-        //       - hcb_acres: SUM(qty) WHERE work_type = 'HCB' — units: acres
-        //       - vps_count: COUNT WHERE work_type = 'VPS' — units: each
-        //       - rem_6_12_count: COUNT WHERE work_type = 'REM612' — units: each
-        //       - rem_other_count: COUNT WHERE work_type IN ('REM1218','REM1824','REM24P') — units: each
-        //       - bucket_trim_miles: SUM(qty) WHERE work_type = 'MPB' — units: miles
-        //       - manual_trim_miles: SUM(qty) WHERE work_type = 'MPM' — units: miles
-        $summaryStats = [
-            'total_miles'           => 1800.0,
-            'completed_miles'       => 1131.3,
-            'remaining_miles'       => 668.7,
-            'days_remaining'        => (int) now()->diffInDays(\Carbon\Carbon::parse('2026-06-30'), false),
-            'herbicide_acres'       => 7730.0,
-            'hcb_acres'             => 29080.4,
-            'vps_count'             => 49,
-            'rem_6_12_count'        => 66,
-            'rem_other_count'       => 32,
-            'bucket_trim_miles'     => 11021.5,
-            'manual_trim_miles'     => 3001.9,
-            'single_phase_miles'    => 1120.0,
-            'multi_phase_miles'     => 680.0,
-        ];
-
-        // Derived stats (keep as-is — computed from above)
+        // Derived stats
         $weeksRemaining = max(1, ceil($summaryStats['days_remaining'] / 7));
         $milesPerWeekNeeded = $summaryStats['remaining_miles'] / $weeksRemaining;
         $activePlanners = $totalStats['active_planners'] ?? 0;
 
-        // ── Miles Burndown (sparkline) ──
-        // TODO: Replace with real query against system_wide_snapshots:
-        //   SELECT captured_at::date as day, MAX(completed_miles) as completed, MAX(total_miles) as total
-        //   FROM system_wide_snapshots
-        //   GROUP BY day ORDER BY day
-        //   Remaining = total - completed for each snapshot day.
-        //   Target pace line: straight line from first snapshot remaining to 0 at contract end.
-        //   Contract end date currently hardcoded to 2026-06-30.
-        $burndownSnapshots = [
-            ['date' => '2025-10-01', 'remaining' => 2205],
-            ['date' => '2025-10-15', 'remaining' => 2100],
-            ['date' => '2025-11-01', 'remaining' => 1980],
-            ['date' => '2025-11-15', 'remaining' => 1850],
-            ['date' => '2025-12-01', 'remaining' => 1710],
-            ['date' => '2025-12-15', 'remaining' => 1580],
-            ['date' => '2026-01-01', 'remaining' => 1420],
-            ['date' => '2026-01-15', 'remaining' => 1280],
-            ['date' => '2026-02-01', 'remaining' => 1100],
-            ['date' => '2026-02-13', 'remaining' => 728],
-            ['date' => '2026-02-18', 'remaining' => 712],
-            ['date' => '2026-02-23', 'remaining' => 695],
-            ['date' => '2026-02-25', 'remaining' => 687],
-            ['date' => '2026-02-28', 'remaining' => 659],
-            ['date' => '2026-03-03', 'remaining' => 655],
-        ];
-        $contractStart = '2025-10-01';
-        $contractEnd = '2026-06-30';
-
-        // ── CTA Hub Stats (Quick Actions) ──
-        // TODO: Replace with real queries. Each stat scoped to active data.
-
-        // Planners — two views: production (active/behind) and quota (target/actual mi/wk)
-        // Source: PlannerMetricsService, PlannerCareerLedgerService
+        // Planners CTA — still partially mock (PlannerMetricsService not yet wired)
         $ctaPlanners = [
-            'production' => ['active' => $activePlanners ?: 12, 'behind_quota' => 3],
+            'production' => ['active' => $activePlanners ?: 0, 'behind_quota' => 0],
             'quota'      => ['target_mi_wk' => 42.0, 'actual_mi_wk' => $milesPerWeekNeeded],
         ];
 
-        // Assessments — per-region assessment counts (active, in_qc, rework)
-        // Source: Assessment model grouped by region, status
-        $ctaAssessmentsByRegion = [
-            'all'          => ['active' => 247, 'in_qc' => 48, 'rework' => 23],
-            'Central'      => ['active' => 62,  'in_qc' => 14, 'rework' => 5],
-            'Harrisburg'   => ['active' => 55,  'in_qc' => 11, 'rework' => 0],
-            'Lancaster'    => ['active' => 48,  'in_qc' => 9,  'rework' => 8],
-            'Lehigh'       => ['active' => 52,  'in_qc' => 10, 'rework' => 7],
-            'Distribution' => ['active' => 30,  'in_qc' => 4,  'rework' => 3],
-        ];
-
-        // Admin — alerts and system health
-        // Source: AlertService, PlannerMetricsService
+        // Admin CTA — still mock (AlertService not yet wired)
         $ctaAdmin = [
-            'alerts' => 3,
-            'stale_planners' => 2,
+            'alerts' => 0,
+            'stale_planners' => 0,
         ];
     @endphp
 
@@ -593,7 +461,7 @@
 
                 {{-- Region filter chips --}}
                 <div class="flex flex-wrap gap-1.5 mb-3">
-                    @foreach(['all' => 'All', 'Central' => 'Central', 'Harrisburg' => 'Hbg', 'Lancaster' => 'Lanc', 'Lehigh' => 'Lehigh', 'Distribution' => 'Dist'] as $key => $label)
+                    @foreach(['all' => 'All', 'Central' => 'Central', 'Harrisburg' => 'Hbg', 'Lancaster' => 'Lanc', 'Lehigh' => 'Lehigh', 'Northeast' => 'NE', 'Susquehanna' => 'Susq'] as $key => $label)
                         <button
                             class="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide transition-colors"
                             :class="region === '{{ $key }}' ? 'bg-primary/15 text-primary' : 'bg-base-200 text-base-content/50 hover:text-base-content/70'"
