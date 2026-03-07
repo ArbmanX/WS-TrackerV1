@@ -136,5 +136,8 @@ return [
 
     'sudo_admin_email' => env('SUDO_ADMIN_EMAIL', 'admin@example.com'),
     'sudo_admin_password' => env('SUDO_ADMIN_PASSWORD'),
+    'manager_email' => env('MANAGER_EMAIL'),
+    'manager_password' => env('MANAGER_PASSWORD'),
+    'email_domain' => env('EMAIL_DOMAIN'),
 
 ];

@@ -47,7 +47,6 @@ class RolePermissionSeeder extends Seeder
         ],
         'manager' => [
             'view-dashboard',
-            'access-data-management',
             'manage-users',
         ],
         'planner' => [

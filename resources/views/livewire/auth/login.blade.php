@@ -1,6 +1,6 @@
 <x-layouts::auth>
     <div class="flex flex-col gap-6">
-        <x-auth-header :title="__('Log in to your account')" :description="__('Enter your email and password below to log in')" />
+        <x-auth-header :title="__('Log in to your account')" :description="__('Enter your username or email and password below to log in')" />
 
         <!-- Session Status -->
         <x-auth-session-status class="text-center" :status="session('status')" />
@@ -10,17 +10,17 @@
 
             <!-- Email Address -->
             <fieldset class="fieldset w-full">
-                <legend class="fieldset-legend">{{ __('Email address') }}</legend>
+                <legend class="fieldset-legend">{{ __('Username or Email') }}</legend>
                 <input
                     id="email"
                     name="email"
-                    type="email"
+                    type="text"
                     value="{{ old('email') }}"
                     class="input w-full @error('email') input-error @enderror"
                     required
                     autofocus
-                    autocomplete="email"
-                    placeholder="email@example.com"
+                    autocomplete="username"
+                    placeholder="jsmith or jsmith@company.com"
                 />
                 @error('email')
                     <p class="label text-error">{{ $message }}</p>

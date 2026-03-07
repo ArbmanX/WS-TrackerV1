@@ -79,8 +79,6 @@ return [
             ['label' => 'Monitoring',     'route' => 'monitoring.index',              'icon' => 'signal'],
 
             ['section' => 'Admin',        'permission' => 'manage-users'],
-            ['label' => 'Query Explorer', 'route' => 'data-management.query-explorer','icon' => 'magnifying-glass-circle', 'permission' => 'manage-users'],
-            ['label' => 'Cache Controls', 'route' => 'data-management.cache',         'icon' => 'arrow-path',              'permission' => 'manage-users'],
             ['label' => 'Create User',    'route' => 'user-management.create',        'icon' => 'user-plus',               'permission' => 'manage-users'],
         ],
 

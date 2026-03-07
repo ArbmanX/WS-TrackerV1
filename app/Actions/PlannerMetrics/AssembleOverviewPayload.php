@@ -60,6 +60,11 @@ class AssembleOverviewPayload
     // TODO(human): Implement enrichPlanner — see Learn by Doing below
     private function enrichPlanner(array $planner): array
     {
+        //  initials, 
+        // status_label, 
+        // coaching_message -> only displayed if the user is_planner
+    
+
         return $planner;
     }
 }

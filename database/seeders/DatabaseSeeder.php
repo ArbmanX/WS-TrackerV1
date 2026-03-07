@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             RolePermissionSeeder::class,
             ReferenceDataSeeder::class,
             SudoAdminSeeder::class,
+            ManagerSeeder::class,
         ]);
 
         // User::factory(10)->create();
