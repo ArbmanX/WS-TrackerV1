@@ -5,6 +5,8 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Services\WorkStudio\Shared\ValueObjects\UserQueryContext;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -78,6 +80,26 @@ class User extends Authenticatable
     public function wsCredential(): HasOne
     {
         return $this->hasOne(UserWsCredential::class);
+    }
+
+    public function wsIdentities(): HasMany
+    {
+        return $this->hasMany(UserWsIdentity::class);
+    }
+
+    public function primaryWsIdentity(): HasOne
+    {
+        return $this->hasOne(UserWsIdentity::class)->where('is_primary', true);
+    }
+
+    public function assessments(): BelongsToMany
+    {
+        return $this->belongsToMany(Assessment::class, 'user_assessments')->withTimestamps();
+    }
+
+    public function regions(): BelongsToMany
+    {
+        return $this->belongsToMany(Region::class, 'user_regions')->withTimestamps();
     }
 
     /**
