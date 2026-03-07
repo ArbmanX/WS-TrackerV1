@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **User Management Wizard** (2026-03-07)
+  - Multi-step user creation wizard (`UserWizard` Livewire component)
+  - `UserWsIdentity`, `UserAssessment`, `UserRegion` models with factories and migrations
+  - Relationships on `User`, `Assessment`, `Region`, `WsUser` models
+  - Full test suite (moved model tests to `Feature/Models/` for Laravel app boot)
+
 ### Changed
 - **Planner Overview data source cleanup** (2026-03-07)
   - Dashboard Overview reads from `SystemWideSnapshot` model instead of `CachedQueryService`

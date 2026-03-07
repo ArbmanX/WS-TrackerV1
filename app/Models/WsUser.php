@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 
 class WsUser extends Model
 {
@@ -28,5 +30,15 @@ class WsUser extends Model
             'groups' => 'array',
             'last_synced_at' => 'datetime',
         ];
+    }
+
+    public function identity(): HasOne
+    {
+        return $this->hasOne(UserWsIdentity::class);
+    }
+
+    public function user(): HasOneThrough
+    {
+        return $this->hasOneThrough(User::class, UserWsIdentity::class, 'ws_user_id', 'id', 'id', 'user_id');
     }
 }

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -88,5 +89,10 @@ class Assessment extends Model
     public function contributors(): HasMany
     {
         return $this->hasMany(AssessmentContributor::class, 'job_guid', 'job_guid');
+    }
+
+    public function assignedUsers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'user_assessments')->withTimestamps();
     }
 }
