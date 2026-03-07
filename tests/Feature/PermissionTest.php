@@ -45,17 +45,12 @@ test('users without access-data-management get 403 on query explorer', function 
         ->assertForbidden();
 });
 
-test('manager can access cache controls', function () {
-    $mock = Mockery::mock(\App\Services\WorkStudio\Shared\Cache\CachedQueryService::class);
-    $mock->shouldReceive('getCacheStatus')->andReturn([]);
-    $mock->shouldReceive('getDriverName')->andReturn('database');
-    app()->instance(\App\Services\WorkStudio\Shared\Cache\CachedQueryService::class, $mock);
-
+test('manager cannot access cache controls', function () {
     $user = createUserWithRole('manager');
 
     $this->actingAs($user)
         ->get(route('data-management.cache'))
-        ->assertOk();
+        ->assertForbidden();
 });
 
 test('manager cannot access query explorer', function () {

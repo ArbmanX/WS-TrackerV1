@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Username login support** (2026-03-07)
+  - Users can log in with bare username (auto-appends configured `EMAIL_DOMAIN`) or full email
+  - `ManagerSeeder` for default manager account via `.env` credentials
+  - Manager role scoped down: no data management access (Query Explorer, Cache Controls removed)
+
 - **User Management Wizard** (2026-03-07)
   - Multi-step user creation wizard (`UserWizard` Livewire component)
   - `UserWsIdentity`, `UserAssessment`, `UserRegion` models with factories and migrations
