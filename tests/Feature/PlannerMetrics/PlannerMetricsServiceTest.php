@@ -1,6 +1,8 @@
 <?php
 
-use App\Models\AssessmentMonitor;
+use App\Models\Assessment;
+use App\Models\AssessmentMetric;
+use App\Models\PlannerDailyRecord;
 use App\Models\PlannerJobAssignment;
 use App\Services\PlannerMetrics\PlannerMetricsService;
 use Carbon\CarbonImmutable;
@@ -15,78 +17,91 @@ beforeEach(function () {
     CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 2, 11, 12, 0, 0, 'UTC'));
 
     $this->service = new PlannerMetricsService;
-    $this->fixtureDir = sys_get_temp_dir().'/career_test_'.Str::random(8);
-    mkdir($this->fixtureDir, 0755, true);
-    config()->set('planner_metrics.career_json_path', $this->fixtureDir);
 });
 
 afterEach(function () {
     CarbonImmutable::setTestNow();
-
-    if (is_dir($this->fixtureDir)) {
-        array_map('unlink', glob($this->fixtureDir.'/*.json'));
-        rmdir($this->fixtureDir);
-    }
 });
 
-function writeCareerFixture(string $dir, string $username, array $assessments, string $date = '2026-02-15'): void
+/**
+ * Create a planner with job assignments and daily records.
+ */
+function createPlanner(string $username, array $dailyRecords = [], array $jobGuids = []): void
 {
-    $data = [
-        'career_timeframe' => '1yrs 0months 0days',
-        'total_career_miles' => 100.0,
-        'assessment_count' => count($assessments),
-        'total_career_unit_count' => 50,
-        'assessments' => $assessments,
-    ];
+    $frstrUser = 'ASPLUNDH\\'.$username;
 
-    file_put_contents(
-        $dir.'/'.$username.'_'.$date.'.json',
-        json_encode($data, JSON_PRETTY_PRINT)
-    );
+    if (empty($jobGuids)) {
+        $jobGuids = ['{'.Str::uuid()->toString().'}'];
+    }
+
+    foreach ($jobGuids as $guid) {
+        PlannerJobAssignment::factory()->create([
+            'frstr_user' => $frstrUser,
+            'normalized_username' => $username,
+            'job_guid' => $guid,
+        ]);
+    }
+
+    foreach ($dailyRecords as $record) {
+        PlannerDailyRecord::create([
+            'job_guid' => $record['job_guid'] ?? $jobGuids[0],
+            'frstr_user' => $frstrUser,
+            'work_order' => $record['work_order'] ?? fake()->numerify('WO-######'),
+            'extension' => '@',
+            'assess_date' => $record['date'],
+            'stat_name' => $record['stat_name'] ?? fake()->numerify('STA-###'),
+            'sequence' => $record['sequence'] ?? fake()->numberBetween(1, 999),
+            'unit_guid' => '{'.Str::uuid()->toString().'}',
+            'unit' => 'SPM',
+            'span_miles' => $record['miles'],
+            'last_synced_at' => now(),
+        ]);
+    }
 }
 
-// ─── Existing tests (updated for Sunday–Saturday boundaries) ─────────────────
+/**
+ * Create an active assessment with metrics for a given job_guid.
+ */
+function createActiveAssessment(string $jobGuid, array $overrides = [], array $metricOverrides = []): void
+{
+    Assessment::factory()->create(array_merge([
+        'job_guid' => $jobGuid,
+        'status' => 'ACTIV',
+    ], $overrides));
 
-test('it returns empty array when no career JSON files exist', function () {
+    AssessmentMetric::factory()->create(array_merge([
+        'job_guid' => $jobGuid,
+    ], $metricOverrides));
+}
+
+// ─── Basic tests ─────────────────────────────────────────────────────────────
+
+test('it returns empty array when no planners exist', function () {
     expect($this->service->getQuotaMetrics())->toBe([])
         ->and($this->service->getHealthMetrics())->toBe([]);
 });
 
-test('it calculates weekly miles from daily_metrics in JSON', function () {
+test('it calculates weekly miles from planner_daily_records', function () {
     $weekStart = CarbonImmutable::now()->startOfWeek(CarbonImmutable::SUNDAY); // Sun Feb 8
 
-    writeCareerFixture($this->fixtureDir, 'jsmith', [
-        [
-            'planner_username' => 'ASPLUNDH\\jsmith',
-            'job_guid' => '{11111111-1111-1111-1111-111111111111}',
-            'scope_year' => 2026,
-            'daily_metrics' => [
-                ['completion_date' => $weekStart->format('Y-m-d'), 'daily_footage_miles' => 2.5, 'unit_count' => 10, 'stations' => []],
-                ['completion_date' => $weekStart->addDay()->format('Y-m-d'), 'daily_footage_miles' => 3.0, 'unit_count' => 12, 'stations' => []],
-            ],
-        ],
+    createPlanner('jsmith', [
+        ['date' => $weekStart->format('Y-m-d'), 'miles' => 2.5],
+        ['date' => $weekStart->addDay()->format('Y-m-d'), 'miles' => 3.0],
     ]);
 
     $result = $this->service->getQuotaMetrics('week');
 
     expect($result)->toHaveCount(1)
         ->and($result[0]['period_miles'])->toBe(5.5)
-        ->and($result[0]['username'])->toBe('jsmith');
+        ->and($result[0]['username'])->toBe('ASPLUNDH\\jsmith');
 });
 
 test('it calculates monthly miles aggregation', function () {
     $startOfMonth = CarbonImmutable::now()->startOfMonth(); // Feb 1
 
-    writeCareerFixture($this->fixtureDir, 'alice', [
-        [
-            'planner_username' => 'ASPLUNDH\\alice',
-            'job_guid' => '{22222222-2222-2222-2222-222222222222}',
-            'scope_year' => 2026,
-            'daily_metrics' => [
-                ['completion_date' => $startOfMonth->format('Y-m-d'), 'daily_footage_miles' => 4.0, 'unit_count' => 10, 'stations' => []],
-                ['completion_date' => $startOfMonth->addDays(5)->format('Y-m-d'), 'daily_footage_miles' => 3.0, 'unit_count' => 8, 'stations' => []],
-            ],
-        ],
+    createPlanner('alice', [
+        ['date' => $startOfMonth->format('Y-m-d'), 'miles' => 4.0],
+        ['date' => $startOfMonth->addDays(5)->format('Y-m-d'), 'miles' => 3.0],
     ]);
 
     $result = $this->service->getQuotaMetrics('month');
@@ -100,16 +115,9 @@ test('it computes streak count for consecutive on-target weeks', function () {
     $lastWeekStart = $now->startOfWeek(CarbonImmutable::SUNDAY)->subWeek(); // Sun Feb 1
     $twoWeeksAgo = $lastWeekStart->subWeek(); // Sun Jan 25
 
-    writeCareerFixture($this->fixtureDir, 'streaker', [
-        [
-            'planner_username' => 'ASPLUNDH\\streaker',
-            'job_guid' => '{33333333-3333-3333-3333-333333333333}',
-            'scope_year' => 2026,
-            'daily_metrics' => [
-                ['completion_date' => $twoWeeksAgo->format('Y-m-d'), 'daily_footage_miles' => 7.0, 'unit_count' => 20, 'stations' => []],
-                ['completion_date' => $lastWeekStart->format('Y-m-d'), 'daily_footage_miles' => 6.5, 'unit_count' => 18, 'stations' => []],
-            ],
-        ],
+    createPlanner('streaker', [
+        ['date' => $twoWeeksAgo->format('Y-m-d'), 'miles' => 7.0],
+        ['date' => $lastWeekStart->format('Y-m-d'), 'miles' => 6.5],
     ]);
 
     $result = $this->service->getQuotaMetrics('week');
@@ -119,21 +127,14 @@ test('it computes streak count for consecutive on-target weeks', function () {
 
 test('it resets streak when a week is below quota', function () {
     $now = CarbonImmutable::now();
-    $lastWeekStart = $now->startOfWeek(CarbonImmutable::SUNDAY)->subWeek(); // Sun Feb 1
-    $twoWeeksAgo = $lastWeekStart->subWeek(); // Sun Jan 25
-    $threeWeeksAgo = $twoWeeksAgo->subWeek(); // Sun Jan 18
+    $lastWeekStart = $now->startOfWeek(CarbonImmutable::SUNDAY)->subWeek();
+    $twoWeeksAgo = $lastWeekStart->subWeek();
+    $threeWeeksAgo = $twoWeeksAgo->subWeek();
 
-    writeCareerFixture($this->fixtureDir, 'broken', [
-        [
-            'planner_username' => 'ASPLUNDH\\broken',
-            'job_guid' => '{44444444-4444-4444-4444-444444444444}',
-            'scope_year' => 2026,
-            'daily_metrics' => [
-                ['completion_date' => $threeWeeksAgo->format('Y-m-d'), 'daily_footage_miles' => 7.0, 'unit_count' => 20, 'stations' => []],
-                ['completion_date' => $twoWeeksAgo->format('Y-m-d'), 'daily_footage_miles' => 2.0, 'unit_count' => 5, 'stations' => []],
-                ['completion_date' => $lastWeekStart->format('Y-m-d'), 'daily_footage_miles' => 8.0, 'unit_count' => 25, 'stations' => []],
-            ],
-        ],
+    createPlanner('broken', [
+        ['date' => $threeWeeksAgo->format('Y-m-d'), 'miles' => 7.0],
+        ['date' => $twoWeeksAgo->format('Y-m-d'), 'miles' => 2.0],
+        ['date' => $lastWeekStart->format('Y-m-d'), 'miles' => 8.0],
     ]);
 
     $result = $this->service->getQuotaMetrics('week');
@@ -141,16 +142,10 @@ test('it resets streak when a week is below quota', function () {
     expect($result[0]['streak_weeks'])->toBe(1);
 });
 
-test('it returns planners from JSON files', function () {
-    writeCareerFixture($this->fixtureDir, 'charlie', [
-        ['planner_username' => 'ASPLUNDH\\charlie', 'job_guid' => '{55555555-5555-5555-5555-555555555555}', 'scope_year' => 2026, 'daily_metrics' => []],
-    ]);
-    writeCareerFixture($this->fixtureDir, 'alice', [
-        ['planner_username' => 'ASPLUNDH\\alice', 'job_guid' => '{66666666-6666-6666-6666-666666666666}', 'scope_year' => 2026, 'daily_metrics' => []],
-    ]);
-    writeCareerFixture($this->fixtureDir, 'bob', [
-        ['planner_username' => 'ASPLUNDH\\bob', 'job_guid' => '{77777777-7777-7777-7777-777777777777}', 'scope_year' => 2026, 'daily_metrics' => []],
-    ]);
+test('it returns planners from job assignments', function () {
+    createPlanner('charlie');
+    createPlanner('alice');
+    createPlanner('bob');
 
     $result = $this->service->getQuotaMetrics();
 
@@ -158,17 +153,10 @@ test('it returns planners from JSON files', function () {
 });
 
 test('it includes all expected keys in quota metrics return', function () {
-    $weekStart = CarbonImmutable::now()->startOfWeek(CarbonImmutable::SUNDAY); // Sun Feb 8
+    $weekStart = CarbonImmutable::now()->startOfWeek(CarbonImmutable::SUNDAY);
 
-    writeCareerFixture($this->fixtureDir, 'editor', [
-        [
-            'planner_username' => 'ASPLUNDH\\editor',
-            'job_guid' => '{88888888-8888-8888-8888-888888888888}',
-            'scope_year' => 2026,
-            'daily_metrics' => [
-                ['completion_date' => $weekStart->format('Y-m-d'), 'daily_footage_miles' => 3.0, 'unit_count' => 10, 'stations' => []],
-            ],
-        ],
+    createPlanner('editor', [
+        ['date' => $weekStart->format('Y-m-d'), 'miles' => 3.0],
     ]);
 
     $result = $this->service->getQuotaMetrics('week');
@@ -180,28 +168,23 @@ test('it includes all expected keys in quota metrics return', function () {
     ]);
 });
 
-test('it returns health metrics from assessment_monitors via job_guid bridge', function () {
+test('it returns health metrics from assessments via job_guid bridge', function () {
     $jobGuid = '{'.Str::uuid()->toString().'}';
 
-    writeCareerFixture($this->fixtureDir, 'healthcheck', [
-        ['planner_username' => 'ASPLUNDH\\healthcheck', 'job_guid' => $jobGuid, 'scope_year' => 2026, 'daily_metrics' => []],
-    ]);
-
-    PlannerJobAssignment::factory()->create([
-        'normalized_username' => 'healthcheck',
-        'frstr_user' => 'ASPLUNDH\\healthcheck',
-        'job_guid' => $jobGuid,
-    ]);
-
-    AssessmentMonitor::factory()->withSnapshots(3)->create([
-        'job_guid' => $jobGuid,
-        'current_status' => 'ACTIV',
+    createPlanner('healthcheck', [], [$jobGuid]);
+    createActiveAssessment($jobGuid, [
+        'raw_title' => 'Circuit-1234',
+        'region' => 'NORTH',
+        'length' => 16093.44,
+        'length_completed' => 8046.72,
+        'percent_complete' => 50,
+        'last_edited' => now()->subDays(3),
     ]);
 
     $result = $this->service->getHealthMetrics();
 
     expect($result)->toHaveCount(1)
-        ->and($result[0]['username'])->toBe('healthcheck')
+        ->and($result[0]['username'])->toBe('ASPLUNDH\\healthcheck')
         ->and($result[0]['active_assessment_count'])->toBe(1)
         ->and($result[0])->toHaveKeys([
             'days_since_last_edit', 'pending_over_threshold',
@@ -213,113 +196,53 @@ test('it aggregates health metrics across multiple active assessments per planne
     $guid1 = '{'.Str::uuid()->toString().'}';
     $guid2 = '{'.Str::uuid()->toString().'}';
 
-    writeCareerFixture($this->fixtureDir, 'multi', [
-        ['planner_username' => 'ASPLUNDH\\multi', 'job_guid' => $guid1, 'scope_year' => 2026, 'daily_metrics' => []],
-        ['planner_username' => 'ASPLUNDH\\multi', 'job_guid' => $guid2, 'scope_year' => 2026, 'daily_metrics' => []],
-    ]);
-
-    PlannerJobAssignment::factory()->create([
-        'normalized_username' => 'multi',
-        'frstr_user' => 'ASPLUNDH\\multi',
-        'job_guid' => $guid1,
-    ]);
-    PlannerJobAssignment::factory()->create([
-        'normalized_username' => 'multi',
-        'frstr_user' => 'ASPLUNDH\\multi',
-        'job_guid' => $guid2,
-    ]);
-
-    AssessmentMonitor::factory()->withSnapshots(1)->create([
-        'job_guid' => $guid1,
-        'current_status' => 'ACTIV',
-    ]);
-    AssessmentMonitor::factory()->withSnapshots(1)->create([
-        'job_guid' => $guid2,
-        'current_status' => 'ACTIV',
-    ]);
+    createPlanner('multi', [], [$guid1, $guid2]);
+    createActiveAssessment($guid1);
+    createActiveAssessment($guid2);
 
     $result = $this->service->getHealthMetrics();
 
     expect($result[0]['active_assessment_count'])->toBe(2);
 });
 
-test('it uses forNormalizedUser scope for username bridge', function () {
+test('it uses forUser scope for username bridge', function () {
     $guid = '{'.Str::uuid()->toString().'}';
 
-    writeCareerFixture($this->fixtureDir, 'scopetest', [
-        ['planner_username' => 'ASPLUNDH\\scopetest', 'job_guid' => $guid, 'scope_year' => 2026, 'daily_metrics' => []],
-    ]);
-
-    PlannerJobAssignment::factory()->create([
-        'normalized_username' => 'scopetest',
-        'frstr_user' => 'ASPLUNDH\\scopetest',
-        'job_guid' => $guid,
-    ]);
-
-    PlannerJobAssignment::factory()->create([
-        'normalized_username' => 'otheruser',
-        'frstr_user' => 'ASPLUNDH\\otheruser',
-        'job_guid' => '{'.Str::uuid()->toString().'}',
-    ]);
-
-    AssessmentMonitor::factory()->withSnapshots(1)->create([
-        'job_guid' => $guid,
-        'current_status' => 'ACTIV',
-    ]);
+    createPlanner('scopetest', [], [$guid]);
+    createPlanner('otheruser');
+    createActiveAssessment($guid);
 
     $result = $this->service->getHealthMetrics();
 
-    expect($result[0]['active_assessment_count'])->toBe(1);
+    $indexed = collect($result)->keyBy('username');
+
+    expect($indexed['ASPLUNDH\\scopetest']['active_assessment_count'])->toBe(1)
+        ->and($indexed['ASPLUNDH\\otheruser']['active_assessment_count'])->toBe(0);
 });
 
 test('it returns success/warning/error status based on thresholds', function () {
-    $weekStart = CarbonImmutable::now()->startOfWeek(CarbonImmutable::SUNDAY); // Sun Feb 8
+    $weekStart = CarbonImmutable::now()->startOfWeek(CarbonImmutable::SUNDAY);
 
-    writeCareerFixture($this->fixtureDir, 'onpace', [
-        [
-            'planner_username' => 'ASPLUNDH\\onpace',
-            'job_guid' => '{AAAA1111-1111-1111-1111-111111111111}',
-            'scope_year' => 2026,
-            'daily_metrics' => [
-                ['completion_date' => $weekStart->format('Y-m-d'), 'daily_footage_miles' => 7.0, 'unit_count' => 20, 'stations' => []],
-            ],
-        ],
+    createPlanner('onpace', [
+        ['date' => $weekStart->format('Y-m-d'), 'miles' => 7.0],
     ]);
-
-    writeCareerFixture($this->fixtureDir, 'behind', [
-        [
-            'planner_username' => 'ASPLUNDH\\behind',
-            'job_guid' => '{BBBB2222-2222-2222-2222-222222222222}',
-            'scope_year' => 2026,
-            'daily_metrics' => [
-                ['completion_date' => $weekStart->format('Y-m-d'), 'daily_footage_miles' => 5.0, 'unit_count' => 14, 'stations' => []],
-            ],
-        ],
+    createPlanner('behind', [
+        ['date' => $weekStart->format('Y-m-d'), 'miles' => 5.0],
     ]);
-
-    writeCareerFixture($this->fixtureDir, 'wayout', [
-        [
-            'planner_username' => 'ASPLUNDH\\wayout',
-            'job_guid' => '{CCCC3333-3333-3333-3333-333333333333}',
-            'scope_year' => 2026,
-            'daily_metrics' => [
-                ['completion_date' => $weekStart->format('Y-m-d'), 'daily_footage_miles' => 1.0, 'unit_count' => 3, 'stations' => []],
-            ],
-        ],
+    createPlanner('wayout', [
+        ['date' => $weekStart->format('Y-m-d'), 'miles' => 1.0],
     ]);
 
     $result = $this->service->getQuotaMetrics('week');
     $indexed = collect($result)->keyBy('username');
 
-    expect($indexed['onpace']['status'])->toBe('success')
-        ->and($indexed['behind']['status'])->toBe('warning')
-        ->and($indexed['wayout']['status'])->toBe('error');
+    expect($indexed['ASPLUNDH\\onpace']['status'])->toBe('success')
+        ->and($indexed['ASPLUNDH\\behind']['status'])->toBe('warning')
+        ->and($indexed['ASPLUNDH\\wayout']['status'])->toBe('error');
 });
 
 test('it handles planner with zero active assessments in health view', function () {
-    writeCareerFixture($this->fixtureDir, 'noassess', [
-        ['planner_username' => 'ASPLUNDH\\noassess', 'job_guid' => '{DDDD4444-4444-4444-4444-444444444444}', 'scope_year' => 2026, 'daily_metrics' => []],
-    ]);
+    createPlanner('noassess');
 
     $result = $this->service->getHealthMetrics();
 
@@ -333,15 +256,8 @@ test('it respects config values for quota target and thresholds', function () {
 
     $weekStart = CarbonImmutable::now()->startOfWeek(CarbonImmutable::SUNDAY);
 
-    writeCareerFixture($this->fixtureDir, 'configtest', [
-        [
-            'planner_username' => 'ASPLUNDH\\configtest',
-            'job_guid' => '{EEEE5555-5555-5555-5555-555555555555}',
-            'scope_year' => 2026,
-            'daily_metrics' => [
-                ['completion_date' => $weekStart->format('Y-m-d'), 'daily_footage_miles' => 7.0, 'unit_count' => 20, 'stations' => []],
-            ],
-        ],
+    createPlanner('configtest', [
+        ['date' => $weekStart->format('Y-m-d'), 'miles' => 7.0],
     ]);
 
     $result = $this->service->getQuotaMetrics('week');
@@ -351,93 +267,25 @@ test('it respects config values for quota target and thresholds', function () {
         ->and($result[0]['status'])->toBe('error');
 });
 
-test('it picks the most recent JSON file per planner', function () {
-    $weekStart = CarbonImmutable::now()->startOfWeek(CarbonImmutable::SUNDAY);
-
-    writeCareerFixture($this->fixtureDir, 'jsmith', [
-        [
-            'planner_username' => 'ASPLUNDH\\jsmith',
-            'job_guid' => '{FFFF6666-6666-6666-6666-666666666666}',
-            'scope_year' => 2026,
-            'daily_metrics' => [
-                ['completion_date' => $weekStart->format('Y-m-d'), 'daily_footage_miles' => 1.0, 'unit_count' => 5, 'stations' => []],
-            ],
-        ],
-    ], '2026-02-10');
-
-    writeCareerFixture($this->fixtureDir, 'jsmith', [
-        [
-            'planner_username' => 'ASPLUNDH\\jsmith',
-            'job_guid' => '{FFFF7777-7777-7777-7777-777777777777}',
-            'scope_year' => 2026,
-            'daily_metrics' => [
-                ['completion_date' => $weekStart->format('Y-m-d'), 'daily_footage_miles' => 5.0, 'unit_count' => 15, 'stations' => []],
-            ],
-        ],
-    ], '2026-02-15');
-
-    $result = $this->service->getQuotaMetrics('week');
-
-    expect($result)->toHaveCount(1)
-        ->and($result[0]['period_miles'])->toBe(5.0);
-});
-
 test('it strips domain prefix for display_name', function () {
-    writeCareerFixture($this->fixtureDir, 'tgibson', [
-        ['planner_username' => 'ASPLUNDH\\tgibson', 'job_guid' => '{AAAA8888-8888-8888-8888-888888888888}', 'scope_year' => 2026, 'daily_metrics' => []],
-    ]);
+    createPlanner('tgibson');
 
     $planners = $this->service->getDistinctPlanners();
 
     expect($planners[0]['display_name'])->toBe('tgibson');
 });
 
-test('it handles planner with empty assessments array', function () {
-    $data = [
-        'career_timeframe' => null,
-        'total_career_miles' => 0,
-        'assessment_count' => 0,
-        'total_career_unit_count' => 0,
-        'assessments' => [],
-    ];
-
-    file_put_contents(
-        $this->fixtureDir.'/nodata_2026-02-15.json',
-        json_encode($data, JSON_PRETTY_PRINT)
-    );
+test('it handles planner with no daily records', function () {
+    createPlanner('nodata');
 
     $planners = $this->service->getDistinctPlanners();
 
     expect($planners)->toHaveCount(1)
-        ->and($planners[0]['username'])->toBe('nodata')
+        ->and($planners[0]['username'])->toBe('ASPLUNDH\\nodata')
         ->and($planners[0]['display_name'])->toBe('nodata');
 });
 
-test('it handles underscored usernames in filenames', function () {
-    $weekStart = CarbonImmutable::now()->startOfWeek(CarbonImmutable::SUNDAY);
-
-    writeCareerFixture($this->fixtureDir, 'eci_chris', [
-        [
-            'planner_username' => 'ASPLUNDH\\eci chris',
-            'job_guid' => '{AAAA9999-9999-9999-9999-999999999999}',
-            'scope_year' => 2026,
-            'daily_metrics' => [
-                ['completion_date' => $weekStart->format('Y-m-d'), 'daily_footage_miles' => 4.0, 'unit_count' => 10, 'stations' => []],
-            ],
-        ],
-    ]);
-
-    $result = $this->service->getQuotaMetrics('week');
-
-    expect($result)->toHaveCount(1)
-        ->and($result[0]['username'])->toBe('eci_chris')
-        ->and($result[0]['display_name'])->toBe('eci chris')
-        ->and($result[0]['period_miles'])->toBe(4.0);
-});
-
-test('it returns empty when directory does not exist', function () {
-    config()->set('planner_metrics.career_json_path', '/tmp/nonexistent_'.Str::random(16));
-
+test('it returns empty when no job assignments exist', function () {
     expect($this->service->getQuotaMetrics())->toBe([])
         ->and($this->service->getDistinctPlanners())->toBe([]);
 });
@@ -445,20 +293,12 @@ test('it returns empty when directory does not exist', function () {
 // ─── Offset navigation tests ────────────────────────────────────────────────
 
 test('it returns previous week data when offset is -1', function () {
-    // Frozen: Wed Feb 11. Previous week: Sun Feb 1 – Sat Feb 7.
-    writeCareerFixture($this->fixtureDir, 'nav', [
-        [
-            'planner_username' => 'ASPLUNDH\\nav',
-            'job_guid' => '{11111111-1111-1111-1111-111111111111}',
-            'scope_year' => 2026,
-            'daily_metrics' => [
-                // Previous week data (Feb 1 and Feb 5)
-                ['completion_date' => '2026-02-01', 'daily_footage_miles' => 3.0, 'unit_count' => 10, 'stations' => []],
-                ['completion_date' => '2026-02-05', 'daily_footage_miles' => 4.0, 'unit_count' => 12, 'stations' => []],
-                // Current week data (Feb 8) — should NOT be included
-                ['completion_date' => '2026-02-08', 'daily_footage_miles' => 99.0, 'unit_count' => 50, 'stations' => []],
-            ],
-        ],
+    createPlanner('nav', [
+        // Previous week data (Feb 1 and Feb 5)
+        ['date' => '2026-02-01', 'miles' => 3.0],
+        ['date' => '2026-02-05', 'miles' => 4.0],
+        // Current week data (Feb 8) — should NOT be included
+        ['date' => '2026-02-08', 'miles' => 99.0],
     ]);
 
     $result = $this->service->getQuotaMetrics('week', -1);
@@ -467,18 +307,10 @@ test('it returns previous week data when offset is -1', function () {
 });
 
 test('it returns two weeks ago data when offset is -2', function () {
-    // Frozen: Wed Feb 11. Two weeks ago: Sun Jan 25 – Sat Jan 31.
-    writeCareerFixture($this->fixtureDir, 'nav2', [
-        [
-            'planner_username' => 'ASPLUNDH\\nav2',
-            'job_guid' => '{22222222-2222-2222-2222-222222222222}',
-            'scope_year' => 2026,
-            'daily_metrics' => [
-                ['completion_date' => '2026-01-27', 'daily_footage_miles' => 5.5, 'unit_count' => 15, 'stations' => []],
-                // Previous week data — should NOT be included
-                ['completion_date' => '2026-02-03', 'daily_footage_miles' => 99.0, 'unit_count' => 50, 'stations' => []],
-            ],
-        ],
+    createPlanner('nav2', [
+        ['date' => '2026-01-27', 'miles' => 5.5],
+        // Previous week data — should NOT be included
+        ['date' => '2026-02-03', 'miles' => 99.0],
     ]);
 
     $result = $this->service->getQuotaMetrics('week', -2);
@@ -487,18 +319,10 @@ test('it returns two weeks ago data when offset is -2', function () {
 });
 
 test('it includes Saturday data for past weeks (full Sun-Sat range)', function () {
-    // Previous week: Sun Feb 1 – Sat Feb 7. Data on Saturday should be included.
-    writeCareerFixture($this->fixtureDir, 'sattest', [
-        [
-            'planner_username' => 'ASPLUNDH\\sattest',
-            'job_guid' => '{33333333-3333-3333-3333-333333333333}',
-            'scope_year' => 2026,
-            'daily_metrics' => [
-                ['completion_date' => '2026-02-07', 'daily_footage_miles' => 2.0, 'unit_count' => 5, 'stations' => []],
-                // Sunday (start of NEXT week) — excluded from offset -1
-                ['completion_date' => '2026-02-08', 'daily_footage_miles' => 99.0, 'unit_count' => 50, 'stations' => []],
-            ],
-        ],
+    createPlanner('sattest', [
+        ['date' => '2026-02-07', 'miles' => 2.0],
+        // Sunday (start of NEXT week) — excluded from offset -1
+        ['date' => '2026-02-08', 'miles' => 99.0],
     ]);
 
     $result = $this->service->getQuotaMetrics('week', -1);
@@ -507,20 +331,12 @@ test('it includes Saturday data for past weeks (full Sun-Sat range)', function (
 });
 
 test('it shows partial week for current week offset 0', function () {
-    // Frozen: Wed Feb 11. Current week window = Sun Feb 8 – Wed Feb 11.
-    writeCareerFixture($this->fixtureDir, 'partial', [
-        [
-            'planner_username' => 'ASPLUNDH\\partial',
-            'job_guid' => '{44444444-4444-4444-4444-444444444444}',
-            'scope_year' => 2026,
-            'daily_metrics' => [
-                ['completion_date' => '2026-02-08', 'daily_footage_miles' => 1.0, 'unit_count' => 3, 'stations' => []],
-                ['completion_date' => '2026-02-10', 'daily_footage_miles' => 2.0, 'unit_count' => 5, 'stations' => []],
-                ['completion_date' => '2026-02-11', 'daily_footage_miles' => 1.5, 'unit_count' => 4, 'stations' => []],
-                // Future data (Feb 12) — should NOT be included
-                ['completion_date' => '2026-02-12', 'daily_footage_miles' => 99.0, 'unit_count' => 50, 'stations' => []],
-            ],
-        ],
+    createPlanner('partial', [
+        ['date' => '2026-02-08', 'miles' => 1.0],
+        ['date' => '2026-02-10', 'miles' => 2.0],
+        ['date' => '2026-02-11', 'miles' => 1.5],
+        // Future data (Feb 12) — should NOT be included
+        ['date' => '2026-02-12', 'miles' => 99.0],
     ]);
 
     $result = $this->service->getQuotaMetrics('week', 0);
@@ -571,23 +387,15 @@ test('it always returns 0 offset for non-week periods', function () {
 // ─── Scope-year (fiscal year Jul 1 – Jun 30) tests ──────────────────────────
 
 test('it calculates scope-year from July 1 to June 30', function () {
-    // Frozen: Feb 11, 2026. Fiscal year = Jul 1, 2025 – Jun 30, 2026.
-    writeCareerFixture($this->fixtureDir, 'fiscal', [
-        [
-            'planner_username' => 'ASPLUNDH\\fiscal',
-            'job_guid' => '{55555555-5555-5555-5555-555555555555}',
-            'scope_year' => 2026,
-            'daily_metrics' => [
-                // Aug 2025 — within fiscal year
-                ['completion_date' => '2025-08-15', 'daily_footage_miles' => 3.0, 'unit_count' => 10, 'stations' => []],
-                // Dec 2025 — within fiscal year
-                ['completion_date' => '2025-12-10', 'daily_footage_miles' => 2.0, 'unit_count' => 8, 'stations' => []],
-                // Feb 2026 — within fiscal year
-                ['completion_date' => '2026-02-05', 'daily_footage_miles' => 4.0, 'unit_count' => 12, 'stations' => []],
-                // Jun 2025 — BEFORE fiscal year, should NOT be included
-                ['completion_date' => '2025-06-15', 'daily_footage_miles' => 99.0, 'unit_count' => 50, 'stations' => []],
-            ],
-        ],
+    createPlanner('fiscal', [
+        // Aug 2025 — within fiscal year
+        ['date' => '2025-08-15', 'miles' => 3.0],
+        // Dec 2025 — within fiscal year
+        ['date' => '2025-12-10', 'miles' => 2.0],
+        // Feb 2026 — within fiscal year
+        ['date' => '2026-02-05', 'miles' => 4.0],
+        // Jun 2025 — BEFORE fiscal year, should NOT be included
+        ['date' => '2025-06-15', 'miles' => 99.0],
     ]);
 
     $result = $this->service->getQuotaMetrics('scope-year', 0);
@@ -596,21 +404,13 @@ test('it calculates scope-year from July 1 to June 30', function () {
 });
 
 test('it shifts scope-year with offset', function () {
-    // Frozen: Feb 11, 2026. Offset -1 = Jul 1, 2024 – Jun 30, 2025.
-    writeCareerFixture($this->fixtureDir, 'pastfiscal', [
-        [
-            'planner_username' => 'ASPLUNDH\\pastfiscal',
-            'job_guid' => '{66666666-6666-6666-6666-666666666666}',
-            'scope_year' => 2025,
-            'daily_metrics' => [
-                // Oct 2024 — within previous fiscal year
-                ['completion_date' => '2024-10-20', 'daily_footage_miles' => 5.0, 'unit_count' => 15, 'stations' => []],
-                // Mar 2025 — within previous fiscal year
-                ['completion_date' => '2025-03-12', 'daily_footage_miles' => 3.0, 'unit_count' => 10, 'stations' => []],
-                // Aug 2025 — CURRENT fiscal year, NOT included in offset -1
-                ['completion_date' => '2025-08-15', 'daily_footage_miles' => 99.0, 'unit_count' => 50, 'stations' => []],
-            ],
-        ],
+    createPlanner('pastfiscal', [
+        // Oct 2024 — within previous fiscal year
+        ['date' => '2024-10-20', 'miles' => 5.0],
+        // Mar 2025 — within previous fiscal year
+        ['date' => '2025-03-12', 'miles' => 3.0],
+        // Aug 2025 — CURRENT fiscal year, NOT included in offset -1
+        ['date' => '2025-08-15', 'miles' => 99.0],
     ]);
 
     $result = $this->service->getQuotaMetrics('scope-year', -1);
@@ -621,34 +421,28 @@ test('it shifts scope-year with offset', function () {
 // ─── Period label tests ──────────────────────────────────────────────────────
 
 test('it generates correct period label for same-year range', function () {
-    // Frozen: Wed Feb 11. Week offset 0 = Feb 8 – Feb 11, 2026.
     expect($this->service->getPeriodLabel('week', 0))->toBe('Feb 8 – Feb 11, 2026');
 });
 
 test('it generates full week label for past weeks', function () {
-    // Week offset -1 = Feb 1 – Feb 7, 2026.
     expect($this->service->getPeriodLabel('week', -1))->toBe('Feb 1 – Feb 7, 2026');
 });
 
 test('it generates cross-year period label when range spans years', function () {
-    // Freeze to Friday Jan 2, 2026. Current week (Sunday-start) = Dec 28, 2025 – Jan 2, 2026.
     CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 1, 2, 12, 0, 0, 'UTC'));
 
     expect($this->service->getPeriodLabel('week', 0))->toBe('Dec 28, 2025 – Jan 2, 2026');
 });
 
 test('it generates month period label', function () {
-    // Frozen: Feb 11. Month offset 0 = Feb 1 – Feb 11, 2026.
     expect($this->service->getPeriodLabel('month', 0))->toBe('Feb 1 – Feb 11, 2026');
 });
 
 test('it generates full month label for past months', function () {
-    // Month offset -1 = Jan 1 – Jan 31, 2026.
     expect($this->service->getPeriodLabel('month', -1))->toBe('Jan 1 – Jan 31, 2026');
 });
 
 test('it generates scope-year period label', function () {
-    // Scope-year offset 0 = Jul 1, 2025 – Feb 11, 2026.
     expect($this->service->getPeriodLabel('scope-year', 0))->toBe('Jul 1, 2025 – Feb 11, 2026');
 });
 
@@ -658,31 +452,14 @@ test('resolveHealthSignal returns circuits key with correct count', function () 
     $guid1 = '{'.Str::uuid()->toString().'}';
     $guid2 = '{'.Str::uuid()->toString().'}';
 
-    writeCareerFixture($this->fixtureDir, 'drawer', [
-        ['planner_username' => 'ASPLUNDH\\drawer', 'job_guid' => $guid1, 'scope_year' => 2026, 'daily_metrics' => []],
-    ]);
+    createPlanner('drawer', [], [$guid1, $guid2]);
 
-    PlannerJobAssignment::factory()->create([
-        'normalized_username' => 'drawer',
-        'frstr_user' => 'ASPLUNDH\\drawer',
-        'job_guid' => $guid1,
-    ]);
-    PlannerJobAssignment::factory()->create([
-        'normalized_username' => 'drawer',
-        'frstr_user' => 'ASPLUNDH\\drawer',
-        'job_guid' => $guid2,
-    ]);
-
-    AssessmentMonitor::factory()->withSnapshots(1)->create([
-        'job_guid' => $guid1,
-        'current_status' => 'ACTIV',
-        'line_name' => 'Circuit-1234',
+    createActiveAssessment($guid1, [
+        'raw_title' => 'Circuit-1234',
         'region' => 'NORTH',
     ]);
-    AssessmentMonitor::factory()->withSnapshots(1)->create([
-        'job_guid' => $guid2,
-        'current_status' => 'ACTIV',
-        'line_name' => 'Circuit-5678',
+    createActiveAssessment($guid2, [
+        'raw_title' => 'Circuit-5678',
         'region' => 'SOUTH',
     ]);
 
@@ -695,22 +472,11 @@ test('resolveHealthSignal returns circuits key with correct count', function () 
 test('each circuit has expected keys', function () {
     $guid = '{'.Str::uuid()->toString().'}';
 
-    writeCareerFixture($this->fixtureDir, 'keys', [
-        ['planner_username' => 'ASPLUNDH\\keys', 'job_guid' => $guid, 'scope_year' => 2026, 'daily_metrics' => []],
-    ]);
-
-    PlannerJobAssignment::factory()->create([
-        'normalized_username' => 'keys',
-        'frstr_user' => 'ASPLUNDH\\keys',
-        'job_guid' => $guid,
-    ]);
-
-    AssessmentMonitor::factory()->withSnapshots(1)->create([
-        'job_guid' => $guid,
-        'current_status' => 'ACTIV',
-        'line_name' => 'Circuit-9999',
+    createPlanner('keys', [], [$guid]);
+    createActiveAssessment($guid, [
+        'raw_title' => 'Circuit-9999',
         'region' => 'EAST',
-        'total_miles' => 15.5,
+        'length' => 24944.832, // ~15.5 miles
     ]);
 
     $result = $this->service->getHealthMetrics();
@@ -725,34 +491,26 @@ test('each circuit has expected keys', function () {
         ->and($circuit['total_miles'])->toBe(15.5);
 });
 
-test('circuits array is empty when no active monitors exist', function () {
-    writeCareerFixture($this->fixtureDir, 'nocircuit', [
-        ['planner_username' => 'ASPLUNDH\\nocircuit', 'job_guid' => '{AAAA0000-0000-0000-0000-000000000000}', 'scope_year' => 2026, 'daily_metrics' => []],
-    ]);
+test('circuits array is empty when no active assessments exist', function () {
+    createPlanner('nocircuit');
 
     $result = $this->service->getHealthMetrics();
 
     expect($result[0]['circuits'])->toBe([]);
 });
 
-test('circuits handles null latest_snapshot gracefully', function () {
+test('circuits handles null metrics gracefully', function () {
     $guid = '{'.Str::uuid()->toString().'}';
 
-    writeCareerFixture($this->fixtureDir, 'nullsnap', [
-        ['planner_username' => 'ASPLUNDH\\nullsnap', 'job_guid' => $guid, 'scope_year' => 2026, 'daily_metrics' => []],
-    ]);
+    createPlanner('nullmetrics', [], [$guid]);
 
-    PlannerJobAssignment::factory()->create([
-        'normalized_username' => 'nullsnap',
-        'frstr_user' => 'ASPLUNDH\\nullsnap',
+    // Create assessment WITHOUT metrics
+    Assessment::factory()->create([
         'job_guid' => $guid,
-    ]);
-
-    // Create monitor WITHOUT snapshots (latest_snapshot = null)
-    AssessmentMonitor::factory()->create([
-        'job_guid' => $guid,
-        'current_status' => 'ACTIV',
-        'total_miles' => 10.0,
+        'status' => 'ACTIV',
+        'length' => 16093.44,
+        'length_completed' => 0,
+        'percent_complete' => 0,
     ]);
 
     $result = $this->service->getHealthMetrics();
@@ -769,27 +527,11 @@ test('getUnifiedMetrics returns all expected keys', function () {
     $guid = '{'.Str::uuid()->toString().'}';
     $weekStart = CarbonImmutable::now()->startOfWeek(CarbonImmutable::SUNDAY);
 
-    writeCareerFixture($this->fixtureDir, 'unified', [
-        [
-            'planner_username' => 'ASPLUNDH\\unified',
-            'job_guid' => $guid,
-            'scope_year' => 2026,
-            'daily_metrics' => [
-                ['completion_date' => $weekStart->format('Y-m-d'), 'daily_footage_miles' => 4.0, 'unit_count' => 10, 'stations' => []],
-            ],
-        ],
-    ]);
+    createPlanner('unified', [
+        ['date' => $weekStart->format('Y-m-d'), 'miles' => 4.0],
+    ], [$guid]);
 
-    PlannerJobAssignment::factory()->create([
-        'normalized_username' => 'unified',
-        'frstr_user' => 'ASPLUNDH\\unified',
-        'job_guid' => $guid,
-    ]);
-
-    AssessmentMonitor::factory()->withSnapshots(1)->create([
-        'job_guid' => $guid,
-        'current_status' => 'ACTIV',
-    ]);
+    createActiveAssessment($guid);
 
     $result = $this->service->getUnifiedMetrics();
 
@@ -806,15 +548,8 @@ test('getUnifiedMetrics returns all expected keys', function () {
 test('getUnifiedMetrics uses quota_percent not percent_complete', function () {
     $weekStart = CarbonImmutable::now()->startOfWeek(CarbonImmutable::SUNDAY);
 
-    writeCareerFixture($this->fixtureDir, 'namechk', [
-        [
-            'planner_username' => 'ASPLUNDH\\namechk',
-            'job_guid' => '{11111111-1111-1111-1111-111111111111}',
-            'scope_year' => 2026,
-            'daily_metrics' => [
-                ['completion_date' => $weekStart->format('Y-m-d'), 'daily_footage_miles' => 3.25, 'unit_count' => 10, 'stations' => []],
-            ],
-        ],
+    createPlanner('namechk', [
+        ['date' => $weekStart->format('Y-m-d'), 'miles' => 3.25],
     ]);
 
     $result = $this->service->getUnifiedMetrics();
@@ -826,18 +561,10 @@ test('getUnifiedMetrics uses quota_percent not percent_complete', function () {
 });
 
 test('getUnifiedMetrics respects offset for week navigation', function () {
-    // Previous week: Sun Feb 1 – Sat Feb 7
-    writeCareerFixture($this->fixtureDir, 'offnav', [
-        [
-            'planner_username' => 'ASPLUNDH\\offnav',
-            'job_guid' => '{22222222-2222-2222-2222-222222222222}',
-            'scope_year' => 2026,
-            'daily_metrics' => [
-                ['completion_date' => '2026-02-03', 'daily_footage_miles' => 5.0, 'unit_count' => 15, 'stations' => []],
-                // Current week — excluded at offset -1
-                ['completion_date' => '2026-02-09', 'daily_footage_miles' => 99.0, 'unit_count' => 50, 'stations' => []],
-            ],
-        ],
+    createPlanner('offnav', [
+        ['date' => '2026-02-03', 'miles' => 5.0],
+        // Current week — excluded at offset -1
+        ['date' => '2026-02-09', 'miles' => 99.0],
     ]);
 
     $result = $this->service->getUnifiedMetrics(-1);
@@ -845,7 +572,7 @@ test('getUnifiedMetrics respects offset for week navigation', function () {
     expect($result[0]['period_miles'])->toBe(5.0);
 });
 
-test('getUnifiedMetrics returns empty when no career files', function () {
+test('getUnifiedMetrics returns empty when no planners', function () {
     expect($this->service->getUnifiedMetrics())->toBe([]);
 });
 
@@ -853,27 +580,11 @@ test('circuits are included in quota metrics return', function () {
     $guid = '{'.Str::uuid()->toString().'}';
     $weekStart = CarbonImmutable::now()->startOfWeek(CarbonImmutable::SUNDAY);
 
-    writeCareerFixture($this->fixtureDir, 'quotacircuit', [
-        [
-            'planner_username' => 'ASPLUNDH\\quotacircuit',
-            'job_guid' => $guid,
-            'scope_year' => 2026,
-            'daily_metrics' => [
-                ['completion_date' => $weekStart->format('Y-m-d'), 'daily_footage_miles' => 3.0, 'unit_count' => 10, 'stations' => []],
-            ],
-        ],
-    ]);
+    createPlanner('quotacircuit', [
+        ['date' => $weekStart->format('Y-m-d'), 'miles' => 3.0],
+    ], [$guid]);
 
-    PlannerJobAssignment::factory()->create([
-        'normalized_username' => 'quotacircuit',
-        'frstr_user' => 'ASPLUNDH\\quotacircuit',
-        'job_guid' => $guid,
-    ]);
-
-    AssessmentMonitor::factory()->withSnapshots(1)->create([
-        'job_guid' => $guid,
-        'current_status' => 'ACTIV',
-    ]);
+    createActiveAssessment($guid);
 
     $result = $this->service->getQuotaMetrics('week');
 

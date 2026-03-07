@@ -4,11 +4,9 @@ namespace App\Livewire\Dashboard;
 
 use App\Models\Assessment;
 use App\Models\AssessmentMetric;
-use App\Services\WorkStudio\Shared\Cache\CachedQueryService;
-use App\Services\WorkStudio\Shared\ValueObjects\UserQueryContext;
+use App\Models\SystemWideSnapshot;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -38,18 +36,19 @@ class Overview extends Component
     #[Computed]
     public function systemMetrics(): Collection
     {
-        $context = UserQueryContext::fromUser(Auth::user());
+        $latest = SystemWideSnapshot::query()
+            ->orderByDesc('captured_at')
+            ->first();
 
-        return app(CachedQueryService::class)->getSystemWideMetrics($context);
-    }
+        if (! $latest) {
+            return collect([]);
+        }
 
-    #[Computed]
-    public function regionalMetrics(): Collection
-    {
-        $context = UserQueryContext::fromUser(Auth::user());
-        $metrics = app(CachedQueryService::class)->getRegionalMetrics($context);
-
-        return $this->sortMetrics($metrics);
+        return collect([[
+            'total_miles' => (float) $latest->total_miles,
+            'completed_miles' => (float) $latest->completed_miles,
+            'active_planners' => (int) $latest->active_planners,
+        ]]);
     }
 
     #[Computed]
@@ -234,27 +233,6 @@ class Overview extends Component
         ];
 
         return array_merge(['all' => $all], $regions->sortKeys()->all());
-    }
-
-    protected function sortMetrics(Collection $metrics): Collection
-    {
-        return $metrics->sortBy(
-            $this->sortBy,
-            SORT_REGULAR,
-            $this->sortDir === 'desc'
-        )->values();
-    }
-
-    public function sort(string $column): void
-    {
-        if ($this->sortBy === $column) {
-            $this->sortDir = $this->sortDir === 'asc' ? 'desc' : 'asc';
-        } else {
-            $this->sortBy = $column;
-            $this->sortDir = 'asc';
-        }
-
-        unset($this->regionalMetrics);
     }
 
     public function openPanel(string $region): void

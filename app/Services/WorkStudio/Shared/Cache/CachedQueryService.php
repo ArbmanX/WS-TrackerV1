@@ -68,6 +68,10 @@ class CachedQueryService
      */
     public function invalidateAllForContext(UserQueryContext $context): int
     {
+        if ($this->isFrozen()) {
+            return 0;
+        }
+
         $datasets = array_keys(config('ws_cache.datasets'));
         $count = 0;
 
@@ -85,6 +89,10 @@ class CachedQueryService
      */
     public function invalidateAll(): int
     {
+        if ($this->isFrozen()) {
+            return 0;
+        }
+
         $hashes = $this->getTrackedContextHashes();
         $datasets = array_keys(config('ws_cache.datasets'));
         $count = 0;
@@ -116,6 +124,10 @@ class CachedQueryService
      */
     public function invalidateDataset(string $dataset, UserQueryContext $context): void
     {
+        if ($this->isFrozen()) {
+            return;
+        }
+
         Cache::forget($this->cacheKey($dataset, $context));
 
         $registry = $this->getRegistry();
@@ -210,17 +222,39 @@ class CachedQueryService
     }
 
     /**
+     * Check if the cache is frozen (e.g. during WS server maintenance).
+     */
+    public function isFrozen(): bool
+    {
+        return (bool) config('ws_cache.frozen', false);
+    }
+
+    /**
      * Resolve, cache, and track a dataset with context-scoped key.
      */
     private function cached(string $dataset, UserQueryContext $context, bool $forceRefresh, \Closure $resolver): Collection
     {
         $key = $this->cacheKey($dataset, $context);
+        $frozen = $this->isFrozen();
 
-        if ($forceRefresh) {
+        if ($forceRefresh && ! $frozen) {
             Cache::forget($key);
         }
 
         $wasCached = Cache::has($key);
+
+        if ($frozen && $wasCached) {
+            $this->trackAccess($dataset, $context, true);
+
+            return Cache::get($key);
+        }
+
+        if ($frozen && ! $wasCached) {
+            Log::warning("CachedQueryService: cache frozen, no data for {$dataset}");
+            $this->trackAccess($dataset, $context, false);
+
+            return collect([]);
+        }
 
         $result = Cache::remember($key, $this->ttl($dataset), $resolver);
 

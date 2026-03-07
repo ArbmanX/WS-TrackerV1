@@ -20,6 +20,7 @@ function testContext(array $overrides = []): UserQueryContext
 }
 
 beforeEach(function () {
+    config(['ws_cache.frozen' => false]);
     $this->mockQuery = Mockery::mock(GetQueryService::class);
     $this->mockSnapshot = Mockery::spy(SnapshotPersistenceService::class);
     $this->service = new CachedQueryService($this->mockQuery, $this->mockSnapshot);

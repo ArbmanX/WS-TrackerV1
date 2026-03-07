@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Planner Overview data source cleanup** (2026-03-07)
+  - Dashboard Overview reads from `SystemWideSnapshot` model instead of `CachedQueryService`
+  - Refactored `PlannerMetricsService` and `CachedQueryService` cache config
+  - Added `PlannerMetrics` Actions
+  - Fixed 5 failing `OverviewTest` assertions (view text drift: renamed heading, spacing class, miles format, stat card HTML)
+
 - **FetchAssessments Service Layer Refactor** (2026-02-23)
   - Extracted inline SQL from `FetchAssessments` command into standalone `FetchAssessmentQueries` query class
   - `GetQueryService::executeQuery()` now uses `Http::workstudio()` macro (SSL, config-driven timeouts)

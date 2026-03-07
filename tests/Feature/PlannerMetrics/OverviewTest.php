@@ -62,7 +62,7 @@ test('it renders overview page for authenticated user', function () {
     $this->actingAs(createMetricsTestUser())
         ->get('/planner-metrics')
         ->assertOk()
-        ->assertSee('Planner Metrics');
+        ->assertSee('Weekly Reports');
 });
 
 test('it redirects unauthenticated user to login', function () {
@@ -76,7 +76,7 @@ test('it displays planner data in unified view', function () {
     Livewire::actingAs(createMetricsTestUser())
         ->test(Overview::class)
         ->assertSee('J Smith')
-        ->assertSee('4.3/6.5')
+        ->assertSee('4.3 / 6.5 mi')
         ->assertSee('Progressing');
 });
 
@@ -200,10 +200,10 @@ test('it displays stat cards when planners exist', function () {
     Livewire::actingAs(createMetricsTestUser())
         ->test(Overview::class)
         ->assertSee('On Track')
-        ->assertSee('1/2')
+        ->assertSeeHtml('1<span class="text-sm font-normal text-base-content/30">/2</span>')
         ->assertSee('Team Avg')
-        ->assertSee('Aging Units')
-        ->assertSee('Team Miles');
+        ->assertSee('Aging')
+        ->assertSee('Miles');
 });
 
 test('it renders planner card with quota progress', function () {
@@ -211,7 +211,7 @@ test('it renders planner card with quota progress', function () {
 
     Livewire::actingAs(createMetricsTestUser())
         ->test(Overview::class)
-        ->assertSee('5.2/6.5')
+        ->assertSee('5.2 / 6.5 mi')
         ->assertSee('Progressing');
 });
 
@@ -220,5 +220,5 @@ test('it renders with space-y-6 root layout', function () {
 
     Livewire::actingAs(createMetricsTestUser())
         ->test(Overview::class)
-        ->assertSeeHtml('class="space-y-6"');
+        ->assertSeeHtml('class="space-y-5"');
 });

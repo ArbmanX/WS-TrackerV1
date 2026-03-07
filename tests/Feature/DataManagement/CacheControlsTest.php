@@ -43,6 +43,7 @@ function mockCacheService(): \Mockery\MockInterface
             ],
         ]);
     $mock->shouldReceive('getDriverName')->andReturn('database');
+    $mock->shouldReceive('isFrozen')->andReturn(false);
 
     app()->instance(CachedQueryService::class, $mock);
 

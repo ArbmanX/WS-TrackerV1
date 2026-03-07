@@ -38,6 +38,12 @@ class CacheControls extends Component
     }
 
     #[Computed]
+    public function isFrozen(): bool
+    {
+        return app(CachedQueryService::class)->isFrozen();
+    }
+
+    #[Computed]
     public function scopeYear(): string
     {
         return config('ws_assessment_query.scope_year', (string) date('Y'));
@@ -63,6 +69,12 @@ class CacheControls extends Component
 
     public function refreshDataset(string $dataset): void
     {
+        if ($this->isFrozen) {
+            $this->flash('Cache is frozen. Set WS_CACHE_FROZEN=false to enable changes.', 'error');
+
+            return;
+        }
+
         $service = app(CachedQueryService::class);
         $context = $this->userContext();
         $datasets = config('ws_cache.datasets');
@@ -88,6 +100,12 @@ class CacheControls extends Component
 
     public function clearAll(): void
     {
+        if ($this->isFrozen) {
+            $this->flash('Cache is frozen. Set WS_CACHE_FROZEN=false to enable changes.', 'error');
+
+            return;
+        }
+
         $count = app(CachedQueryService::class)->invalidateAll();
         $this->flash("Cleared {$count} cached dataset(s).");
         $this->clearComputedCache();
@@ -95,6 +113,12 @@ class CacheControls extends Component
 
     public function warmAll(): void
     {
+        if ($this->isFrozen) {
+            $this->flash('Cache is frozen. Set WS_CACHE_FROZEN=false to enable changes.', 'error');
+
+            return;
+        }
+
         $results = app(CachedQueryService::class)->warmAllForContext($this->userContext());
         $successes = collect($results)->where('success', true)->count();
         $failures = collect($results)->where('success', false)->count();

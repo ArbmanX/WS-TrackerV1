@@ -12,6 +12,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Cache Freeze
+    |--------------------------------------------------------------------------
+    | When true, cached data will never expire or be invalidated. Use this
+    | when WorkStudio servers are down for maintenance to prevent cache
+    | misses from triggering failed API calls. Toggle via .env or at runtime.
+    */
+
+    'frozen' => (bool) env('WS_CACHE_FROZEN', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Per-Dataset TTL Defaults (seconds)
     |--------------------------------------------------------------------------
     | Override any TTL via .env: WS_CACHE_TTL_SYSTEM_WIDE_METRICS=900
