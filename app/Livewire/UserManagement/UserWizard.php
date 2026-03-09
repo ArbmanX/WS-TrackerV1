@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Livewire\UserManagement;
 
-use App\Models\Assessment;
-use App\Models\AssessmentContributor;
 use App\Models\Region;
 use App\Models\User;
 use App\Models\UserSetting;
@@ -50,14 +48,8 @@ class UserWizard extends Component
     // Step 3 — Role
     public string $selectedRole = '';
 
-    // Step 4 — Regions & Assessments
+    // Step 4 — Regions
     public array $selectedRegionIds = [];
-
-    public array $selectedAssessmentIds = [];
-
-    public array $detectedAssessmentIds = [];
-
-    public string $assessmentSearch = '';
 
     // Success state
     public bool $userCreated = false;
@@ -82,10 +74,6 @@ class UserWizard extends Component
 
         if ($this->currentStep === 1) {
             $this->prepopulateFromCredentials();
-        }
-
-        if ($this->currentStep === 3) {
-            $this->detectAssessments();
         }
 
         $this->currentStep = min($this->currentStep + 1, 5);
@@ -151,41 +139,6 @@ class UserWizard extends Component
         $this->selectedRegionIds = [];
     }
 
-    public function toggleAssessment(int $assessmentId): void
-    {
-        if (in_array($assessmentId, $this->selectedAssessmentIds)) {
-            $this->selectedAssessmentIds = array_values(array_diff($this->selectedAssessmentIds, [$assessmentId]));
-        } else {
-            $this->selectedAssessmentIds[] = $assessmentId;
-        }
-    }
-
-    public function detectAssessments(): void
-    {
-        if (empty($this->selectedWsUserIds)) {
-            $this->detectedAssessmentIds = [];
-            $this->selectedAssessmentIds = [];
-
-            return;
-        }
-
-        $wsUsernames = WsUser::whereIn('id', $this->selectedWsUserIds)->pluck('username')->all();
-
-        $assessmentIds = AssessmentContributor::whereIn('ws_username', $wsUsernames)
-            ->distinct()
-            ->pluck('job_guid')
-            ->toArray();
-
-        $this->detectedAssessmentIds = Assessment::whereIn('job_guid', $assessmentIds)
-            ->pluck('id')
-            ->all();
-
-        // Pre-check detected assessments (merge with any manual selections)
-        $this->selectedAssessmentIds = array_values(array_unique(
-            array_merge($this->selectedAssessmentIds, $this->detectedAssessmentIds)
-        ));
-    }
-
     public function saveUser(): void
     {
         $this->validateCurrentStep();
@@ -217,11 +170,6 @@ class UserWizard extends Component
                 // Link regions
                 if (! empty($this->selectedRegionIds)) {
                     $user->regions()->attach($this->selectedRegionIds);
-                }
-
-                // Link assessments
-                if (! empty($this->selectedAssessmentIds)) {
-                    $user->assessments()->attach($this->selectedAssessmentIds);
                 }
 
                 UserSetting::create([
@@ -310,34 +258,6 @@ class UserWizard extends Component
             ->get()
             ->pluck('user.name', 'ws_user_id')
             ->all();
-    }
-
-    #[Computed]
-    public function searchedAssessments()
-    {
-        if ($this->assessmentSearch === '') {
-            return collect();
-        }
-
-        $search = $this->assessmentSearch;
-
-        return Assessment::where(function ($q) use ($search) {
-            $q->where('work_order', 'like', "%{$search}%")
-                ->orWhereHas('circuit', fn ($cq) => $cq->where('line_name', 'like', "%{$search}%"));
-        })
-            ->whereNotIn('id', $this->selectedAssessmentIds)
-            ->limit(20)
-            ->get();
-    }
-
-    #[Computed]
-    public function selectedAssessments()
-    {
-        if (empty($this->selectedAssessmentIds)) {
-            return collect();
-        }
-
-        return Assessment::with('circuit:id,line_name')->whereIn('id', $this->selectedAssessmentIds)->get();
     }
 
     #[Computed]

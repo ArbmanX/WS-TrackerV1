@@ -91,28 +91,6 @@
                 @endif
             </div>
 
-            {{-- Assessments --}}
-            <div class="p-4 rounded-lg border border-base-200">
-                <div class="flex items-center justify-between">
-                    <h3 class="font-semibold text-sm">
-                        Assessments
-                        <span class="badge badge-ghost badge-xs">{{ count($selectedAssessmentIds) }}</span>
-                    </h3>
-                    <button wire:click="goToStep(4)" class="btn btn-ghost btn-xs">Edit</button>
-                </div>
-                @if(count($selectedAssessmentIds) > 0)
-                    <div class="mt-2 max-h-32 overflow-y-auto space-y-1">
-                        @foreach($this->selectedAssessments as $assessment)
-                            <p class="text-sm truncate">
-                                {{ $assessment->work_order }}{{ $assessment->extension !== '@' ? ' / ' . $assessment->extension : '' }}
-                                <span class="text-xs text-base-content/40">{{ $assessment->circuit?->line_name ?? '' }}</span>
-                            </p>
-                        @endforeach
-                    </div>
-                @else
-                    <p class="text-sm text-base-content/40 mt-2">No assessments selected</p>
-                @endif
-            </div>
         </div>
 
         {{-- Navigation --}}

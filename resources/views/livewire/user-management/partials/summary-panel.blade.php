@@ -71,19 +71,13 @@
             <div>
                 <button wire:click="goToStep(4)" class="flex items-center gap-2 text-sm font-semibold hover:text-primary transition-colors">
                     <span class="badge badge-sm {{ $currentStep >= 4 ? 'badge-primary' : 'badge-ghost' }}">4</span>
-                    Regions & Assessments
+                    Regions
                 </button>
                 <div class="ml-7 mt-1">
                     @if(count($selectedRegionIds) > 0)
                         <p class="text-xs">{{ count($selectedRegionIds) }} region(s)</p>
                     @else
                         <p class="text-xs text-base-content/30">No regions</p>
-                    @endif
-
-                    @if(count($selectedAssessmentIds) > 0)
-                        <p class="text-xs">{{ count($selectedAssessmentIds) }} assessment(s)</p>
-                    @else
-                        <p class="text-xs text-base-content/30">No assessments</p>
                     @endif
                 </div>
             </div>

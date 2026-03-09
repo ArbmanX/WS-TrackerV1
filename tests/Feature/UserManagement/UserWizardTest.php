@@ -1,8 +1,6 @@
 <?php
 
 use App\Livewire\UserManagement\UserWizard;
-use App\Models\Assessment;
-use App\Models\AssessmentContributor;
 use App\Models\Region;
 use App\Models\User;
 use App\Models\UserSetting;
@@ -297,39 +295,6 @@ test('can select and deselect all regions', function () {
     expect($component->get('selectedRegionIds'))->toBeEmpty();
 });
 
-test('auto-detects assessments from ws credentials', function () {
-    $admin = createOnboardedWizardUser('sudo-admin');
-    $wsUser = WsUser::factory()->create(['username' => 'ASPLUNDH\jdoe']);
-    $assessment = Assessment::factory()->create();
-    AssessmentContributor::factory()->create([
-        'job_guid' => $assessment->job_guid,
-        'ws_username' => 'ASPLUNDH\jdoe',
-    ]);
-
-    Livewire::actingAs($admin)
-        ->test(UserWizard::class)
-        ->call('toggleWsUser', $wsUser->id)
-        ->set('currentStep', 3) // need to be on step 3 to trigger detection on nextStep
-        ->set('selectedRole', 'planner')
-        ->call('nextStep') // triggers detectAssessments on advancing from step 3
-        ->assertSet('currentStep', 4);
-
-    // Verify detected assessment IDs were populated
-    // The detection happens when advancing from step 3
-});
-
-test('can toggle assessment selection', function () {
-    $admin = createOnboardedWizardUser('sudo-admin');
-    $assessment = Assessment::factory()->create();
-
-    Livewire::actingAs($admin)
-        ->test(UserWizard::class)
-        ->call('toggleAssessment', $assessment->id)
-        ->assertSet('selectedAssessmentIds', [$assessment->id])
-        ->call('toggleAssessment', $assessment->id)
-        ->assertSet('selectedAssessmentIds', []);
-});
-
 // ──────────────────────────────────────────
 // Save: Full Flow
 // ──────────────────────────────────────────
@@ -338,7 +303,6 @@ test('full wizard creates user with all associations', function () {
     $admin = createOnboardedWizardUser('sudo-admin');
     $wsUser = WsUser::factory()->create(['display_name' => 'Jane Doe', 'email' => 'jane@test.com']);
     $region = Region::factory()->create();
-    $assessment = Assessment::factory()->create();
 
     Livewire::actingAs($admin)
         ->test(UserWizard::class)
@@ -354,7 +318,6 @@ test('full wizard creates user with all associations', function () {
         ->call('nextStep') // -> step 4
         // Step 4
         ->call('toggleRegion', $region->id)
-        ->call('toggleAssessment', $assessment->id)
         ->call('nextStep') // -> step 5
         // Step 5
         ->call('saveUser')
@@ -371,7 +334,6 @@ test('full wizard creates user with all associations', function () {
         ->and($createdUser->primaryWsIdentity)->not->toBeNull()
         ->and($createdUser->primaryWsIdentity->ws_user_id)->toBe($wsUser->id)
         ->and($createdUser->regions)->toHaveCount(1)
-        ->and($createdUser->assessments)->toHaveCount(1)
         ->and($createdUser->settings->first_login)->toBeTrue();
 });
 
@@ -412,7 +374,7 @@ test('user created without ws credentials works', function () {
         ->and($createdUser->wsIdentities)->toHaveCount(0);
 });
 
-test('user created without regions or assessments works', function () {
+test('user created without regions works', function () {
     $admin = createOnboardedWizardUser('sudo-admin');
 
     Livewire::actingAs($admin)
@@ -426,8 +388,7 @@ test('user created without regions or assessments works', function () {
 
     $createdUser = User::where('email', 'bare@example.com')->first();
 
-    expect($createdUser->regions)->toHaveCount(0)
-        ->and($createdUser->assessments)->toHaveCount(0);
+    expect($createdUser->regions)->toHaveCount(0);
 });
 
 test('create another resets all wizard state', function () {
@@ -448,6 +409,5 @@ test('create another resets all wizard state', function () {
         ->assertSet('userEmail', '')
         ->assertSet('selectedRole', '')
         ->assertSet('selectedWsUserIds', [])
-        ->assertSet('selectedRegionIds', [])
-        ->assertSet('selectedAssessmentIds', []);
+        ->assertSet('selectedRegionIds', []);
 });

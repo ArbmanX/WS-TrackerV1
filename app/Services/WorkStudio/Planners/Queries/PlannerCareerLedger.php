@@ -43,6 +43,7 @@ class PlannerCareerLedger extends AbstractQueryBuilder
                 WHERE VU.FRSTR_USER IN ({$usersSql})
                 AND VU.ASSDDATE IS NOT NULL
                 AND VU.ASSDDATE != ''
+                AND SS.JOBTYPE LIKE '%Assessment%'
                 AND SS.EXT = '@'
                 {$yearFilter}";
     }

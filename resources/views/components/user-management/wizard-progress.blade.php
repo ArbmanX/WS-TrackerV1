@@ -7,7 +7,7 @@
         1 => 'Select Credentials',
         2 => 'Verify Info',
         3 => 'Assign Role',
-        4 => 'Regions & Assessments',
+        4 => 'Regions',
         5 => 'Review & Save',
     ];
 @endphp
