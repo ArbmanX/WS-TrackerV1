@@ -48,7 +48,8 @@ class FetchAssessments extends Command
         try {
             $assessments = $this->fetchFromApi($queryService, $year, $status, $full);
         } catch (\Exception $e) {
-            $this->error('API request failed: '.json_decode($e->getMessage(), true)['Message'] ?? $e->getMessage());
+            $decoded = json_decode($e->getMessage(), true);
+            $this->error('API request failed: '.($decoded['Message'] ?? $e->getMessage()));
             $failLogger->error('FetchAssessments API failure', ['error' => $e->getMessage()]);
 
             return self::FAILURE;

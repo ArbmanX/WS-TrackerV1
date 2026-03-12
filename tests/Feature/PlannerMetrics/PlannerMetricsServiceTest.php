@@ -49,11 +49,10 @@ function createPlanner(string $username, array $dailyRecords = [], array $jobGui
             'work_order' => $record['work_order'] ?? fake()->numerify('WO-######'),
             'extension' => '@',
             'assess_date' => $record['date'],
-            'stat_name' => $record['stat_name'] ?? fake()->numerify('STA-###'),
-            'sequence' => $record['sequence'] ?? fake()->numberBetween(1, 999),
-            'unit_guid' => '{'.Str::uuid()->toString().'}',
-            'unit' => 'SPM',
+            'span_length_ft' => ($record['miles'] ?? 0) * 5280,
             'span_miles' => $record['miles'],
+            'station_count' => $record['station_count'] ?? 1,
+            'stations' => json_encode($record['stations'] ?? []),
             'last_synced_at' => now(),
         ]);
     }

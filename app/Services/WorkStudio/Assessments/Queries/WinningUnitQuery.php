@@ -2,8 +2,6 @@
 
 namespace App\Services\WorkStudio\Assessments\Queries;
 
-
-
 // <!-- -- Winning Unit Query: First-assessed unit per station for Assessment Dx jobs
 // -- Returns flat rows sorted for User → WO → Date grouping
 // -- DDOProtocol-safe: no CTEs, single SELECT, read-only
@@ -19,8 +17,7 @@ class WinningUnitQuery
      *
      * Output columns: JOBGUID, FRSTR_USER, WO, EXT, ASSESS_DATE (date part of ASSDDATE), STATNAME,
      * SEQUENCE, UNITGUID, UNIT, LAT (YCOORD or ASSLAT), [LONG] (XCOORD or ASSLONG),
-     * COORD_SOURCE ('station' or 'unit'), SPANLGTH (station span length in meters),
-     * SPAN_MILES (calculated miles).
+     * COORD_SOURCE ('station' or 'unit'), SPAN_LENGTH_FT (station span length in feet).
      *
      * Results are grouped by all output columns to deduplicate rows from the
      * VEGUNIT × STATIONS × SS join, then ordered by User → WO → Date.
@@ -28,11 +25,12 @@ class WinningUnitQuery
      * NOTE: The DDOProtocol API does not support CTEs (WITH...AS).
      * All queries must use derived tables (subqueries) instead.
      *
-     * @return string  The T-SQL query string to execute against the WorkStudio database
+     * @return string The T-SQL query string to execute against the WorkStudio database
      */
     public static function build(array $jobGuids): string
     {
         $uids = implode("','", $jobGuids);
+
         return "SELECT
                 w.JOBGUID,
                 w.FRSTR_USER,
@@ -46,8 +44,7 @@ class WinningUnitQuery
                 COALESCE(w.YCOORD, w.ASSLAT) AS LAT,
                 COALESCE(w.XCOORD, w.ASSLONG) AS [LONG],
                 CASE WHEN w.YCOORD IS NOT NULL THEN 'station' ELSE 'unit' END AS COORD_SOURCE,
-                w.SPANLGTH,
-                (w.SPANLGTH * 3.28084) / 5280.0 AS SPAN_MILES
+                (w.SPANLGTH * 3.28084) AS SPAN_LENGTH_FT
             FROM (
                 -- Middle layer: rank units per station, pick oldest ASSDDATE
                 SELECT
