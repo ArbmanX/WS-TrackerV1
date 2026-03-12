@@ -10,7 +10,7 @@ return [
     | theme preference is invalid.
     |
     */
-    'default' => 'corporate',
+    'default' => 'ppl-light',
 
     /*
     |--------------------------------------------------------------------------
@@ -274,7 +274,22 @@ return [
     |
     */
     'system_mapping' => [
-        'light' => 'corporate',
-        'dark' => 'dark',
+        'light' => 'ppl-light',
+        'dark' => 'ppl-dark',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Domain Theme Mapping
+    |--------------------------------------------------------------------------
+    |
+    | Maps email domains (extracted from user email) to branded themes.
+    | Used post-login to auto-apply the correct company theme.
+    |
+    */
+    'domain_theme_map' => [
+        'ppl' => ['light' => 'ppl-light', 'dark' => 'ppl-dark'],
+        'asplundh' => ['light' => 'asplundh-light', 'dark' => 'asplundh-dark'],
+        'pennline' => ['light' => 'pennline-light', 'dark' => 'pennline-dark'],
     ],
 ];

@@ -21,6 +21,10 @@
                 <span class="text-sm text-base-content/70">{{ __('Theme') }}</span>
                 <span class="text-sm font-medium">{{ $summary['theme'] }}</span>
             </div>
+            <div class="flex justify-between">
+                <span class="text-sm text-base-content/70">{{ __('Home Page') }}</span>
+                <span class="text-sm font-medium">{{ ucwords(str_replace(['-', '.'], [' ', ' - '], $summary['home_page'])) }}</span>
+            </div>
         </div>
 
         <!-- WorkStudio Info -->
@@ -49,6 +53,18 @@
                 </div>
             @endif
         </div>
+
+        <!-- Teams (if any) -->
+        @if(count($summary['teams']) > 0)
+            <div class="p-4 space-y-2">
+                <h3 class="text-sm font-semibold text-base-content/50 uppercase tracking-wide">{{ __('Teams') }}</h3>
+                <div class="flex flex-wrap gap-2">
+                    @foreach($summary['teams'] as $team)
+                        <span class="badge badge-primary badge-outline">{{ $team }}</span>
+                    @endforeach
+                </div>
+            </div>
+        @endif
     </div>
 
     <div class="flex gap-3">
@@ -61,5 +77,5 @@
         </button>
     </div>
 
-    <x-onboarding.progress :currentStep="4" />
+    <x-onboarding.progress :currentStep="6" />
 </div>

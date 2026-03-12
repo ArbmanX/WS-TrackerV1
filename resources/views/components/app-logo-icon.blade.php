@@ -1,8 +1,32 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 42" {{ $attributes }}>
-    <path 
-        fill="currentColor" 
-        fill-rule="evenodd" 
-        clip-rule="evenodd"
-        d="M17.2 5.633 8.6.855 0 5.633v26.51l16.2 9 16.2-9v-8.442l7.6-4.223V9.856l-8.6-4.777-8.6 4.777V18.3l-5.6 3.111V5.633ZM38 18.301l-5.6 3.11v-6.157l5.6-3.11V18.3Zm-1.06-7.856-5.54 3.078-5.54-3.079 5.54-3.078 5.54 3.079ZM24.8 18.3v-6.157l5.6 3.111v6.158L24.8 18.3Zm-1 1.732 5.54 3.078-13.14 7.302-5.54-3.078 13.14-7.3v-.002Zm-16.2 7.89 7.6 4.222V38.3L2 30.966V7.92l5.6 3.111v16.892ZM8.6 9.3 3.06 6.222 8.6 3.143l5.54 3.08L8.6 9.3Zm21.8 15.51-13.2 7.334V38.3l13.2-7.334v-6.156ZM9.6 11.034l5.6-3.11v14.6l-5.6 3.11v-14.6Z"
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" {{ $attributes }}>
+    <!-- Tree canopy -->
+    <path
+        fill="currentColor"
+        d="M16 38l8-10-3 0 7-9-3 0 6-8 6 8-3 0 7 9-3 0 8 10z"
+        opacity="0.85"
     />
+    <!-- Tree trunk -->
+    <rect fill="currentColor" x="28" y="38" width="4" height="10" rx="0.5" />
+    <!-- Utility pole -->
+    <rect fill="currentColor" x="46" y="8" width="3" height="46" rx="0.5" />
+    <!-- Cross arm -->
+    <rect fill="currentColor" x="40" y="14" width="15" height="2.5" rx="0.5" />
+    <!-- Insulators -->
+    <rect fill="currentColor" x="41" y="16.5" width="1.5" height="3" rx="0.5" />
+    <rect fill="currentColor" x="52.5" y="16.5" width="1.5" height="3" rx="0.5" />
+    <!-- Wires -->
+    <path
+        fill="none"
+        stroke="currentColor"
+        stroke-width="0.8"
+        d="M41.75 19.5 Q47 22 52.5 19.5"
+    />
+    <path
+        fill="none"
+        stroke="currentColor"
+        stroke-width="0.8"
+        d="M41.75 19.5 Q35 23 28 21"
+    />
+    <!-- Ground line -->
+    <rect fill="currentColor" x="8" y="48" width="50" height="2" rx="1" opacity="0.4" />
 </svg>

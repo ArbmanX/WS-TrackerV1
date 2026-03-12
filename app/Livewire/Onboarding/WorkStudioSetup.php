@@ -91,7 +91,12 @@ class WorkStudioSetup extends Component
                 'onboarding_step' => 3,
             ]);
 
-            $this->redirect(route('onboarding.confirmation'), navigate: true);
+            // Route to team selection for GF/Manager, otherwise home page
+            $nextRoute = $user->hasAnyRole(['general-foreman', 'manager'])
+                ? route('onboarding.team-selection')
+                : route('onboarding.home-page');
+
+            $this->redirect($nextRoute, navigate: true);
         } catch (UserNotFoundException $e) {
             $this->errorMessage = 'User not found in WorkStudio. Please check your username and try again.';
         } catch (WorkStudioApiException $e) {

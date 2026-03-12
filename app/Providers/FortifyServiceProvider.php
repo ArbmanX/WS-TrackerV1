@@ -48,9 +48,29 @@ class FortifyServiceProvider extends ServiceProvider
             $user = User::where('email', $email)->first();
 
             if ($user && Hash::check($request->password, $user->password)) {
+                $this->applyDomainTheme($user);
+
                 return $user;
             }
         });
+    }
+
+    /**
+     * Apply the branded theme based on the user's email domain.
+     */
+    private function applyDomainTheme(User $user): void
+    {
+        $emailDomain = Str::before(Str::after($user->email, '@'), '.');
+        $domainMap = config('themes.domain_theme_map', []);
+
+        if (isset($domainMap[$emailDomain])) {
+            $theme = $domainMap[$emailDomain]['light'];
+
+            $settings = $user->settings;
+            if ($settings && (! $settings->theme || $settings->theme === 'system' || $settings->theme === config('themes.default'))) {
+                $settings->update(['theme' => $theme]);
+            }
+        }
     }
 
     /**

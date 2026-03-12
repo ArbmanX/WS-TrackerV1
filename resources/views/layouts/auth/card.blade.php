@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html
     lang="{{ str_replace('_', '-', app()->getLocale()) }}"
-    :data-theme="$store.theme?.effective ?? 'corporate'"
-    data-theme="corporate"
+    :data-theme="$store.theme?.effective ?? 'ppl-light'"
+    data-theme="ppl-light"
     x-data
     x-init="$store.theme?.init()"
 >

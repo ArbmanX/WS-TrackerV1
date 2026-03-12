@@ -2,6 +2,8 @@
 
 use App\Livewire\Onboarding\ChangePassword;
 use App\Livewire\Onboarding\Confirmation;
+use App\Livewire\Onboarding\HomePageSelection;
+use App\Livewire\Onboarding\TeamSelection;
 use App\Livewire\Onboarding\ThemeSelection;
 use App\Livewire\Onboarding\WorkStudioSetup;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +25,8 @@ Route::middleware(['auth'])->prefix('onboarding')->name('onboarding.')->group(fu
     Route::get('/password', ChangePassword::class)->name('password');
     Route::get('/theme', ThemeSelection::class)->name('theme');
     Route::get('/workstudio', WorkStudioSetup::class)->name('workstudio');
+    Route::get('/team-selection', TeamSelection::class)->name('team-selection');
+    Route::get('/home-page', HomePageSelection::class)->name('home-page');
     Route::get('/confirmation', Confirmation::class)->name('confirmation');
 });
 

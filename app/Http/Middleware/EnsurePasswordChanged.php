@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\OnboardingStep;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -59,21 +60,48 @@ class EnsurePasswordChanged
         }
 
         // Route to the correct onboarding step based on progress
+        return $this->redirectToCurrentStep($user, $settings) ?? $next($request);
+    }
+
+    /**
+     * Determine the correct onboarding step and redirect.
+     */
+    protected function redirectToCurrentStep($user, $settings): ?Response
+    {
         $step = $settings->onboarding_step;
 
+        // Step 1: Theme selection
         if ($step === null || $step < 2) {
             return redirect()->route('onboarding.theme');
         }
 
+        // Step 2: WS Credentials
         if ($step < 3) {
             return redirect()->route('onboarding.workstudio');
         }
 
+        // Step 3 complete → determine next step
         if ($step < 4) {
+            // Team selection only for GF/Manager roles
+            if ($user->hasAnyRole(['general-foreman', 'manager'])) {
+                return redirect()->route('onboarding.team-selection');
+            }
+
+            // Skip to home page selection for other roles
+            return redirect()->route('onboarding.home-page');
+        }
+
+        // Step 4 complete → home page selection
+        if ($step < 5) {
+            return redirect()->route('onboarding.home-page');
+        }
+
+        // Step 5 complete → confirmation
+        if ($step < 6) {
             return redirect()->route('onboarding.confirmation');
         }
 
-        return $next($request);
+        return null;
     }
 
     /**

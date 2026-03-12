@@ -14,6 +14,7 @@ class UserSetting extends Model
     protected $fillable = [
         'user_id',
         'theme',
+        'home_page',
         'layout_preference',
         'notifications_enabled',
         'sidebar_collapsed',

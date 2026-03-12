@@ -97,6 +97,16 @@ class User extends Authenticatable
         return $this->belongsToMany(Assessment::class, 'user_assessments')->withTimestamps();
     }
 
+    public function teams(): HasMany
+    {
+        return $this->hasMany(Team::class, 'owner_id');
+    }
+
+    public function memberOfTeams(): BelongsToMany
+    {
+        return $this->belongsToMany(Team::class)->withTimestamps();
+    }
+
     public function regions(): BelongsToMany
     {
         return $this->belongsToMany(Region::class, 'user_regions')->withTimestamps();
