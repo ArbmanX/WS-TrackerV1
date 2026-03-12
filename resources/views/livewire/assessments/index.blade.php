@@ -16,8 +16,8 @@
                         <span class="text-base-content/60">Region</span>
                         <span>{{ $a['region'] ?? '—' }}</span>
 
-                        <span class="text-base-content/60">Assigned To</span>
-                        <span>{{ $a['assigned_to'] ?? '—' }}</span>
+                        <span class="text-base-content/60">Taken By</span>
+                        <span>{{ $a['taken_by_username'] ?? '—' }}</span>
 
                         <span class="text-base-content/60">% Complete</span>
                         <span>{{ $a['percent_complete'] ?? 0 }}%</span>
@@ -80,7 +80,7 @@
                     <th>Status</th>
                     <th>% Complete</th>
                     <th>Region</th>
-                    <th>Assigned To</th>
+                    <th>Taken By</th>
                     <th>Oldest Pending</th>
                     <th>Total Units</th>
                     <th>Appr</th>
@@ -100,7 +100,7 @@
                         <td>{{ $assessment['status'] }}</td>
                         <td>{{ $assessment['percent_complete'] ?? 0 }}%</td>
                         <td>{{ $assessment['region'] ?? '—' }}</td>
-                        <td>{{ $assessment['assigned_to'] ?? '—' }}</td>
+                        <td>{{ $assessment['taken_by_username'] ?? '—' }}</td>
                         <td>{{ isset($assessment['metrics']['oldest_pending_date']) ? \Carbon\Carbon::parse($assessment['metrics']['oldest_pending_date'])->format('M j') : '—' }}</td>
                         <td>{{ $assessment['metrics']['total_units'] ?? '—' }}</td>
                         <td>{{ $assessment['metrics']['approved'] ?? '—' }}</td>

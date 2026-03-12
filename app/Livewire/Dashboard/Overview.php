@@ -56,7 +56,6 @@ class Overview extends Component
     {
         $rows = Assessment::query()
             ->select('region', 'status', DB::raw('SUM(length / '.self::METERS_PER_MILE.') as miles'))
-            ->whereIn('status', ['ACTIV', 'QC', 'REWRK', 'CLOSE'])
             ->whereNotNull('region')
             ->groupBy('region', 'status')
             ->get();
